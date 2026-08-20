@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Junior Entrepreneur</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700&family=Nunito:wght@500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/styles.css" />
+  </head>
+  <body>
+    <div class="sky" aria-hidden="true"></div>
+
+    <main class="stand">
+      <header class="brand">
+        <p class="brand-kicker">Corner stand</p>
+        <h1 class="brand-name">Junior Entrepreneur</h1>
+        <p class="brand-tag">Mix juice. Set a price. Make the day pay.</p>
+      </header>
+
+      <section class="status" aria-label="Stand status">
+        <div class="stat">
+          <span class="stat-label">Day</span>
+          <span class="stat-value" id="stat-day">1</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Cash</span>
+          <span class="stat-value" id="stat-cash">$20.00</span>
+        </div>
+      </section>
+
+      <section class="inventory" aria-label="Inventory">
+        <h2 class="section-title">Inventory</h2>
+        <ul class="inventory-list" id="inventory-list"></ul>
+      </section>
+
+      <section class="actions" aria-label="Day actions">
+        <button type="button" class="btn" id="btn-recipe" data-stub="recipe">
+          Recipe
+        </button>
+        <button type="button" class="btn" id="btn-buy" data-stub="buy">Buy</button>
+        <button type="button" class="btn" id="btn-price" data-stub="price">
+          Price
+        </button>
+        <button type="button" class="btn btn-primary" id="btn-sell">Sell Day</button>
+      </section>
+
+      <section class="report" aria-live="polite">
+        <h2 class="section-title">Day report</h2>
+        <p class="report-body" id="report-body">
+          Open for business. Prep your stand, then sell the day.
+        </p>
+      </section>
+    </main>
+
+    <script src="js/state.js"></script>
+    <script src="js/recipe.js"></script>
+    <script src="js/economy.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/main.js"></script>
+  </body>
+</html>
