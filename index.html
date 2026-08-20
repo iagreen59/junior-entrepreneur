@@ -33,6 +33,16 @@
         </div>
       </section>
 
+      <section class="morning" aria-label="Morning checklist">
+        <h2 class="section-title">Before you sell</h2>
+        <ol class="morning-list" id="morning-list">
+          <li>Check your <strong>Recipe</strong> (units per cup).</li>
+          <li><strong>Buy</strong> fruit, sugar, ice, and cups so you have stock.</li>
+          <li>Set a <strong>Price</strong> a bit above ingredient cost (around $2 works).</li>
+          <li>Hit <strong>Sell Day</strong> when you are ready.</li>
+        </ol>
+      </section>
+
       <section class="inventory" aria-label="Inventory">
         <h2 class="section-title">Inventory</h2>
         <ul class="inventory-list" id="inventory-list"></ul>
@@ -43,6 +53,7 @@
         <button type="button" class="btn" id="btn-buy">Buy</button>
         <button type="button" class="btn" id="btn-price">Price</button>
         <button type="button" class="btn btn-primary" id="btn-sell">Sell Day</button>
+        <button type="button" class="btn btn-quiet" id="btn-new-game">New Game</button>
       </section>
 
       <section class="panel" id="panel-recipe" hidden aria-label="Recipe editor">
@@ -193,7 +204,7 @@
       <section class="report" aria-live="polite">
         <h2 class="section-title">Day report</h2>
         <p class="report-body" id="report-body">
-          Open for business. Prep your stand, then sell the day.
+          Good morning. Recipe → Buy → Price → Sell Day. Stock up before you open.
         </p>
       </section>
     </main>

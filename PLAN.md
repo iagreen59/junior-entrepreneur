@@ -18,7 +18,7 @@ Future agents: skip anything already checked.
 - [x] Phase 1 — Playable fake-day shell
 - [x] Phase 2 — Recipe + buy ingredients
 - [x] Phase 3 — Price + real daily sales
-- [ ] Phase 4 — Polish (validation, New Game, light balance)
+- [x] Phase 4 — Polish (validation, New Game, light balance)
 
 ---
 
@@ -163,7 +163,7 @@ Player sets sell price. Sell Day runs a simple demand simulation (price + light 
 
 ## Phase 4 — Polish
 
-**Status:** not started — start only after Phase 3 is checked done
+**Status:** done
 
 ### Goal
 
@@ -184,11 +184,11 @@ Morning guidance (what to do before Sell Day), basic validation messages (e.g. n
 
 ### Play-test checklist
 
-- [ ] Morning / guidance copy makes the loop clear
-- [ ] Validation blocks or explains bad Sell Day cases (e.g. empty stock)
-- [ ] New Game clears save and returns to starting day/cash
-- [ ] A reasonable recipe + buy + price can show profit across a few days
-- [ ] Full loop still persists correctly after refresh
+- [x] Morning / guidance copy makes the loop clear
+- [x] Validation blocks or explains bad Sell Day cases (e.g. empty stock)
+- [x] New Game clears save and returns to starting day/cash
+- [x] A reasonable recipe + buy + price can show profit across a few days
+- [x] Full loop still persists correctly after refresh
 
 ### Out of scope
 

@@ -2,6 +2,8 @@
  * Costs, demand, sales, profit.
  * Phase 3: real Sell Day — price-sensitive demand, weather noise, inventory
  * consumption, and end-of-day P&L. Replaces the Phase 1 stub.
+ * Phase 4: light balance — slightly more traffic, softer price sensitivity so
+ * default recipe (COGS ≈ $1.50) at about $2/cup can profit over a few days.
  *
  * Demand formula (documented for play-testers / future balance):
  *   interest = BASE_INTEREST * (REF_PRICE / price) ^ ELASTICITY * weather
@@ -16,14 +18,14 @@
  * Profit can be negative when selling below ingredient cost.
  */
 (function (global) {
-  /** Typical daily foot traffic at the reference price. */
-  const BASE_INTEREST = 18;
+  /** Typical daily foot traffic at the reference price. Phase 4: 18 → 20. */
+  const BASE_INTEREST = 20;
   /** Price where BASE_INTEREST customers show up before weather. */
   const REF_PRICE = 1.5;
-  /** How sharply demand falls as price rises (1 = inverse to price). */
-  const ELASTICITY = 1.15;
-  const WEATHER_MIN = 0.7;
-  const WEATHER_MAX = 1.3;
+  /** How sharply demand falls as price rises (1 = inverse to price). Phase 4: 1.15 → 1.05. */
+  const ELASTICITY = 1.05;
+  const WEATHER_MIN = 0.75;
+  const WEATHER_MAX = 1.25;
 
   function weatherFactor(randomFn) {
     const roll = typeof randomFn === "function" ? randomFn() : Math.random();

@@ -1,8 +1,11 @@
 /**
  * DOM updates / panel rendering.
- * Phase 3: price panel + richer day-report display.
+ * Phase 4: morning guidance copy, Sell Day validation feedback, New Game UX.
  */
 (function (global) {
+  const MORNING_COPY =
+    "Good morning. Recipe → Buy → Price → Sell Day. Stock up before you open.";
+
   function formatMoney(amount) {
     const sign = amount < 0 ? "-" : "";
     return sign + "$" + Math.abs(amount).toFixed(2);
@@ -82,6 +85,42 @@
     );
   }
 
+  /**
+   * Short readiness line under the morning checklist (stock / price hints).
+   */
+  function morningHint(state) {
+    const stockCups = global.GameEconomy.maxCupsFromStock(state);
+    const price = Number(state.price);
+    if (stockCups <= 0) {
+      return "No cups ready — buy ingredients that match your recipe first.";
+    }
+    if (!Number.isFinite(price) || price <= 0) {
+      return "Set a sell price before you open.";
+    }
+    return (
+      "Ready for about " +
+      stockCups +
+      " cup" +
+      (stockCups === 1 ? "" : "s") +
+      " at " +
+      formatMoney(price) +
+      "."
+    );
+  }
+
+  function renderMorningHint(state) {
+    const list = document.getElementById("morning-list");
+    if (!list) return;
+    let hint = document.getElementById("morning-hint");
+    if (!hint) {
+      hint = document.createElement("p");
+      hint.id = "morning-hint";
+      hint.className = "morning-hint";
+      list.insertAdjacentElement("afterend", hint);
+    }
+    hint.textContent = morningHint(state);
+  }
+
   function render(state) {
     const dayEl = document.getElementById("stat-day");
     const cashEl = document.getElementById("stat-cash");
@@ -109,11 +148,11 @@
     fillRecipeForm(state);
     fillPriceForm(state);
     renderBuyPrices();
+    renderMorningHint(state);
 
     if (reportEl) {
       const text = formatDayReport(state.lastDayReport);
-      reportEl.textContent =
-        text || "Open for business. Prep your stand, then sell the day.";
+      reportEl.textContent = text || MORNING_COPY;
     }
   }
 
@@ -130,6 +169,7 @@
   }
 
   global.GameUI = {
+    MORNING_COPY,
     formatMoney,
     render,
     setReport,
@@ -137,5 +177,6 @@
     readRecipeForm,
     readPriceForm,
     readBuyQty,
+    morningHint,
   };
 })(window);
