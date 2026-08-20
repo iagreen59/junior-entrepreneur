@@ -14,6 +14,8 @@ Then visit `http://localhost:8000`.
 
 GitHub Pages is not set up yet.
 
+No build step or install is required — open the HTML file and play.
+
 ## Cursor workflow
 
 1. Plan and build early slices on PC.
