@@ -7,6 +7,45 @@
     return sign + "$" + Math.abs(amount).toFixed(2);
   }
 
+  function fillRecipeForm(state) {
+    for (const key of global.GameState.INVENTORY_KEYS) {
+      const input = document.getElementById("recipe-" + key);
+      if (input) input.value = String(state.recipe[key] ?? 0);
+    }
+  }
+
+  function readRecipeForm() {
+    const draft = {};
+    for (const key of global.GameState.INVENTORY_KEYS) {
+      const input = document.getElementById("recipe-" + key);
+      draft[key] = input ? input.value : 0;
+    }
+    return draft;
+  }
+
+  function readBuyQty(key) {
+    const input = document.getElementById("buy-qty-" + key);
+    return input ? input.value : "0";
+  }
+
+  function renderBuyPrices() {
+    const labels = global.GameState.inventoryLabels();
+    for (const key of global.GameState.INVENTORY_KEYS) {
+      const priceEl = document.getElementById("buy-price-" + key);
+      if (priceEl) {
+        priceEl.textContent =
+          labels[key] + " — " + formatMoney(global.GameState.unitPrice(key)) + " each";
+      }
+    }
+  }
+
+  function setPanel(name) {
+    const recipePanel = document.getElementById("panel-recipe");
+    const buyPanel = document.getElementById("panel-buy");
+    if (recipePanel) recipePanel.hidden = name !== "recipe";
+    if (buyPanel) buyPanel.hidden = name !== "buy";
+  }
+
   function render(state) {
     const dayEl = document.getElementById("stat-day");
     const cashEl = document.getElementById("stat-cash");
@@ -30,6 +69,9 @@
         listEl.appendChild(li);
       }
     }
+
+    fillRecipeForm(state);
+    renderBuyPrices();
 
     if (reportEl) {
       if (state.lastDayReport && state.lastDayReport.message) {
@@ -57,5 +99,8 @@
     formatMoney,
     render,
     setReport,
+    setPanel,
+    readRecipeForm,
+    readBuyQty,
   };
 })(window);

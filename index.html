@@ -39,14 +39,133 @@
       </section>
 
       <section class="actions" aria-label="Day actions">
-        <button type="button" class="btn" id="btn-recipe" data-stub="recipe">
-          Recipe
-        </button>
-        <button type="button" class="btn" id="btn-buy" data-stub="buy">Buy</button>
-        <button type="button" class="btn" id="btn-price" data-stub="price">
-          Price
-        </button>
+        <button type="button" class="btn" id="btn-recipe">Recipe</button>
+        <button type="button" class="btn" id="btn-buy">Buy</button>
+        <button type="button" class="btn" id="btn-price">Price</button>
         <button type="button" class="btn btn-primary" id="btn-sell">Sell Day</button>
+      </section>
+
+      <section class="panel" id="panel-recipe" hidden aria-label="Recipe editor">
+        <h2 class="section-title">Recipe</h2>
+        <p class="panel-lead">Units of each ingredient used per cup of juice.</p>
+        <form id="form-recipe" class="panel-form">
+          <label class="field">
+            <span class="field-label">Fruit</span>
+            <input
+              type="number"
+              id="recipe-fruit"
+              name="fruit"
+              min="0"
+              step="1"
+              required
+            />
+          </label>
+          <label class="field">
+            <span class="field-label">Sugar</span>
+            <input
+              type="number"
+              id="recipe-sugar"
+              name="sugar"
+              min="0"
+              step="1"
+              required
+            />
+          </label>
+          <label class="field">
+            <span class="field-label">Ice</span>
+            <input
+              type="number"
+              id="recipe-ice"
+              name="ice"
+              min="0"
+              step="1"
+              required
+            />
+          </label>
+          <label class="field">
+            <span class="field-label">Cups</span>
+            <input
+              type="number"
+              id="recipe-cups"
+              name="cups"
+              min="1"
+              step="1"
+              required
+            />
+          </label>
+          <button type="submit" class="btn btn-panel">Save recipe</button>
+        </form>
+      </section>
+
+      <section class="panel" id="panel-buy" hidden aria-label="Buy ingredients">
+        <h2 class="section-title">Buy ingredients</h2>
+        <p class="panel-lead">Spend cash to stock your stand. You cannot buy more than you can afford.</p>
+        <ul class="buy-list">
+          <li class="buy-row">
+            <div class="buy-meta">
+              <span class="buy-name" id="buy-price-fruit">Fruit</span>
+            </div>
+            <label class="field field-inline">
+              <span class="visually-hidden">Quantity of fruit</span>
+              <input
+                type="number"
+                id="buy-qty-fruit"
+                min="1"
+                step="1"
+                value="10"
+              />
+            </label>
+            <button type="button" class="btn btn-panel" data-buy="fruit">Buy</button>
+          </li>
+          <li class="buy-row">
+            <div class="buy-meta">
+              <span class="buy-name" id="buy-price-sugar">Sugar</span>
+            </div>
+            <label class="field field-inline">
+              <span class="visually-hidden">Quantity of sugar</span>
+              <input
+                type="number"
+                id="buy-qty-sugar"
+                min="1"
+                step="1"
+                value="10"
+              />
+            </label>
+            <button type="button" class="btn btn-panel" data-buy="sugar">Buy</button>
+          </li>
+          <li class="buy-row">
+            <div class="buy-meta">
+              <span class="buy-name" id="buy-price-ice">Ice</span>
+            </div>
+            <label class="field field-inline">
+              <span class="visually-hidden">Quantity of ice</span>
+              <input
+                type="number"
+                id="buy-qty-ice"
+                min="1"
+                step="1"
+                value="10"
+              />
+            </label>
+            <button type="button" class="btn btn-panel" data-buy="ice">Buy</button>
+          </li>
+          <li class="buy-row">
+            <div class="buy-meta">
+              <span class="buy-name" id="buy-price-cups">Cups</span>
+            </div>
+            <label class="field field-inline">
+              <span class="visually-hidden">Quantity of cups</span>
+              <input
+                type="number"
+                id="buy-qty-cups"
+                min="1"
+                step="1"
+                value="10"
+              />
+            </label>
+            <button type="button" class="btn btn-panel" data-buy="cups">Buy</button>
+          </li>
+        </ul>
       </section>
 
       <section class="report" aria-live="polite">
