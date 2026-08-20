@@ -12,7 +12,7 @@ python -m http.server 8000
 
 Then visit `http://localhost:8000`.
 
-GitHub Pages is not set up yet.
+**Play on GitHub Pages:** https://iagreen59.github.io/junior-entrepreneur/
 
 No build step or install is required — open the HTML file and play.
 

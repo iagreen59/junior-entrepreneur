@@ -4,7 +4,7 @@ Cloud Agent brief for the v1 corner juice stand game (vanilla HTML / CSS / JS).
 
 **Read this file first.** Honor the Phase status checkboxes. Do not re-do checked phases. Implement **one phase per PR**. Touch only the files listed for that phase. Open a PR when done. In the same PR (or a tiny follow-up), mark the phase checkbox `[x]` when the work is complete.
 
-**Stack rules:** no npm, no frameworks, no build step. Persist with `localStorage` via `js/state.js`. GitHub Pages is not in scope. Keep the Phase 1 Sell Day stub until Phase 3 replaces it.
+**Stack rules:** no npm, no frameworks, no build step. Persist with `localStorage` via `js/state.js`. GitHub Pages is in scope (live site from `main` `/`). Keep the Phase 1 Sell Day stub until Phase 3 replaces it.
 
 **Suggested prompt:** `Implement Phase N from PLAN.md. Open a PR. Do not start later phases. Mark Phase N done in the Phase status list when finished.`
 
@@ -45,8 +45,9 @@ GitHub repo + Cursor Cloud Agents path working for a static project (no game UI 
 ### Out of scope
 
 - Game UI / JS gameplay
-- GitHub Pages
 - npm, Docker, or non-empty install scripts
+
+**Hosting (in scope for the project):** GitHub Pages deploys from `main` branch `/` (root). Live URL: https://iagreen59.github.io/junior-entrepreneur/
 
 ---
 
