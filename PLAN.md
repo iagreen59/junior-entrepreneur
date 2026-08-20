@@ -17,7 +17,7 @@ Future agents: skip anything already checked.
 - [x] Phase 0 — Repo + Cursor integration
 - [x] Phase 1 — Playable fake-day shell
 - [x] Phase 2 — Recipe + buy ingredients
-- [ ] Phase 3 — Price + real daily sales
+- [x] Phase 3 — Price + real daily sales
 - [ ] Phase 4 — Polish (validation, New Game, light balance)
 
 ---
@@ -126,7 +126,7 @@ Player can edit the juice recipe (fruit, sugar, ice, cups — units per cup) and
 
 ## Phase 3 — Price + real daily sales
 
-**Status:** not started — start only after Phase 2 is checked done
+**Status:** done
 
 ### Goal
 
@@ -146,12 +146,12 @@ Player sets sell price. Sell Day runs a simple demand simulation (price + light 
 
 ### Play-test checklist
 
-- [ ] Player can set and persist sell price
-- [ ] High price → fewer sales (usually)
-- [ ] Low price → more sales and/or sell-out when stock is low
-- [ ] Inventory decreases by recipe × cups sold
-- [ ] Day report shows revenue, costs, profit; cash updates; refresh persists
-- [ ] Profit can be negative
+- [x] Player can set and persist sell price
+- [x] High price → fewer sales (usually)
+- [x] Low price → more sales and/or sell-out when stock is low
+- [x] Inventory decreases by recipe × cups sold
+- [x] Day report shows revenue, costs, profit; cash updates; refresh persists
+- [x] Profit can be negative
 
 ### Out of scope
 
