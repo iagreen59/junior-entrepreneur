@@ -16,7 +16,7 @@ Future agents: skip anything already checked.
 
 - [x] Phase 0 — Repo + Cursor integration
 - [x] Phase 1 — Playable fake-day shell
-- [ ] Phase 2 — Recipe + buy ingredients
+- [x] Phase 2 — Recipe + buy ingredients
 - [ ] Phase 3 — Price + real daily sales
 - [ ] Phase 4 — Polish (validation, New Game, light balance)
 
@@ -86,7 +86,7 @@ Clickable stand shell: day, cash, inventory placeholders, Recipe / Buy / Price /
 
 ## Phase 2 — Recipe + buy ingredients
 
-**Status:** not started — **do this next**
+**Status:** done
 
 ### Goal
 
@@ -108,11 +108,11 @@ Player can edit the juice recipe (fruit, sugar, ice, cups — units per cup) and
 
 ### Play-test checklist
 
-- [ ] Recipe UI edits fruit, sugar, ice, cups and saves to state
-- [ ] Buy UI purchases ingredients; cash goes down; inventory goes up
-- [ ] Cannot buy more than cash allows (clear message)
-- [ ] Refresh keeps recipe, inventory, and cash
-- [ ] Sell Day still uses the Phase 1 stub (unchanged economy)
+- [x] Recipe UI edits fruit, sugar, ice, cups and saves to state
+- [x] Buy UI purchases ingredients; cash goes down; inventory goes up
+- [x] Cannot buy more than cash allows (clear message)
+- [x] Refresh keeps recipe, inventory, and cash
+- [x] Sell Day still uses the Phase 1 stub (unchanged economy)
 
 ### Out of scope
 
