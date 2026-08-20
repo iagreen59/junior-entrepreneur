@@ -22,4 +22,6 @@ No build step or install is required — open the HTML file and play.
 2. Later slices: launch **Cloud Agents** from iPhone (not Remote Control on Windows).
 3. Review PRs on phone, merge, then `git pull` on PC and play-test.
 
+Cloud Agents should follow **[PLAN.md](PLAN.md)** (one phase per PR; honor the Phase status checkboxes).
+
 Cloud Agents: connect this GitHub repo in the [Cloud Agents dashboard](https://cursor.com/dashboard/cloud-agents#environments). This repo uses a minimal `.cursor/environment.json` (static site, no npm).
