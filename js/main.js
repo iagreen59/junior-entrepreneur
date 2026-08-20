@@ -1,6 +1,6 @@
 /**
  * Boot, wire events, day-loop orchestration.
- * Phase 2: recipe editor + buy ingredients. Sell Day stays the Phase 1 stub.
+ * Phase 3: price panel + real Sell Day economy (no stub).
  */
 (function () {
   let state = GameState.load();
@@ -21,12 +21,10 @@
     });
   }
 
-  function onPriceStub() {
-    GameUI.setPanel(null);
+  function onPriceOpen() {
+    GameUI.setPanel("price");
     GameUI.setReport(
-      "Price controls come in Phase 3. Current price: " +
-        GameUI.formatMoney(state.price) +
-        ".",
+      "Set your cup price. Current: " + GameUI.formatMoney(state.price) + ".",
       { flash: true }
     );
   }
@@ -34,6 +32,18 @@
   function onRecipeSave(event) {
     event.preventDefault();
     const result = GameRecipe.apply(state, GameUI.readRecipeForm());
+    if (!result.ok) {
+      GameUI.setReport(result.message, { flash: true });
+      return;
+    }
+    GameState.save(state);
+    refresh();
+    GameUI.setReport(result.message, { flash: true });
+  }
+
+  function onPriceSave(event) {
+    event.preventDefault();
+    const result = GameEconomy.applyPrice(state, GameUI.readPriceForm());
     if (!result.ok) {
       GameUI.setReport(result.message, { flash: true });
       return;
@@ -55,12 +65,17 @@
   }
 
   function onSellDay() {
-    const result = GameEconomy.runStubDay(state);
+    const result = GameEconomy.runSellDay(state);
     state.cash = result.cashAfter;
     state.day += 1;
     state.lastDayReport = {
       cupsSold: result.cupsSold,
+      demand: result.demand,
+      stockCups: result.stockCups,
+      revenue: result.revenue,
+      cogs: result.cogs,
       profit: result.profit,
+      soldOut: result.soldOut,
       message: result.message,
     };
     GameState.save(state);
@@ -70,12 +85,16 @@
 
   document.getElementById("btn-recipe")?.addEventListener("click", onRecipeOpen);
   document.getElementById("btn-buy")?.addEventListener("click", onBuyOpen);
-  document.getElementById("btn-price")?.addEventListener("click", onPriceStub);
+  document.getElementById("btn-price")?.addEventListener("click", onPriceOpen);
   document.getElementById("btn-sell")?.addEventListener("click", onSellDay);
 
   document
     .getElementById("form-recipe")
     ?.addEventListener("submit", onRecipeSave);
+
+  document
+    .getElementById("form-price")
+    ?.addEventListener("submit", onPriceSave);
 
   document.getElementById("panel-buy")?.addEventListener("click", (event) => {
     const btn = event.target.closest("[data-buy]");

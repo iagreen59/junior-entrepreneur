@@ -168,6 +168,28 @@
         </ul>
       </section>
 
+      <section class="panel" id="panel-price" hidden aria-label="Set sell price">
+        <h2 class="section-title">Price</h2>
+        <p class="panel-lead">
+          Set what you charge per cup. Higher prices usually mean fewer buyers.
+        </p>
+        <form id="form-price" class="panel-form panel-form-price">
+          <label class="field">
+            <span class="field-label">Dollars per cup</span>
+            <input
+              type="number"
+              id="sell-price"
+              name="price"
+              min="0"
+              max="100"
+              step="0.25"
+              required
+            />
+          </label>
+          <button type="submit" class="btn btn-panel">Save price</button>
+        </form>
+      </section>
+
       <section class="report" aria-live="polite">
         <h2 class="section-title">Day report</h2>
         <p class="report-body" id="report-body">

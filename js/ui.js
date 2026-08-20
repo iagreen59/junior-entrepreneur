@@ -1,5 +1,6 @@
 /**
  * DOM updates / panel rendering.
+ * Phase 3: price panel + richer day-report display.
  */
 (function (global) {
   function formatMoney(amount) {
@@ -14,6 +15,11 @@
     }
   }
 
+  function fillPriceForm(state) {
+    const input = document.getElementById("sell-price");
+    if (input) input.value = Number(state.price).toFixed(2);
+  }
+
   function readRecipeForm() {
     const draft = {};
     for (const key of global.GameState.INVENTORY_KEYS) {
@@ -21,6 +27,11 @@
       draft[key] = input ? input.value : 0;
     }
     return draft;
+  }
+
+  function readPriceForm() {
+    const input = document.getElementById("sell-price");
+    return input ? input.value : "0";
   }
 
   function readBuyQty(key) {
@@ -42,8 +53,33 @@
   function setPanel(name) {
     const recipePanel = document.getElementById("panel-recipe");
     const buyPanel = document.getElementById("panel-buy");
+    const pricePanel = document.getElementById("panel-price");
     if (recipePanel) recipePanel.hidden = name !== "recipe";
     if (buyPanel) buyPanel.hidden = name !== "buy";
+    if (pricePanel) pricePanel.hidden = name !== "price";
+  }
+
+  function formatDayReport(report) {
+    if (!report) return null;
+    if (report.message) return report.message;
+
+    const cups = report.cupsSold ?? 0;
+    const revenue = report.revenue ?? 0;
+    const costs = report.cogs ?? report.costs ?? 0;
+    const profit = report.profit ?? 0;
+    return (
+      "Sold " +
+      cups +
+      " cup" +
+      (cups === 1 ? "" : "s") +
+      ". Revenue " +
+      formatMoney(revenue) +
+      ", costs " +
+      formatMoney(costs) +
+      ", profit " +
+      formatMoney(profit) +
+      "."
+    );
   }
 
   function render(state) {
@@ -71,15 +107,13 @@
     }
 
     fillRecipeForm(state);
+    fillPriceForm(state);
     renderBuyPrices();
 
     if (reportEl) {
-      if (state.lastDayReport && state.lastDayReport.message) {
-        reportEl.textContent = state.lastDayReport.message;
-      } else {
-        reportEl.textContent =
-          "Open for business. Prep your stand, then sell the day.";
-      }
+      const text = formatDayReport(state.lastDayReport);
+      reportEl.textContent =
+        text || "Open for business. Prep your stand, then sell the day.";
     }
   }
 
@@ -101,6 +135,7 @@
     setReport,
     setPanel,
     readRecipeForm,
+    readPriceForm,
     readBuyQty,
   };
 })(window);
