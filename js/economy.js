@@ -108,10 +108,10 @@
   }
 
   /**
-   * Run one sell day for the active product under today's weather.
-   * Mutates inventory. Caller advances day, cash, and re-rolls weather.
+   * Plan one sell day without mutating inventory.
+   * Phase 8 plays this plan as timed customers, then applySellDay commits it.
    */
-  function runSellDay(state) {
+  function planSellDay(state) {
     const product = activeProduct(state);
     const weather = state.weather || "mild";
     const price = Number(global.GameState.activePrice(state));
@@ -122,8 +122,6 @@
     const revenue = +(cupsSold * (Number.isFinite(price) ? price : 0)).toFixed(2);
     const cogs = costOfGoods(state, cupsSold);
     const profit = +(revenue - cogs).toFixed(2);
-
-    consumeInventory(state, cupsSold);
 
     const soldOut = stockCups > 0 && cupsSold === stockCups && demand > stockCups;
     const drink = global.GameState.productLabel(product);
@@ -185,6 +183,7 @@
       product,
       weather,
       preference,
+      price: Number.isFinite(price) ? price : 0,
       cupsSold,
       demand,
       stockCups,
@@ -195,6 +194,24 @@
       soldOut,
       message,
     };
+  }
+
+  /**
+   * Commit a planned sell day: consume inventory for cupsSold.
+   * Caller updates cash / day / weather from the plan.
+   */
+  function applySellDay(state, plan) {
+    consumeInventory(state, plan.cupsSold);
+    return plan;
+  }
+
+  /**
+   * Instant sell day (plan + apply). Kept for tests / simple callers.
+   */
+  function runSellDay(state) {
+    const plan = planSellDay(state);
+    applySellDay(state, plan);
+    return plan;
   }
 
   function formatMoney(amount) {
@@ -233,6 +250,8 @@
     ELASTICITY,
     maxCupsFromStock,
     demandForPrice,
+    planSellDay,
+    applySellDay,
     runSellDay,
     applyPrice,
   };

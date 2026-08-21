@@ -24,7 +24,7 @@ Future agents: skip anything already checked.
 - [x] Phase 5 — Panel close buttons
 - [x] Phase 6 — Hot cocoa drink
 - [x] Phase 7 — Weather and drink preference
-- [ ] Phase 8 — Animated customer day + summary
+- [x] Phase 8 — Animated customer day + summary
 
 ---
 
@@ -326,7 +326,7 @@ Morning shows today’s weather as discrete **hot**, **mild**, or **cold** (roll
 
 ## Phase 8 — Animated customer day + summary
 
-**Status:** not started
+**Status:** done
 
 ### Goal
 
@@ -354,14 +354,14 @@ Block starting another Sell Day while the animation runs. After ~10s, show a **c
 
 ### Play-test checklist
 
-- [ ] Sell Day lasts about 10 seconds (not instant)
-- [ ] Customers appear over the day; some buy and some leave
-- [ ] Leave shows readable reason icons (price / stock / weather mismatch)
-- [ ] Buy shows like / dislike / happy icons as appropriate
-- [ ] Cannot start another Sell Day while one is running
-- [ ] Day-end customer summary matches buy/leave totals and sits with P&L
-- [ ] Inventory, cash, and day still update correctly after the animation
-- [ ] **Preview:** short video of a full Sell Day plus a screenshot of the customer summary — attach to the PR
+- [x] Sell Day lasts about 10 seconds (not instant)
+- [x] Customers appear over the day; some buy and some leave
+- [x] Leave shows readable reason icons (price / stock / weather mismatch)
+- [x] Buy shows like / dislike / happy icons as appropriate
+- [x] Cannot start another Sell Day while one is running
+- [x] Day-end customer summary matches buy/leave totals and sits with P&L
+- [x] Inventory, cash, and day still update correctly after the animation
+- [x] **Preview:** short video of a full Sell Day plus a screenshot of the customer summary — attach to the PR
 
 ### Out of scope
 

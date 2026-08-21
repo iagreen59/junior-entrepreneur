@@ -505,6 +505,104 @@ body {
   line-height: 1.45;
 }
 
+.customer-day,
+.customer-summary {
+  margin-bottom: 1.25rem;
+  padding: 1rem 1.1rem;
+  background: rgba(255, 255, 255, 0.55);
+  border-radius: 1rem;
+  border: 1px solid var(--stroke);
+}
+
+.customer-day-progress {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+
+.customer-stage {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  min-height: 4.5rem;
+  margin-top: 0.75rem;
+}
+
+.customer-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.55rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--stroke);
+  background: rgba(255, 255, 255, 0.85);
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--ink-soft);
+  animation: customer-pop 0.35s ease-out both;
+}
+
+.customer-chip.is-buy {
+  border-color: rgba(47, 125, 74, 0.35);
+  color: var(--leaf-deep);
+}
+
+.customer-chip.is-leave {
+  border-color: rgba(160, 70, 40, 0.28);
+  color: #7a3b22;
+}
+
+@keyframes customer-pop {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.customer-icon {
+  width: 1.15rem;
+  height: 1.15rem;
+  flex-shrink: 0;
+}
+
+.summary-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
+.summary-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.45rem 0.65rem;
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 0.7rem;
+  border: 1px solid var(--stroke);
+  font-size: 0.9rem;
+}
+
+.summary-list .qty {
+  font-weight: 700;
+  color: var(--leaf-deep);
+}
+
+.btn[disabled],
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
 @media (max-width: 420px) {
   .inventory-list {
     grid-template-columns: 1fr;
@@ -519,6 +617,10 @@ body {
   }
 
   .buy-row {
+    grid-template-columns: 1fr;
+  }
+
+  .summary-list {
     grid-template-columns: 1fr;
   }
 }
