@@ -1,6 +1,8 @@
 /**
  * Boot, wire events, day-loop orchestration.
  * Phase 8: Sell Day plays ~10s of customer events, then commits P&L.
+ * Phase 11: four-item product picker + daily menuOffered toggles.
+ * Sell Day remains single-product (activeProduct) until Phase 12.
  */
 (function () {
   let state = GameState.load();
@@ -16,6 +18,19 @@
     const result = GameState.setActiveProduct(state, product);
     if (!result.ok) {
       GameUI.setReport(result.message, { flash: true });
+      return;
+    }
+    GameState.save(state);
+    refresh();
+    GameUI.setReport(result.message, { flash: true });
+  }
+
+  function onMenuToggle(product, offered) {
+    if (selling) return;
+    const result = GameState.setMenuOffered(state, product, offered);
+    if (!result.ok) {
+      GameUI.setReport(result.message, { flash: true });
+      refresh();
       return;
     }
     GameState.save(state);
@@ -267,7 +282,7 @@
     }
 
     const confirmed = window.confirm(
-      "Start a new game? This clears your saved day, cash, stand, inventory, recipes, prices, and weather."
+      "Start a new game? This clears your saved day, cash, stand, inventory, recipes, prices, menu, and weather."
     );
     if (!confirmed) return;
 
@@ -294,16 +309,17 @@
     );
   }
 
-  document
-    .getElementById("btn-product-juice")
-    ?.addEventListener("click", function () {
-      onProductSelect("juice");
+  document.querySelectorAll("[data-product]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      onProductSelect(btn.getAttribute("data-product"));
     });
-  document
-    .getElementById("btn-product-cocoa")
-    ?.addEventListener("click", function () {
-      onProductSelect("cocoa");
+  });
+
+  document.querySelectorAll("[data-menu-product]").forEach(function (input) {
+    input.addEventListener("change", function () {
+      onMenuToggle(input.getAttribute("data-menu-product"), input.checked);
     });
+  });
 
   document.getElementById("btn-recipe")?.addEventListener("click", onRecipeOpen);
   document.getElementById("btn-buy")?.addEventListener("click", onBuyOpen);

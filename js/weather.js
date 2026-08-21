@@ -1,20 +1,21 @@
 /**
- * Typed daily weather + drink preference helpers.
+ * Typed daily weather + product preference helpers.
  * Phase 7: hot / mild / cold replace anonymous weather noise.
+ * Phase 11: food prefs — burger favored on hot; soup favored on cold.
  *
  * Preference (applied in GameEconomy demand):
- *   hot  → favors juice (cold drink), reduces cocoa
- *   cold → favors cocoa (hot drink), reduces juice
- *   mild → roughly even (factor 1.0 for both)
+ *   hot  → favors juice + burger (cold drink / hot-day food), reduces cocoa + soup
+ *   cold → favors cocoa + soup (hot drink / cold-day food), reduces juice + burger
+ *   mild → roughly even (factor 1.0 for all four)
  */
 (function (global) {
   const TYPES = ["hot", "mild", "cold"];
 
-  /** Demand multiplier when the active drink matches the weather. */
+  /** Demand multiplier when the active product matches the weather. */
   const MATCH_FACTOR = 1.35;
-  /** Demand multiplier when the active drink mismatches the weather. */
+  /** Demand multiplier when the active product mismatches the weather. */
   const MISMATCH_FACTOR = 0.65;
-  /** Mild days stay even for juice and cocoa. */
+  /** Mild days stay even for all products. */
   const MILD_FACTOR = 1.0;
 
   function isType(value) {
@@ -29,12 +30,12 @@
 
   function tip(weather) {
     if (weather === "hot") {
-      return "Hot day — shoppers want cold juice more than cocoa.";
+      return "Hot day — shoppers want juice and burgers more than cocoa or soup.";
     }
     if (weather === "cold") {
-      return "Cold day — shoppers want hot cocoa more than juice.";
+      return "Cold day — shoppers want hot cocoa and soup more than juice or burgers.";
     }
-    return "Mild day — juice and cocoa draw about the same interest.";
+    return "Mild day — juice, cocoa, burgers, and soup draw about the same interest.";
   }
 
   /**
@@ -53,14 +54,26 @@
   }
 
   /**
-   * Whether the product is the weather-favored drink.
-   * Juice = cold drink; cocoa = hot drink.
+   * Whether the product is weather-favored.
+   * Hot: juice + burger. Cold: cocoa + soup. Mild: neither (null).
    */
   function favorsProduct(weather, product) {
-    const drink = product === "cocoa" ? "cocoa" : "juice";
-    if (weather === "hot") return drink === "juice";
-    if (weather === "cold") return drink === "cocoa";
-    return null; // mild — neither favored
+    const item =
+      product === "cocoa" ||
+      product === "burger" ||
+      product === "soup"
+        ? product
+        : "juice";
+
+    if (weather === "hot") {
+      if (item === "juice" || item === "burger") return true;
+      return false;
+    }
+    if (weather === "cold") {
+      if (item === "cocoa" || item === "soup") return true;
+      return false;
+    }
+    return null; // mild — none favored
   }
 
   /**

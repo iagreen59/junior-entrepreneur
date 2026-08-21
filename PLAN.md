@@ -72,7 +72,7 @@ Future agents: skip anything already checked.
 - [x] Phase 8 — Animated customer day + summary
 - [x] Phase 9 — Starting cash, first stand, hideable instructions
 - [x] Phase 10 — Hot/cold cups + recipe yield and COGS
-- [ ] Phase 11 — Four-item menu + daily offers + per-item prices
+- [x] Phase 11 — Four-item menu + daily offers + per-item prices
 - [ ] Phase 12 — Multi-item Sell Day + purchase feedback icons
 - [ ] Phase 13 — Multi-stand unlock, selector, map
 - [ ] Phase 14 — Employees for multi-stand
@@ -502,7 +502,7 @@ Replace shared `cups` with **coldCups** (juice) and **hotCups** (cocoa). Recipe 
 
 ## Phase 11 — Four-item menu + daily offer toggles + per-item prices
 
-**Status:** not started — start only after Phase 10 is checked done
+**Status:** done
 
 ### Goal
 
@@ -526,12 +526,12 @@ Add **burger** and **soup** with the locked unique ingredient lists. Player enab
 
 ### Play-test checklist
 
-- [ ] All four recipes editable with unique ingredients
-- [ ] Daily menu toggles persist
-- [ ] Player can offer a subset (e.g. no soup on a hot day)
-- [ ] Independent prices per item persist
-- [ ] Buy UI covers all new ingredients
-- [ ] **Preview:** screenshots of menu toggles, food recipes, and buy list — attach to the PR
+- [x] All four recipes editable with unique ingredients
+- [x] Daily menu toggles persist
+- [x] Player can offer a subset (e.g. no soup on a hot day)
+- [x] Independent prices per item persist
+- [x] Buy UI covers all new ingredients
+- [x] **Preview:** screenshots of menu toggles, food recipes, and buy list — attach to the PR
 
 ### Out of scope
 

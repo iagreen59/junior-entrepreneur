@@ -2,6 +2,7 @@
  * Product recipe helpers + validation.
  * Phase 6: juice and cocoa recipes.
  * Phase 10: juice uses coldCups; cocoa uses hotCups (no shared cups).
+ * Phase 11: burger and soup with unique ingredients (no cups).
  */
 (function (global) {
   function describe(product, recipe) {
@@ -11,8 +12,12 @@
     const parts = keys.map(function (key) {
       return recipe[key] + " " + labels[key].toLowerCase();
     });
+    const unit =
+      product === "burger" || product === "soup" ? "serving" : "cup";
     return (
-      "Per cup of " +
+      "Per " +
+      unit +
+      " of " +
       global.GameState.productLabel(product) +
       ": " +
       parts.join(", ") +
@@ -39,21 +44,44 @@
     }
 
     const cupKey = global.GameState.cupKeyFor(product);
-    if (recipe[cupKey] < 1) {
-      return {
-        ok: false,
-        message:
-          product === "cocoa"
-            ? "Each drink needs at least 1 hot cup."
-            : "Each drink needs at least 1 cold cup.",
-      };
+    if (cupKey) {
+      if (recipe[cupKey] < 1) {
+        return {
+          ok: false,
+          message:
+            product === "cocoa"
+              ? "Each drink needs at least 1 hot cup."
+              : "Each drink needs at least 1 cold cup.",
+        };
+      }
+    } else {
+      // Food items: require at least one ingredient so a serving is defined.
+      let anyPositive = false;
+      for (const key of keys) {
+        if (recipe[key] >= 1) {
+          anyPositive = true;
+          break;
+        }
+      }
+      if (!anyPositive) {
+        return {
+          ok: false,
+          message:
+            "Each " +
+            global.GameState.productLabel(product) +
+            " serving needs at least one ingredient.",
+        };
+      }
     }
 
     return { ok: true, recipe };
   }
 
   function apply(state, draft) {
-    const product = state.activeProduct === "cocoa" ? "cocoa" : "juice";
+    const product = global.GameState.normalizeProduct(
+      state.activeProduct,
+      "juice"
+    );
     const parsed = parseDraft(product, draft);
     if (!parsed.ok) return parsed;
     state.recipes[product] = parsed.recipe;

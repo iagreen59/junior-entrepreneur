@@ -3,15 +3,23 @@
  * Phase 7: weather status + preference tips for juice vs cocoa.
  * Phase 9: stand ownership gate + hideable instructions panel.
  * Phase 10: coldCups / hotCups fields; recipe yield + COGS display.
+ * Phase 11: four products + daily menuOffered toggles; food recipes/prices.
  */
 (function (global) {
   const MORNING_COPY =
-    "Good morning. Buy your stand if needed, check the weather, pick a drink → Recipe → Buy → Price → Sell Day.";
+    "Good morning. Buy your stand if needed, check the weather, set today’s menu, pick an item → Recipe → Buy → Price → Sell Day.";
 
   const PANEL_IDS = {
     recipe: "panel-recipe",
     buy: "panel-buy",
     price: "panel-price",
+  };
+
+  const PRODUCT_TITLES = {
+    juice: "Juice",
+    cocoa: "Hot cocoa",
+    burger: "Burger",
+    soup: "Soup",
   };
 
   /** Latest state from render() — used for live recipe yield/COGS updates. */
@@ -23,7 +31,10 @@
   }
 
   function activeProduct(state) {
-    return state.activeProduct === "cocoa" ? "cocoa" : "juice";
+    return global.GameState.normalizeProduct(
+      state && state.activeProduct,
+      "juice"
+    );
   }
 
   function fillRecipeForm(state) {
@@ -78,7 +89,7 @@
       product,
       recipe
     );
-    const drink = global.GameState.productLabel(product);
+    const item = global.GameState.productLabel(product);
 
     const yieldEl = document.getElementById("recipe-yield");
     const cogsEl = document.getElementById("recipe-cogs");
@@ -89,12 +100,12 @@
         " serving" +
         (servings === 1 ? "" : "s") +
         " of " +
-        drink +
+        item +
         " from current stock.";
     }
     if (cogsEl) {
       cogsEl.textContent =
-        "COGS per " + drink + ": " + formatMoney(cogs) + ".";
+        "COGS per " + item + ": " + formatMoney(cogs) + ".";
     }
   }
 
@@ -240,6 +251,32 @@
     }
   }
 
+  function renderMenuToggles(state) {
+    const offered = state.menuOffered || global.GameState.defaultMenuOffered();
+    const on = [];
+    for (const product of global.GameState.PRODUCTS) {
+      const input = document.getElementById("menu-offer-" + product);
+      if (input) {
+        input.checked = !!offered[product];
+      }
+      if (offered[product]) {
+        on.push(PRODUCT_TITLES[product] || product);
+      }
+    }
+    const hint = document.getElementById("menu-hint");
+    if (hint) {
+      if (on.length === 0) {
+        hint.textContent =
+          "No items on today’s menu yet — toggle at least one before multi-item Sell Day arrives.";
+      } else {
+        hint.textContent =
+          "Offered today: " +
+          on.join(", ") +
+          ". Sell Day still sells the Edit / sell item for now.";
+      }
+    }
+  }
+
   function renderProductPicker(state) {
     const product = activeProduct(state);
     const weather = state.weather || "mild";
@@ -254,7 +291,7 @@
       const favor = global.GameWeather
         ? global.GameWeather.favorsProduct(weather, product)
         : null;
-      let fit = "Mild weather — either drink is fine.";
+      let fit = "Mild weather — any item is fine.";
       if (favor === true) {
         fit =
           global.GameWeather.label(weather) +
@@ -268,8 +305,12 @@
           global.GameState.productLabel(product) +
           ".";
       }
+      const onMenu = global.GameState.isMenuOffered(state, product);
       hint.textContent =
-        "Selling " + global.GameState.productLabel(product) + ". " + fit;
+        "Editing / selling " +
+        global.GameState.productLabel(product) +
+        (onMenu ? " (on today’s menu). " : " (off today’s menu). ") +
+        fit;
     }
 
     document.querySelectorAll("[data-recipe-product]").forEach(function (block) {
@@ -278,29 +319,36 @@
 
     const recipeTitle = document.getElementById("recipe-panel-title");
     const recipeLead = document.getElementById("recipe-panel-lead");
-    const drink = global.GameState.productLabel(product);
+    const item = global.GameState.productLabel(product);
+    const title = PRODUCT_TITLES[product] || "Item";
     if (recipeTitle) {
-      recipeTitle.textContent =
-        product === "cocoa" ? "Hot cocoa recipe" : "Juice recipe";
+      recipeTitle.textContent = title + " recipe";
     }
     if (recipeLead) {
       recipeLead.textContent =
-        "Units of each ingredient used per cup of " +
-        drink +
-        ". Juice uses cold cups; cocoa uses hot cups.";
+        "Units of each ingredient used per serving of " +
+        item +
+        ". Ingredients are unique to this product.";
     }
 
     const priceTitle = document.getElementById("price-panel-title");
     const priceLead = document.getElementById("price-panel-lead");
+    const priceLabel = document.getElementById("sell-price-label");
+    const unit =
+      product === "burger" || product === "soup" ? "serving" : "cup";
     if (priceTitle) {
-      priceTitle.textContent =
-        product === "cocoa" ? "Hot cocoa price" : "Juice price";
+      priceTitle.textContent = title + " price";
     }
     if (priceLead) {
       priceLead.textContent =
-        "Set what you charge per cup of " +
-        drink +
-        ". Higher prices usually mean fewer buyers. Juice and cocoa prices are saved separately.";
+        "Set what you charge per " +
+        unit +
+        " of " +
+        item +
+        ". Each menu item has its own saved price.";
+    }
+    if (priceLabel) {
+      priceLabel.textContent = "Dollars per " + unit;
     }
   }
 
@@ -340,7 +388,7 @@
     return (
       "Sold " +
       cups +
-      " cup" +
+      " serving" +
       (cups === 1 ? "" : "s") +
       ". Revenue " +
       formatMoney(revenue) +
@@ -409,23 +457,31 @@
     }
 
     const product = activeProduct(state);
-    const drink = global.GameState.productLabel(product);
+    const item = global.GameState.productLabel(product);
     const weather = state.weather || "mild";
     const stockCups = global.GameEconomy.maxCupsFromStock(state, product);
     const price = Number(global.GameState.activePrice(state));
     const favor = global.GameWeather
       ? global.GameWeather.favorsProduct(weather, product)
       : null;
+    const unit =
+      product === "burger" || product === "soup"
+        ? stockCups === 1
+          ? "serving"
+          : "servings"
+        : stockCups === 1
+          ? "cup"
+          : "cups";
 
     if (stockCups <= 0) {
       return (
         "No " +
-        drink +
-        " cups ready — buy ingredients that match that recipe first."
+        item +
+        " ready — buy ingredients that match that recipe first."
       );
     }
     if (!Number.isFinite(price) || price <= 0) {
-      return "Set a sell price for " + drink + " before you open.";
+      return "Set a sell price for " + item + " before you open.";
     }
 
     let fit = "";
@@ -436,9 +492,9 @@
       "Ready for about " +
       stockCups +
       " " +
-      drink +
-      " cup" +
-      (stockCups === 1 ? "" : "s") +
+      item +
+      " " +
+      unit +
       " at " +
       formatMoney(price) +
       "." +
@@ -487,6 +543,7 @@
     renderWeather(state);
     renderStand(state);
     renderInstructions();
+    renderMenuToggles(state);
     renderProductPicker(state);
     fillRecipeForm(state);
     fillPriceForm(state);
@@ -540,16 +597,13 @@
     }
 
     if (kind === "price") {
-      // Dollar with slash
       path("M12 3v18");
       path("M16 8a3 3 0 0 0-3-2h-2a3 3 0 0 0 0 6h2a3 3 0 0 1 0 6h-2a3 3 0 0 1-3-2");
       path("M4 4l16 16");
     } else if (kind === "stock") {
-      // Empty cup outline
       path("M6 8h12l-1 11a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L6 8z");
       path("M8 8V6a4 4 0 0 1 8 0v2");
     } else if (kind === "weather") {
-      // Cloud with sun rays crossed feel
       path("M7 16a4 4 0 0 1 .5-7.9A5 5 0 0 1 17 10a3.5 3.5 0 0 1 .2 7H7z");
       path("M4 4l16 16");
     } else if (kind === "happy") {
@@ -676,7 +730,6 @@
     setSellDayLocked(false, state);
   }
 
-  // Live-update recipe yield / COGS while editing amounts (no main.js change).
   const recipeForm = document.getElementById("form-recipe");
   if (recipeForm) {
     recipeForm.addEventListener("input", function () {
@@ -702,6 +755,7 @@
     clearCart,
     renderCart,
     renderRecipeStats,
+    renderMenuToggles,
     morningHint,
     renderStand,
     renderInstructions,
