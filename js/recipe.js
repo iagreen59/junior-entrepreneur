@@ -1,30 +1,33 @@
 /**
- * Juice recipe helpers + validation.
- * Phase 2: edit fruit / sugar / ice / cups (units per cup).
+ * Product recipe helpers + validation.
+ * Phase 6: juice (fruit/sugar/ice/cups) and cocoa
+ * (chocolate/milk/whippedCream/chocolateSprinkles/cups) recipes.
  */
 (function (global) {
-  function describe(recipe) {
+  function describe(product, recipe) {
     if (!recipe) return "No recipe set yet.";
+    const keys = global.GameState.recipeKeysFor(product);
+    const labels = global.GameState.inventoryLabels();
+    const parts = keys.map(function (key) {
+      return recipe[key] + " " + labels[key].toLowerCase();
+    });
     return (
-      "Per cup: " +
-      recipe.fruit +
-      " fruit, " +
-      recipe.sugar +
-      " sugar, " +
-      recipe.ice +
-      " ice, " +
-      recipe.cups +
-      " cup."
+      "Per cup of " +
+      global.GameState.productLabel(product) +
+      ": " +
+      parts.join(", ") +
+      "."
     );
   }
 
   /**
-   * Normalize recipe draft from form inputs.
+   * Normalize recipe draft from form inputs for a product.
    * Returns { ok: true, recipe } or { ok: false, message }.
    */
-  function parseDraft(raw) {
+  function parseDraft(product, raw) {
+    const keys = global.GameState.recipeKeysFor(product);
     const recipe = {};
-    for (const key of global.GameState.INVENTORY_KEYS) {
+    for (const key of keys) {
       const value = Number(raw && raw[key]);
       if (!Number.isFinite(value) || value < 0) {
         return {
@@ -32,7 +35,6 @@
           message: "Recipe amounts must be zero or greater.",
         };
       }
-      // Keep whole units for inventory math later (Phase 3).
       recipe[key] = Math.floor(value);
     }
 
@@ -47,13 +49,15 @@
   }
 
   function apply(state, draft) {
-    const parsed = parseDraft(draft);
+    const product = state.activeProduct === "cocoa" ? "cocoa" : "juice";
+    const parsed = parseDraft(product, draft);
     if (!parsed.ok) return parsed;
-    state.recipe = parsed.recipe;
+    state.recipes[product] = parsed.recipe;
     return {
       ok: true,
+      product,
       recipe: parsed.recipe,
-      message: "Recipe saved. " + describe(parsed.recipe),
+      message: "Recipe saved. " + describe(product, parsed.recipe),
     };
   }
 

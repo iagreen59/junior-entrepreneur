@@ -22,9 +22,9 @@ Future agents: skip anything already checked.
 - [x] Phase 3 — Price + real daily sales
 - [x] Phase 4 — Polish (validation, New Game, light balance)
 - [x] Phase 5 — Panel close buttons
-- [ ] Phase 6 — Hot cocoa drink
-- [ ] Phase 7 — Weather and drink preference
-- [ ] Phase 8 — Animated customer day + summary
+- [x] Phase 6 — Hot cocoa drink
+- [x] Phase 7 — Weather and drink preference
+- [x] Phase 8 — Animated customer day + summary
 
 ---
 
@@ -240,7 +240,7 @@ Every open menu (Recipe, Buy, Price) has an obvious **Close** control that hides
 
 ## Phase 6 — Hot cocoa drink
 
-**Status:** not started
+**Status:** done
 
 ### Goal
 
@@ -267,14 +267,14 @@ Player can sell **juice** (cold) or **hot cocoa** (hot). Cocoa ingredients: choc
 
 ### Play-test checklist
 
-- [ ] Player can switch between juice and hot cocoa
-- [ ] Cocoa recipe edits chocolate, milk, whipped cream, chocolate sprinkles, cups and saves
-- [ ] Buy UI purchases new cocoa ingredients; cash and inventory update
-- [ ] Player can set a cocoa sell price (and juice price remains independent)
-- [ ] Sell Day consumes inventory for the product being sold
-- [ ] Refresh keeps both products’ recipes, prices, and inventory
-- [ ] Old juice-only saves still load (migrate/normalize)
-- [ ] **Preview:** screenshots of cocoa recipe panel and buy rows for new ingredients — attach to the PR
+- [x] Player can switch between juice and hot cocoa
+- [x] Cocoa recipe edits chocolate, milk, whipped cream, chocolate sprinkles, cups and saves
+- [x] Buy UI purchases new cocoa ingredients; cash and inventory update
+- [x] Player can set a cocoa sell price (and juice price remains independent)
+- [x] Sell Day consumes inventory for the product being sold
+- [x] Refresh keeps both products’ recipes, prices, and inventory
+- [x] Old juice-only saves still load (migrate/normalize)
+- [x] **Preview:** screenshots of cocoa recipe panel and buy rows for new ingredients — attach to the PR
 
 ### Out of scope
 
@@ -287,7 +287,7 @@ Player can sell **juice** (cold) or **hot cocoa** (hot). Cocoa ingredients: choc
 
 ## Phase 7 — Weather and drink preference
 
-**Status:** not started
+**Status:** done
 
 ### Goal
 
@@ -307,14 +307,14 @@ Morning shows today’s weather as discrete **hot**, **mild**, or **cold** (roll
 
 ### Play-test checklist
 
-- [ ] Status / morning UI shows today’s weather (hot / mild / cold)
-- [ ] Weather re-rolls for each new day (after Sell Day advances the day)
-- [ ] Hot day favors juice sales vs cocoa when both are stocked
-- [ ] Cold day favors cocoa sales vs juice when both are stocked
-- [ ] Mild day is roughly balanced between juice and cocoa
-- [ ] Formula is documented in code comments
-- [ ] Refresh keeps or correctly re-derives the current day’s weather as designed
-- [ ] **Preview:** screenshots of hot and cold weather in the status UI — attach to the PR
+- [x] Status / morning UI shows today’s weather (hot / mild / cold)
+- [x] Weather re-rolls for each new day (after Sell Day advances the day)
+- [x] Hot day favors juice sales vs cocoa when both are stocked
+- [x] Cold day favors cocoa sales vs juice when both are stocked
+- [x] Mild day is roughly balanced between juice and cocoa
+- [x] Formula is documented in code comments
+- [x] Refresh keeps or correctly re-derives the current day’s weather as designed
+- [x] **Preview:** screenshots of hot and cold weather in the status UI — attach to the PR
 
 ### Out of scope
 
@@ -326,7 +326,7 @@ Morning shows today’s weather as discrete **hot**, **mild**, or **cold** (roll
 
 ## Phase 8 — Animated customer day + summary
 
-**Status:** not started
+**Status:** done
 
 ### Goal
 
@@ -354,14 +354,14 @@ Block starting another Sell Day while the animation runs. After ~10s, show a **c
 
 ### Play-test checklist
 
-- [ ] Sell Day lasts about 10 seconds (not instant)
-- [ ] Customers appear over the day; some buy and some leave
-- [ ] Leave shows readable reason icons (price / stock / weather mismatch)
-- [ ] Buy shows like / dislike / happy icons as appropriate
-- [ ] Cannot start another Sell Day while one is running
-- [ ] Day-end customer summary matches buy/leave totals and sits with P&L
-- [ ] Inventory, cash, and day still update correctly after the animation
-- [ ] **Preview:** short video of a full Sell Day plus a screenshot of the customer summary — attach to the PR
+- [x] Sell Day lasts about 10 seconds (not instant)
+- [x] Customers appear over the day; some buy and some leave
+- [x] Leave shows readable reason icons (price / stock / weather mismatch)
+- [x] Buy shows like / dislike / happy icons as appropriate
+- [x] Cannot start another Sell Day while one is running
+- [x] Day-end customer summary matches buy/leave totals and sits with P&L
+- [x] Inventory, cash, and day still update correctly after the animation
+- [x] **Preview:** short video of a full Sell Day plus a screenshot of the customer summary — attach to the PR
 
 ### Out of scope
 

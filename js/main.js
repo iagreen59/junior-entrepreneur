@@ -1,20 +1,41 @@
 /**
  * Boot, wire events, day-loop orchestration.
- * Phase 5: Close / Escape dismiss panels without saving drafts.
+ * Phase 8: Sell Day plays ~10s of customer events, then commits P&L.
  */
 (function () {
   let state = GameState.load();
+  let selling = false;
+  let playback = null;
 
   function refresh() {
     GameUI.render(state);
   }
 
+  function onProductSelect(product) {
+    if (selling) return;
+    const result = GameState.setActiveProduct(state, product);
+    if (!result.ok) {
+      GameUI.setReport(result.message, { flash: true });
+      return;
+    }
+    GameState.save(state);
+    refresh();
+    GameUI.setReport(result.message, { flash: true });
+  }
+
   function onRecipeOpen() {
+    if (selling) return;
     GameUI.setPanel("recipe");
-    GameUI.setReport("Edit units per cup, then save your mix.", { flash: true });
+    GameUI.setReport(
+      "Edit the " +
+        GameState.productLabel(state.activeProduct) +
+        " recipe, then save.",
+      { flash: true }
+    );
   }
 
   function onBuyOpen() {
+    if (selling) return;
     GameUI.setPanel("buy");
     GameUI.setReport("Buy supplies. Cash drops; inventory goes up.", {
       flash: true,
@@ -22,14 +43,20 @@
   }
 
   function onPriceOpen() {
+    if (selling) return;
     GameUI.setPanel("price");
     GameUI.setReport(
-      "Set your cup price. Current: " + GameUI.formatMoney(state.price) + ".",
+      "Set " +
+        GameState.productLabel(state.activeProduct) +
+        " price. Current: " +
+        GameUI.formatMoney(GameState.activePrice(state)) +
+        ".",
       { flash: true }
     );
   }
 
   function onPanelClose() {
+    if (selling) return;
     const closed = GameUI.closePanel(state);
     if (!closed) return;
     GameUI.setReport("Panel closed. Nothing new was saved.", { flash: true });
@@ -37,7 +64,8 @@
 
   function onRecipeSave(event) {
     event.preventDefault();
-    const result = GameRecipe.apply(state, GameUI.readRecipeForm());
+    if (selling) return;
+    const result = GameRecipe.apply(state, GameUI.readRecipeForm(state));
     if (!result.ok) {
       GameUI.setReport(result.message, { flash: true });
       return;
@@ -49,6 +77,7 @@
 
   function onPriceSave(event) {
     event.preventDefault();
+    if (selling) return;
     const result = GameEconomy.applyPrice(state, GameUI.readPriceForm());
     if (!result.ok) {
       GameUI.setReport(result.message, { flash: true });
@@ -60,6 +89,7 @@
   }
 
   function onBuy(key) {
+    if (selling) return;
     const result = GameState.buyIngredient(state, key, GameUI.readBuyQty(key));
     if (!result.ok) {
       GameUI.setReport(result.message, { flash: true });
@@ -70,23 +100,22 @@
     GameUI.setReport(result.message, { flash: true });
   }
 
-  /**
-   * Block Sell Day when the stand cannot make any cups (empty / mismatched stock)
-   * or when the sell price is not usable. Explains what to fix; does not burn a day.
-   */
   function validateSellDay(current) {
-    const price = Number(current.price);
+    const drink = GameState.productLabel(current.activeProduct);
+    const price = Number(GameState.activePrice(current));
     if (!Number.isFinite(price) || price < 0) {
       return {
         ok: false,
-        message: "Set a valid sell price before Sell Day.",
+        message: "Set a valid " + drink + " sell price before Sell Day.",
       };
     }
     if (price === 0) {
       return {
         ok: false,
         message:
-          "A $0.00 price will not earn cash. Set a price above ingredient cost first.",
+          "A $0.00 " +
+          drink +
+          " price will not earn cash. Set a price above ingredient cost first.",
       };
     }
 
@@ -95,14 +124,44 @@
       return {
         ok: false,
         message:
-          "No stock for today's recipe — buy ingredients (or fix the recipe) before Sell Day.",
+          "No stock for today's " +
+          drink +
+          " recipe — buy ingredients (or fix the recipe) before Sell Day.",
       };
     }
 
     return { ok: true, stockCups };
   }
 
+  function finishSellDay(summary, plan) {
+    GameEconomy.applySellDay(state, plan);
+    state.cash = plan.cashAfter;
+    state.day += 1;
+    state.weather = GameWeather.roll();
+    state.lastDayReport = {
+      product: plan.product,
+      weather: plan.weather,
+      preference: plan.preference,
+      cupsSold: plan.cupsSold,
+      demand: plan.demand,
+      stockCups: plan.stockCups,
+      revenue: plan.revenue,
+      cogs: plan.cogs,
+      profit: plan.profit,
+      soldOut: plan.soldOut,
+      message: plan.message,
+      customers: summary,
+    };
+    GameState.save(state);
+    selling = false;
+    playback = null;
+    refresh();
+    GameUI.showCustomerSummary(summary, plan);
+  }
+
   function onSellDay() {
+    if (selling) return;
+
     const check = validateSellDay(state);
     if (!check.ok) {
       GameUI.setPanel(null);
@@ -110,27 +169,47 @@
       return;
     }
 
-    const result = GameEconomy.runSellDay(state);
-    state.cash = result.cashAfter;
-    state.day += 1;
-    state.lastDayReport = {
-      cupsSold: result.cupsSold,
-      demand: result.demand,
-      stockCups: result.stockCups,
-      revenue: result.revenue,
-      cogs: result.cogs,
-      profit: result.profit,
-      soldOut: result.soldOut,
-      message: result.message,
-    };
-    GameState.save(state);
-    refresh();
-    GameUI.setReport(result.message, { flash: true });
+    const plan = GameEconomy.planSellDay(state);
+    const timeline = GameCustomers.buildTimeline(plan, state);
+
+    // Guard: visual buys must match economy cups sold.
+    if (timeline.summary.bought !== plan.cupsSold) {
+      GameUI.setReport(
+        "Could not build a matching customer day. Try Sell Day again.",
+        { flash: true }
+      );
+      return;
+    }
+
+    selling = true;
+    GameUI.setPanel(null);
+    GameUI.hideCustomerDay();
+    GameUI.startCustomerDay();
+    GameUI.setReport(
+      "Sell Day is under way — watch the customers for about 10 seconds.",
+      { flash: true }
+    );
+
+    playback = GameCustomers.play(timeline, {
+      onEvent: function (event) {
+        GameUI.showCustomerEvent(event);
+      },
+      onDone: function (summary, donePlan) {
+        finishSellDay(summary, donePlan);
+      },
+    });
   }
 
   function onNewGame() {
+    if (selling) {
+      if (playback) playback.cancel();
+      selling = false;
+      playback = null;
+      GameUI.hideCustomerDay();
+    }
+
     const confirmed = window.confirm(
-      "Start a new game? This clears your saved day, cash, inventory, recipe, and price."
+      "Start a new game? This clears your saved day, cash, inventory, recipes, prices, and weather."
     );
     if (!confirmed) return;
 
@@ -143,12 +222,27 @@
     state = GameState.defaultState();
     GameState.save(state);
     GameUI.setPanel(null);
+    GameUI.hideCustomerDay();
     refresh();
     GameUI.setReport(
-      "New game started. Day 1, $20.00 cash. " + GameUI.MORNING_COPY,
+      "New game started. Day 1, $20.00 cash. Weather: " +
+        GameWeather.label(state.weather) +
+        ". " +
+        GameUI.MORNING_COPY,
       { flash: true }
     );
   }
+
+  document
+    .getElementById("btn-product-juice")
+    ?.addEventListener("click", function () {
+      onProductSelect("juice");
+    });
+  document
+    .getElementById("btn-product-cocoa")
+    ?.addEventListener("click", function () {
+      onProductSelect("cocoa");
+    });
 
   document.getElementById("btn-recipe")?.addEventListener("click", onRecipeOpen);
   document.getElementById("btn-buy")?.addEventListener("click", onBuyOpen);
@@ -176,6 +270,7 @@
 
   document.addEventListener("keydown", (event) => {
     if (event.key !== "Escape") return;
+    if (selling) return;
     if (!GameUI.getOpenPanel()) return;
     event.preventDefault();
     onPanelClose();

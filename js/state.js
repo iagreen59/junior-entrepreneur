@@ -1,68 +1,178 @@
 /**
  * Game state + localStorage persistence.
- * Phase 2: day, cash, inventory, and recipe persist; price reserved for Phase 3.
+ * Phase 6: dual products (juice | cocoa), shared inventory bag, dual recipes/prices.
+ * Migrates Phase 1–5 juice-only saves (legacy `recipe` / `price` → recipes.juice / prices.juice).
  *
- * Buy unit prices (cash per inventory unit) — schema note for Phase 2:
- * not stored in the save blob; constants live here so Buy UI / helpers share one source.
+ * Buy unit prices (cash per inventory unit) — not stored in the save blob;
+ * constants live here so Buy UI / helpers share one source.
  */
 (function (global) {
   const STORAGE_KEY = "junior-entrepreneur-v1";
 
-  const INVENTORY_KEYS = ["fruit", "sugar", "ice", "cups"];
+  const PRODUCTS = ["juice", "cocoa"];
+
+  /** Juice recipe keys (units per cup). */
+  const JUICE_KEYS = ["fruit", "sugar", "ice", "cups"];
+
+  /** Cocoa recipe keys (units per cup). Shared cups with juice. */
+  const COCOA_KEYS = [
+    "chocolate",
+    "milk",
+    "whippedCream",
+    "chocolateSprinkles",
+    "cups",
+  ];
+
+  /** Full shared inventory bag (all buyable ingredients). */
+  const INVENTORY_KEYS = [
+    "fruit",
+    "sugar",
+    "ice",
+    "chocolate",
+    "milk",
+    "whippedCream",
+    "chocolateSprinkles",
+    "cups",
+  ];
 
   /** Cash cost per inventory unit when buying supplies. */
   const UNIT_PRICES = {
     fruit: 0.5,
     sugar: 0.25,
     ice: 0.1,
+    chocolate: 0.4,
+    milk: 0.3,
+    whippedCream: 0.25,
+    chocolateSprinkles: 0.15,
     cups: 0.15,
   };
 
-  function defaultState() {
+  function defaultJuiceRecipe() {
+    return { fruit: 2, sugar: 1, ice: 1, cups: 1 };
+  }
+
+  function defaultCocoaRecipe() {
+    return {
+      chocolate: 2,
+      milk: 1,
+      whippedCream: 1,
+      chocolateSprinkles: 1,
+      cups: 1,
+    };
+  }
+
+  function emptyInventory() {
+    const inventory = {};
+    for (const key of INVENTORY_KEYS) inventory[key] = 0;
+    return inventory;
+  }
+
+  function defaultState(randomFn) {
     return {
       day: 1,
       cash: 20,
-      inventory: {
-        fruit: 0,
-        sugar: 0,
-        ice: 0,
-        cups: 0,
+      activeProduct: "juice",
+      weather: global.GameWeather
+        ? global.GameWeather.roll(randomFn)
+        : "mild",
+      inventory: emptyInventory(),
+      recipes: {
+        juice: defaultJuiceRecipe(),
+        cocoa: defaultCocoaRecipe(),
       },
-      recipe: {
-        fruit: 2,
-        sugar: 1,
-        ice: 1,
-        cups: 1,
+      prices: {
+        juice: 1.5,
+        cocoa: 2.0,
       },
-      price: 1.5,
       lastDayReport: null,
     };
   }
 
+  function productLabel(product) {
+    if (product === "cocoa") return "hot cocoa";
+    return "juice";
+  }
+
+  function recipeKeysFor(product) {
+    return product === "cocoa" ? COCOA_KEYS.slice() : JUICE_KEYS.slice();
+  }
+
+  function normalizeRecipe(product, rawRecipe, fallback) {
+    const keys = recipeKeysFor(product);
+    const recipe = { ...fallback };
+    if (!rawRecipe || typeof rawRecipe !== "object") return recipe;
+    for (const key of keys) {
+      const value = rawRecipe[key];
+      if (Number.isFinite(value) && value >= 0) recipe[key] = value;
+    }
+    return recipe;
+  }
+
+  function normalizePrice(raw, fallback) {
+    return Number.isFinite(raw) && raw >= 0 ? raw : fallback;
+  }
+
+  /**
+   * Normalize any save blob (including pre–Phase 6 juice-only shapes).
+   * Legacy: top-level `recipe` / `price` become recipes.juice / prices.juice.
+   */
   function normalize(raw) {
     const base = defaultState();
     if (!raw || typeof raw !== "object") return base;
 
-    const inventory = { ...base.inventory };
+    const inventory = emptyInventory();
+    const rawInv = raw.inventory && typeof raw.inventory === "object" ? raw.inventory : {};
     for (const key of INVENTORY_KEYS) {
-      const value = raw.inventory && raw.inventory[key];
+      const value = rawInv[key];
       inventory[key] = Number.isFinite(value) ? Math.max(0, value) : 0;
     }
 
-    const recipe = { ...base.recipe };
-    if (raw.recipe && typeof raw.recipe === "object") {
-      for (const key of INVENTORY_KEYS) {
-        const value = raw.recipe[key];
-        if (Number.isFinite(value) && value >= 0) recipe[key] = value;
-      }
-    }
+    const legacyRecipe =
+      raw.recipe && typeof raw.recipe === "object" ? raw.recipe : null;
+    const recipesRaw =
+      raw.recipes && typeof raw.recipes === "object" ? raw.recipes : {};
+
+    const recipes = {
+      juice: normalizeRecipe(
+        "juice",
+        recipesRaw.juice || legacyRecipe,
+        base.recipes.juice
+      ),
+      cocoa: normalizeRecipe(
+        "cocoa",
+        recipesRaw.cocoa,
+        base.recipes.cocoa
+      ),
+    };
+
+    const pricesRaw =
+      raw.prices && typeof raw.prices === "object" ? raw.prices : {};
+    const prices = {
+      juice: normalizePrice(
+        pricesRaw.juice !== undefined ? pricesRaw.juice : raw.price,
+        base.prices.juice
+      ),
+      cocoa: normalizePrice(pricesRaw.cocoa, base.prices.cocoa),
+    };
+
+    const activeProduct = PRODUCTS.includes(raw.activeProduct)
+      ? raw.activeProduct
+      : "juice";
+
+    const weather = global.GameWeather
+      ? global.GameWeather.normalize(raw.weather)
+      : raw.weather === "hot" || raw.weather === "cold" || raw.weather === "mild"
+        ? raw.weather
+        : "mild";
 
     return {
       day: Number.isFinite(raw.day) && raw.day >= 1 ? Math.floor(raw.day) : 1,
       cash: Number.isFinite(raw.cash) ? raw.cash : base.cash,
+      activeProduct,
+      weather,
       inventory,
-      recipe,
-      price: Number.isFinite(raw.price) && raw.price >= 0 ? raw.price : base.price,
+      recipes,
+      prices,
       lastDayReport:
         raw.lastDayReport && typeof raw.lastDayReport === "object"
           ? raw.lastDayReport
@@ -89,12 +199,38 @@
       fruit: "Fruit",
       sugar: "Sugar",
       ice: "Ice",
+      chocolate: "Chocolate",
+      milk: "Milk",
+      whippedCream: "Whipped cream",
+      chocolateSprinkles: "Chocolate sprinkles",
       cups: "Cups",
     };
   }
 
   function unitPrice(key) {
     return UNIT_PRICES[key] ?? 0;
+  }
+
+  function activeRecipe(state) {
+    const product = state.activeProduct === "cocoa" ? "cocoa" : "juice";
+    return state.recipes[product];
+  }
+
+  function activePrice(state) {
+    const product = state.activeProduct === "cocoa" ? "cocoa" : "juice";
+    return state.prices[product];
+  }
+
+  function setActiveProduct(state, product) {
+    if (!PRODUCTS.includes(product)) {
+      return { ok: false, message: "Unknown product." };
+    }
+    state.activeProduct = product;
+    return {
+      ok: true,
+      product,
+      message: "Now selling " + productLabel(product) + ".",
+    };
   }
 
   /**
@@ -155,13 +291,22 @@
 
   global.GameState = {
     STORAGE_KEY,
+    PRODUCTS,
+    JUICE_KEYS,
+    COCOA_KEYS,
     INVENTORY_KEYS,
     UNIT_PRICES,
     defaultState,
     load,
     save,
+    normalize,
     inventoryLabels,
     unitPrice,
+    productLabel,
+    recipeKeysFor,
+    activeRecipe,
+    activePrice,
+    setActiveProduct,
     buyIngredient,
   };
 })(window);
