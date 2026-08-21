@@ -233,6 +233,35 @@
     };
   }
 
+  function emptyCart() {
+    const cart = {};
+    for (const key of INVENTORY_KEYS) cart[key] = 0;
+    return cart;
+  }
+
+  function cartLineCost(key, qty) {
+    return +(unitPrice(key) * qty).toFixed(2);
+  }
+
+  /** Total cash needed for a cart object of ingredient → qty. */
+  function cartTotal(cart) {
+    if (!cart || typeof cart !== "object") return 0;
+    let total = 0;
+    for (const key of INVENTORY_KEYS) {
+      const qty = Number(cart[key]) || 0;
+      if (qty > 0) total += unitPrice(key) * qty;
+    }
+    return +total.toFixed(2);
+  }
+
+  function cartHasItems(cart) {
+    if (!cart || typeof cart !== "object") return false;
+    for (const key of INVENTORY_KEYS) {
+      if ((Number(cart[key]) || 0) > 0) return true;
+    }
+    return false;
+  }
+
   /**
    * Buy `qty` units of an ingredient.
    * Returns { ok, message, cost?, qty?, key? } — mutates state only on success.
@@ -289,6 +318,80 @@
     };
   }
 
+  /**
+   * Checkout an entire cart in one purchase.
+   * Returns { ok, message, total?, lines? } — mutates state only on success.
+   * `message` is a multi-line receipt string for the day report.
+   */
+  function buyCart(state, cart) {
+    if (!cartHasItems(cart)) {
+      return { ok: false, message: "Your cart is empty. Add supplies first." };
+    }
+
+    const lines = [];
+    const labels = inventoryLabels();
+    for (const key of INVENTORY_KEYS) {
+      const qty = Number(cart[key]) || 0;
+      if (qty <= 0) continue;
+      if (!Number.isInteger(qty)) {
+        return {
+          ok: false,
+          message: "Cart quantities must be whole numbers.",
+        };
+      }
+      lines.push({
+        key,
+        label: labels[key],
+        qty,
+        cost: cartLineCost(key, qty),
+      });
+    }
+
+    const total = cartTotal(cart);
+    if (total > state.cash + 1e-9) {
+      return {
+        ok: false,
+        message:
+          "You don't have enough money. Cart total is $" +
+          total.toFixed(2) +
+          ", but you only have $" +
+          state.cash.toFixed(2) +
+          ".",
+        total,
+        shortfall: true,
+      };
+    }
+
+    state.cash = +(state.cash - total).toFixed(2);
+    for (const line of lines) {
+      state.inventory[line.key] = (state.inventory[line.key] || 0) + line.qty;
+    }
+
+    const receipt = [
+      "Sunny Corner Supply Co.",
+      "────────────────────────",
+    ];
+    for (const line of lines) {
+      receipt.push(
+        line.label +
+          "  ×" +
+          line.qty +
+          "  $" +
+          line.cost.toFixed(2)
+      );
+    }
+    receipt.push("────────────────────────");
+    receipt.push("TOTAL  $" + total.toFixed(2));
+    receipt.push("Thank you for your purchase!");
+
+    return {
+      ok: true,
+      total,
+      lines,
+      message: receipt.join("\n"),
+    };
+  }
+
   global.GameState = {
     STORAGE_KEY,
     PRODUCTS,
@@ -308,5 +411,9 @@
     activePrice,
     setActiveProduct,
     buyIngredient,
+    emptyCart,
+    cartTotal,
+    cartHasItems,
+    buyCart,
   };
 })(window);

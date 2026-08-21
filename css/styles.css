@@ -440,15 +440,27 @@ body {
   gap: 0.55rem;
 }
 
+.buy-head {
+  display: none;
+}
+
 .buy-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 0.5rem 0.75rem;
+  gap: 0.45rem 0.75rem;
   align-items: center;
+  padding-bottom: 0.55rem;
+  border-bottom: 1px dashed rgba(47, 125, 74, 0.2);
+}
+
+.buy-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
 }
 
 .buy-meta {
   min-width: 0;
+  grid-column: 1 / -1;
 }
 
 .buy-name {
@@ -462,7 +474,8 @@ body {
   display: flex;
   align-items: center;
   gap: 0.45rem;
-  flex-shrink: 0;
+  flex-wrap: wrap;
+  min-width: 0;
 }
 
 .buy-controls .field-inline {
@@ -476,6 +489,98 @@ body {
 .buy-controls .btn-panel {
   margin: 0;
   white-space: nowrap;
+  font-size: 0.9rem;
+  padding: 0.55rem 0.7rem;
+}
+
+.buy-cart-cell {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.45rem;
+}
+
+.buy-cart-qty {
+  min-width: 1.75rem;
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--leaf-deep);
+}
+
+.btn-quiet-inline {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--ink-soft);
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 0.35rem 0.45rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+}
+
+.btn-quiet-inline:hover:not(:disabled) {
+  background: rgba(26, 46, 31, 0.08);
+  color: var(--leaf-deep);
+}
+
+.btn-quiet-inline:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.btn-quiet-inline:focus-visible {
+  outline: 3px solid var(--citrus);
+  outline-offset: 2px;
+}
+
+.buy-checkout {
+  margin-top: 0.85rem;
+  padding-top: 0.85rem;
+  border-top: 2px solid rgba(47, 125, 74, 0.2);
+  display: grid;
+  gap: 0.65rem;
+}
+
+.buy-total-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.buy-total-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.buy-total-value {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--leaf-deep);
+}
+
+.buy-total-value.is-over-budget {
+  color: #b42318;
+}
+
+.btn-checkout {
+  width: 100%;
+  border-color: transparent;
+  background: linear-gradient(135deg, var(--citrus) 0%, var(--citrus-hot) 100%);
+  color: var(--ink);
+  box-shadow: 0 8px 18px rgba(240, 154, 26, 0.28);
+}
+
+.btn-checkout:hover {
+  background: linear-gradient(135deg, #ffd24a 0%, #f09a1a 100%);
 }
 
 .field-inline {
@@ -523,6 +628,15 @@ body {
   margin: 0;
   color: var(--ink-soft);
   line-height: 1.45;
+  white-space: pre-line;
+}
+
+.report-body.is-receipt {
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.5;
 }
 
 .customer-day,
@@ -643,6 +757,10 @@ body {
 
   .buy-controls {
     justify-content: flex-start;
+  }
+
+  .buy-cart-cell {
+    justify-content: space-between;
   }
 
   .summary-list {

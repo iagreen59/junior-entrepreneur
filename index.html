@@ -175,8 +175,14 @@
           </button>
         </div>
         <p class="panel-lead">
-          Spend cash to stock your stand. Cups are shared by juice and cocoa.
+          Add supplies to your cart, then Buy once at the bottom. Your cart stays
+          while you switch menus. Cups are shared by juice and cocoa.
         </p>
+        <div class="buy-head" aria-hidden="true">
+          <span class="buy-head-item">Item</span>
+          <span class="buy-head-qty">Qty</span>
+          <span class="buy-head-cart">In cart</span>
+        </div>
         <ul class="buy-list" id="buy-list">
           <li class="buy-row">
             <div class="buy-meta">
@@ -185,9 +191,22 @@
             <div class="buy-controls">
               <label class="field field-inline">
                 <span class="visually-hidden">Quantity of fruit</span>
-              <input type="number" id="buy-qty-fruit" min="1" step="1" value="10" />
+                <input type="number" id="buy-qty-fruit" min="1" step="1" value="10" />
               </label>
-            <button type="button" class="btn btn-panel" data-buy="fruit">Buy</button>
+              <button type="button" class="btn btn-panel" data-add-cart="fruit">
+                Add to cart
+              </button>
+            </div>
+            <div class="buy-cart-cell">
+              <span class="buy-cart-qty" id="cart-qty-fruit" aria-live="polite">0</span>
+              <button
+                type="button"
+                class="btn btn-quiet-inline"
+                data-remove-cart="fruit"
+                aria-label="Remove fruit from cart"
+              >
+                Remove
+              </button>
             </div>
           </li>
           <li class="buy-row">
@@ -197,9 +216,22 @@
             <div class="buy-controls">
               <label class="field field-inline">
                 <span class="visually-hidden">Quantity of sugar</span>
-              <input type="number" id="buy-qty-sugar" min="1" step="1" value="10" />
+                <input type="number" id="buy-qty-sugar" min="1" step="1" value="10" />
               </label>
-            <button type="button" class="btn btn-panel" data-buy="sugar">Buy</button>
+              <button type="button" class="btn btn-panel" data-add-cart="sugar">
+                Add to cart
+              </button>
+            </div>
+            <div class="buy-cart-cell">
+              <span class="buy-cart-qty" id="cart-qty-sugar" aria-live="polite">0</span>
+              <button
+                type="button"
+                class="btn btn-quiet-inline"
+                data-remove-cart="sugar"
+                aria-label="Remove sugar from cart"
+              >
+                Remove
+              </button>
             </div>
           </li>
           <li class="buy-row">
@@ -209,9 +241,22 @@
             <div class="buy-controls">
               <label class="field field-inline">
                 <span class="visually-hidden">Quantity of ice</span>
-              <input type="number" id="buy-qty-ice" min="1" step="1" value="10" />
+                <input type="number" id="buy-qty-ice" min="1" step="1" value="10" />
               </label>
-            <button type="button" class="btn btn-panel" data-buy="ice">Buy</button>
+              <button type="button" class="btn btn-panel" data-add-cart="ice">
+                Add to cart
+              </button>
+            </div>
+            <div class="buy-cart-cell">
+              <span class="buy-cart-qty" id="cart-qty-ice" aria-live="polite">0</span>
+              <button
+                type="button"
+                class="btn btn-quiet-inline"
+                data-remove-cart="ice"
+                aria-label="Remove ice from cart"
+              >
+                Remove
+              </button>
             </div>
           </li>
           <li class="buy-row">
@@ -221,9 +266,22 @@
             <div class="buy-controls">
               <label class="field field-inline">
                 <span class="visually-hidden">Quantity of chocolate</span>
-              <input type="number" id="buy-qty-chocolate" min="1" step="1" value="10" />
+                <input type="number" id="buy-qty-chocolate" min="1" step="1" value="10" />
               </label>
-            <button type="button" class="btn btn-panel" data-buy="chocolate">Buy</button>
+              <button type="button" class="btn btn-panel" data-add-cart="chocolate">
+                Add to cart
+              </button>
+            </div>
+            <div class="buy-cart-cell">
+              <span class="buy-cart-qty" id="cart-qty-chocolate" aria-live="polite">0</span>
+              <button
+                type="button"
+                class="btn btn-quiet-inline"
+                data-remove-cart="chocolate"
+                aria-label="Remove chocolate from cart"
+              >
+                Remove
+              </button>
             </div>
           </li>
           <li class="buy-row">
@@ -233,9 +291,22 @@
             <div class="buy-controls">
               <label class="field field-inline">
                 <span class="visually-hidden">Quantity of milk</span>
-              <input type="number" id="buy-qty-milk" min="1" step="1" value="10" />
+                <input type="number" id="buy-qty-milk" min="1" step="1" value="10" />
               </label>
-            <button type="button" class="btn btn-panel" data-buy="milk">Buy</button>
+              <button type="button" class="btn btn-panel" data-add-cart="milk">
+                Add to cart
+              </button>
+            </div>
+            <div class="buy-cart-cell">
+              <span class="buy-cart-qty" id="cart-qty-milk" aria-live="polite">0</span>
+              <button
+                type="button"
+                class="btn btn-quiet-inline"
+                data-remove-cart="milk"
+                aria-label="Remove milk from cart"
+              >
+                Remove
+              </button>
             </div>
           </li>
           <li class="buy-row">
@@ -245,15 +316,28 @@
             <div class="buy-controls">
               <label class="field field-inline">
                 <span class="visually-hidden">Quantity of whipped cream</span>
-              <input
-                type="number"
-                id="buy-qty-whippedCream"
-                min="1"
-                step="1"
-                value="10"
-              />
+                <input
+                  type="number"
+                  id="buy-qty-whippedCream"
+                  min="1"
+                  step="1"
+                  value="10"
+                />
               </label>
-            <button type="button" class="btn btn-panel" data-buy="whippedCream">Buy</button>
+              <button type="button" class="btn btn-panel" data-add-cart="whippedCream">
+                Add to cart
+              </button>
+            </div>
+            <div class="buy-cart-cell">
+              <span class="buy-cart-qty" id="cart-qty-whippedCream" aria-live="polite">0</span>
+              <button
+                type="button"
+                class="btn btn-quiet-inline"
+                data-remove-cart="whippedCream"
+                aria-label="Remove whipped cream from cart"
+              >
+                Remove
+              </button>
             </div>
           </li>
           <li class="buy-row">
@@ -263,17 +347,36 @@
             <div class="buy-controls">
               <label class="field field-inline">
                 <span class="visually-hidden">Quantity of chocolate sprinkles</span>
-              <input
-                type="number"
-                id="buy-qty-chocolateSprinkles"
-                min="1"
-                step="1"
-                value="10"
-              />
+                <input
+                  type="number"
+                  id="buy-qty-chocolateSprinkles"
+                  min="1"
+                  step="1"
+                  value="10"
+                />
               </label>
-            <button type="button" class="btn btn-panel" data-buy="chocolateSprinkles">
-              Buy
-            </button>
+              <button
+                type="button"
+                class="btn btn-panel"
+                data-add-cart="chocolateSprinkles"
+              >
+                Add to cart
+              </button>
+            </div>
+            <div class="buy-cart-cell">
+              <span
+                class="buy-cart-qty"
+                id="cart-qty-chocolateSprinkles"
+                aria-live="polite"
+              >0</span>
+              <button
+                type="button"
+                class="btn btn-quiet-inline"
+                data-remove-cart="chocolateSprinkles"
+                aria-label="Remove chocolate sprinkles from cart"
+              >
+                Remove
+              </button>
             </div>
           </li>
           <li class="buy-row">
@@ -283,12 +386,37 @@
             <div class="buy-controls">
               <label class="field field-inline">
                 <span class="visually-hidden">Quantity of cups</span>
-              <input type="number" id="buy-qty-cups" min="1" step="1" value="10" />
+                <input type="number" id="buy-qty-cups" min="1" step="1" value="10" />
               </label>
-            <button type="button" class="btn btn-panel" data-buy="cups">Buy</button>
+              <button type="button" class="btn btn-panel" data-add-cart="cups">
+                Add to cart
+              </button>
+            </div>
+            <div class="buy-cart-cell">
+              <span class="buy-cart-qty" id="cart-qty-cups" aria-live="polite">0</span>
+              <button
+                type="button"
+                class="btn btn-quiet-inline"
+                data-remove-cart="cups"
+                aria-label="Remove cups from cart"
+              >
+                Remove
+              </button>
             </div>
           </li>
         </ul>
+        <div class="buy-checkout">
+          <button type="button" class="btn btn-quiet-inline" id="btn-clear-cart">
+            Clear cart
+          </button>
+          <div class="buy-total-row">
+            <span class="buy-total-label">Cart total</span>
+            <span class="buy-total-value" id="cart-total">$0.00</span>
+          </div>
+          <button type="button" class="btn btn-panel btn-checkout" id="btn-cart-buy">
+            Buy
+          </button>
+        </div>
       </section>
 
       <section class="panel" id="panel-price" hidden aria-label="Set sell price">
