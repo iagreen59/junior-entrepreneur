@@ -31,6 +31,10 @@
           <span class="stat-label">Cash</span>
           <span class="stat-value" id="stat-cash">$20.00</span>
         </div>
+        <div class="stat stat-weather" id="stat-weather-card">
+          <span class="stat-label">Weather</span>
+          <span class="stat-value" id="stat-weather">Mild</span>
+        </div>
       </section>
 
       <section class="product-picker" aria-label="Drink for sale today">
@@ -63,9 +67,9 @@
       <section class="morning" aria-label="Morning checklist">
         <h2 class="section-title">Before you sell</h2>
         <ol class="morning-list" id="morning-list">
-          <li>Pick <strong>Juice</strong> or <strong>Hot cocoa</strong>.</li>
-          <li>Check that drink’s <strong>Recipe</strong> (units per cup).</li>
-          <li><strong>Buy</strong> the ingredients you need (cups are shared).</li>
+          <li>Check today’s <strong>Weather</strong> (hot / mild / cold).</li>
+          <li>Pick <strong>Juice</strong> or <strong>Hot cocoa</strong> to match the day.</li>
+          <li>Check that drink’s <strong>Recipe</strong>, then <strong>Buy</strong> stock.</li>
           <li>Set that drink’s <strong>Price</strong>, then <strong>Sell Day</strong>.</li>
         </ol>
       </section>
@@ -81,6 +85,19 @@
         <button type="button" class="btn" id="btn-price">Price</button>
         <button type="button" class="btn btn-primary" id="btn-sell">Sell Day</button>
         <button type="button" class="btn btn-quiet" id="btn-new-game">New Game</button>
+      </section>
+
+      <section class="customer-day" id="customer-day" hidden aria-live="polite">
+        <div class="panel-header">
+          <h2 class="section-title">Customers today</h2>
+          <p class="customer-day-progress" id="customer-day-progress">Opening the stand…</p>
+        </div>
+        <div class="customer-stage" id="customer-stage" aria-label="Customer activity"></div>
+      </section>
+
+      <section class="customer-summary" id="customer-summary" hidden aria-label="Customer summary">
+        <h2 class="section-title">Customer summary</h2>
+        <ul class="summary-list" id="customer-summary-list"></ul>
       </section>
 
       <section class="panel" id="panel-recipe" hidden aria-label="Recipe editor">
@@ -293,9 +310,11 @@
       </section>
     </main>
 
+    <script src="js/weather.js"></script>
     <script src="js/state.js"></script>
     <script src="js/recipe.js"></script>
     <script src="js/economy.js"></script>
+    <script src="js/customers.js"></script>
     <script src="js/ui.js"></script>
     <script src="js/main.js"></script>
   </body>

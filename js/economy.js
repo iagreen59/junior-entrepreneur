@@ -1,50 +1,47 @@
 /**
  * Costs, demand, sales, profit.
- * Phase 3: real Sell Day — price-sensitive demand, weather noise, inventory
- * consumption, and end-of-day P&L.
- * Phase 4: light balance — slightly more traffic, softer price sensitivity.
- * Phase 6: sells the active product (juice or cocoa) using that product's
- * recipe + price; shared inventory bag; demand still simple until Phase 7.
+ * Phase 3–4: price-sensitive demand, inventory consumption, P&L.
+ * Phase 6: sells the active product (juice or cocoa).
+ * Phase 7: typed weather (hot/mild/cold) biases demand toward the
+ * weather-matched drink instead of anonymous [0.75, 1.25] noise.
  *
  * Demand formula (documented for play-testers / future balance):
- *   interest = BASE_INTEREST * (REF_PRICE / price) ^ ELASTICITY * weather
- *   weather  = uniform random in [WEATHER_MIN, WEATHER_MAX]
- *   demand   = floor(max(0, interest))
- *   stockCups = min over active-recipe ingredients of floor(inv[k] / recipe[k])
- *               (ingredients with recipe[k] === 0 are ignored)
- *   cupsSold = min(demand, stockCups)
+ *   preference = GameWeather.preferenceFactor(weather, product)
+ *                hot+juice / cold+cocoa → 1.35 (match)
+ *                hot+cocoa / cold+juice → 0.65 (mismatch)
+ *                mild + either         → 1.00
+ *   interest   = BASE_INTEREST * (REF_PRICE / price) ^ ELASTICITY * preference
+ *   demand     = floor(max(0, interest))
+ *   stockCups  = min over active-recipe ingredients of floor(inv[k] / recipe[k])
+ *   cupsSold   = min(demand, stockCups)
  *
  * Cash: ingredients were already paid when bought, so cash += revenue.
  * Reported profit = revenue − COGS (unit buy prices × recipe × cupsSold).
- * Profit can be negative when selling below ingredient cost.
  */
 (function (global) {
-  /** Typical daily foot traffic at the reference price. Phase 4: 18 → 20. */
+  /** Typical daily foot traffic at the reference price. */
   const BASE_INTEREST = 20;
-  /** Price where BASE_INTEREST customers show up before weather. */
+  /** Price where BASE_INTEREST customers show up before weather preference. */
   const REF_PRICE = 1.5;
-  /** How sharply demand falls as price rises (1 = inverse to price). Phase 4: 1.15 → 1.05. */
+  /** How sharply demand falls as price rises (1 = inverse to price). */
   const ELASTICITY = 1.05;
-  const WEATHER_MIN = 0.75;
-  const WEATHER_MAX = 1.25;
-
-  function weatherFactor(randomFn) {
-    const roll = typeof randomFn === "function" ? randomFn() : Math.random();
-    return WEATHER_MIN + (WEATHER_MAX - WEATHER_MIN) * roll;
-  }
 
   function activeProduct(state) {
     return state.activeProduct === "cocoa" ? "cocoa" : "juice";
   }
 
   /**
-   * How many cups inventory can support for the active product recipe.
+   * How many cups inventory can support for a product recipe.
+   * Defaults to the active product when `product` is omitted.
    */
-  function maxCupsFromStock(state) {
-    const product = activeProduct(state);
-    const recipe = global.GameState.activeRecipe(state) || {};
+  function maxCupsFromStock(state, product) {
+    const drink = product || activeProduct(state);
+    const recipe =
+      (state.recipes && state.recipes[drink]) ||
+      global.GameState.activeRecipe(state) ||
+      {};
     const inventory = state.inventory || {};
-    const keys = global.GameState.recipeKeysFor(product);
+    const keys = global.GameState.recipeKeysFor(drink);
     let maxCups = Infinity;
     let anyRequirement = false;
 
@@ -60,16 +57,23 @@
     return Math.max(0, maxCups === Infinity ? 0 : maxCups);
   }
 
-  function demandForPrice(price, randomFn) {
+  /**
+   * Price + weather preference demand for selling `product`.
+   * `weather` should be hot | mild | cold (from state.weather).
+   */
+  function demandForPrice(price, weather, product) {
     const sellPrice = Number(price);
     if (!Number.isFinite(sellPrice) || sellPrice <= 0) {
-      // Free / invalid → treat as huge interest, still capped by stock later.
       return Math.floor(BASE_INTEREST * 4);
     }
 
-    const weather = weatherFactor(randomFn);
+    const preference = global.GameWeather
+      ? global.GameWeather.preferenceFactor(weather, product)
+      : 1;
     const interest =
-      BASE_INTEREST * Math.pow(REF_PRICE / sellPrice, ELASTICITY) * weather;
+      BASE_INTEREST *
+      Math.pow(REF_PRICE / sellPrice, ELASTICITY) *
+      preference;
     return Math.max(0, Math.floor(interest));
   }
 
@@ -104,30 +108,48 @@
   }
 
   /**
-   * Run one real sell day for the active product. Mutates inventory on success.
-   * Returns report fields; caller advances day and cash.
-   *
-   * Optional `randomFn` (0..1) is for tests / deterministic play-checks.
+   * Plan one sell day without mutating inventory.
+   * Phase 8 plays this plan as timed customers, then applySellDay commits it.
    */
-  function runSellDay(state, randomFn) {
+  function planSellDay(state) {
     const product = activeProduct(state);
+    const weather = state.weather || "mild";
     const price = Number(global.GameState.activePrice(state));
-    const stockCups = maxCupsFromStock(state);
-    const demand = demandForPrice(price, randomFn);
+    const stockCups = maxCupsFromStock(state, product);
+    const demand = demandForPrice(price, weather, product);
     const cupsSold = Math.min(demand, stockCups);
 
     const revenue = +(cupsSold * (Number.isFinite(price) ? price : 0)).toFixed(2);
     const cogs = costOfGoods(state, cupsSold);
     const profit = +(revenue - cogs).toFixed(2);
 
-    consumeInventory(state, cupsSold);
-
     const soldOut = stockCups > 0 && cupsSold === stockCups && demand > stockCups;
     const drink = global.GameState.productLabel(product);
-    const weatherNote =
-      demand === 0 && stockCups > 0
-        ? " Almost nobody stopped by at that price."
-        : "";
+    const preference = global.GameWeather
+      ? global.GameWeather.preferenceFactor(weather, product)
+      : 1;
+    const favor = global.GameWeather
+      ? global.GameWeather.favorsProduct(weather, product)
+      : null;
+
+    let weatherNote = "";
+    if (demand === 0 && stockCups > 0) {
+      weatherNote = " Almost nobody stopped by at that price.";
+    } else if (favor === false && cupsSold < stockCups) {
+      weatherNote =
+        " " +
+        global.GameWeather.label(weather) +
+        " weather cooled interest in " +
+        drink +
+        ".";
+    } else if (favor === true && !soldOut) {
+      weatherNote =
+        " " +
+        global.GameWeather.label(weather) +
+        " weather helped " +
+        drink +
+        " sell.";
+    }
 
     let message =
       "Sold " +
@@ -159,6 +181,9 @@
 
     return {
       product,
+      weather,
+      preference,
+      price: Number.isFinite(price) ? price : 0,
       cupsSold,
       demand,
       stockCups,
@@ -171,6 +196,24 @@
     };
   }
 
+  /**
+   * Commit a planned sell day: consume inventory for cupsSold.
+   * Caller updates cash / day / weather from the plan.
+   */
+  function applySellDay(state, plan) {
+    consumeInventory(state, plan.cupsSold);
+    return plan;
+  }
+
+  /**
+   * Instant sell day (plan + apply). Kept for tests / simple callers.
+   */
+  function runSellDay(state) {
+    const plan = planSellDay(state);
+    applySellDay(state, plan);
+    return plan;
+  }
+
   function formatMoney(amount) {
     const n = Number(amount);
     if (!Number.isFinite(n)) return "$0.00";
@@ -178,10 +221,6 @@
     return sign + "$" + Math.abs(n).toFixed(2);
   }
 
-  /**
-   * Validate and apply a sell-price draft for the active product.
-   * Returns { ok, message, price? } — mutates state only on success.
-   */
   function applyPrice(state, rawPrice) {
     const product = activeProduct(state);
     const price = Number(rawPrice);
@@ -209,10 +248,10 @@
     BASE_INTEREST,
     REF_PRICE,
     ELASTICITY,
-    WEATHER_MIN,
-    WEATHER_MAX,
     maxCupsFromStock,
     demandForPrice,
+    planSellDay,
+    applySellDay,
     runSellDay,
     applyPrice,
   };

@@ -67,11 +67,14 @@
     return inventory;
   }
 
-  function defaultState() {
+  function defaultState(randomFn) {
     return {
       day: 1,
       cash: 20,
       activeProduct: "juice",
+      weather: global.GameWeather
+        ? global.GameWeather.roll(randomFn)
+        : "mild",
       inventory: emptyInventory(),
       recipes: {
         juice: defaultJuiceRecipe(),
@@ -156,10 +159,17 @@
       ? raw.activeProduct
       : "juice";
 
+    const weather = global.GameWeather
+      ? global.GameWeather.normalize(raw.weather)
+      : raw.weather === "hot" || raw.weather === "cold" || raw.weather === "mild"
+        ? raw.weather
+        : "mild";
+
     return {
       day: Number.isFinite(raw.day) && raw.day >= 1 ? Math.floor(raw.day) : 1,
       cash: Number.isFinite(raw.cash) ? raw.cash : base.cash,
       activeProduct,
+      weather,
       inventory,
       recipes,
       prices,
