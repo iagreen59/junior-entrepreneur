@@ -140,6 +140,38 @@ body {
   color: var(--leaf-deep);
 }
 
+.morning {
+  margin-bottom: 1.25rem;
+  padding: 0.85rem 1rem;
+  background: rgba(255, 255, 255, 0.4);
+  border-radius: 1rem;
+  border: 1px dashed rgba(47, 125, 74, 0.35);
+}
+
+.morning-list {
+  margin: 0;
+  padding: 0 0 0 1.2rem;
+  color: var(--ink-soft);
+  font-size: 0.95rem;
+  line-height: 1.45;
+}
+
+.morning-list li + li {
+  margin-top: 0.35rem;
+}
+
+.morning-list strong {
+  color: var(--leaf-deep);
+  font-weight: 700;
+}
+
+.morning-hint {
+  margin: 0.65rem 0 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--leaf-deep);
+}
+
 .inventory {
   margin-bottom: 1.25rem;
 }
@@ -214,6 +246,23 @@ body {
 
 .btn-primary:hover {
   background: linear-gradient(135deg, #ffd24a 0%, #f09a1a 100%);
+}
+
+.btn-quiet {
+  grid-column: 1 / -1;
+  border-color: transparent;
+  background: transparent;
+  color: var(--ink-soft);
+  font-weight: 600;
+  font-size: 0.9rem;
+  padding: 0.45rem 0.9rem;
+  box-shadow: none;
+}
+
+.btn-quiet:hover {
+  background: rgba(255, 255, 255, 0.45);
+  color: var(--leaf-deep);
+  transform: none;
 }
 
 .panel {
