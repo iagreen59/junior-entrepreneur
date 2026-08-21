@@ -6,7 +6,9 @@ Cloud Agent brief for the v1 corner juice stand game (vanilla HTML / CSS / JS).
 
 **Stack rules:** no npm, no frameworks, no build step. Persist with `localStorage` via `js/state.js`. GitHub Pages is in scope (live site from `main` `/`). Keep the Phase 1 Sell Day stub until Phase 3 replaces it.
 
-**Suggested prompt:** `Implement Phase N from PLAN.md. Open a PR. Do not start later phases. Mark Phase N done in the Phase status list when finished.`
+**Preview artifacts (required for Phase 5+):** Every phase PR must include **screenshot(s) and/or a short screen recording** of the new UI/behavior before the change is accepted or merged. Attach artifacts under `/opt/cursor/artifacts/` and embed or link them in the PR body so a human can review the look and feel without running the game. Each Phase 5+ play-test checklist includes a preview checkbox — do not mark the phase done until that preview is in the PR.
+
+**Suggested prompt:** `Implement Phase N from PLAN.md. Open a PR. Do not start later phases. Mark Phase N done in the Phase status list when finished. Include screenshot or video preview artifacts before asking for review.`
 
 ---
 
@@ -19,6 +21,10 @@ Future agents: skip anything already checked.
 - [x] Phase 2 — Recipe + buy ingredients
 - [x] Phase 3 — Price + real daily sales
 - [x] Phase 4 — Polish (validation, New Game, light balance)
+- [ ] Phase 5 — Panel close buttons
+- [ ] Phase 6 — Hot cocoa drink
+- [ ] Phase 7 — Weather and drink preference
+- [ ] Phase 8 — Animated customer day + summary
 
 ---
 
@@ -198,11 +204,179 @@ Morning guidance (what to do before Sell Day), basic validation messages (e.g. n
 
 ---
 
+## Phase 5 — Panel close buttons
+
+**Status:** not started
+
+### Goal
+
+Every open menu (Recipe, Buy, Price) has an obvious **Close** control that hides the panel without saving. Pressing **Escape** also closes the open panel. Opening another menu still switches panels as today.
+
+### Files to touch
+
+**Primary**
+
+- `index.html`
+- `css/styles.css`
+- `js/ui.js`
+- `js/main.js`
+
+### Play-test checklist
+
+- [ ] Recipe panel Close hides the panel without applying unsaved edits
+- [ ] Buy panel Close hides the panel
+- [ ] Price panel Close hides the panel without applying unsaved price
+- [ ] Escape closes whichever panel is open
+- [ ] Save recipe / Buy / Set price still work after adding Close
+- [ ] **Preview:** screenshot of each panel (Recipe, Buy, Price) with the Close control visible — attach to the PR
+
+### Out of scope
+
+- Weather UI
+- Hot cocoa / new ingredients
+- Customer animation or Sell Day changes
+
+---
+
+## Phase 6 — Hot cocoa drink
+
+**Status:** not started
+
+### Goal
+
+Player can sell **juice** (cold) or **hot cocoa** (hot). Cocoa ingredients: chocolate, milk, whipped cream, chocolate sprinkles, plus shared **cups**. Recipe / Buy / Price work for the selected product. Inventory and dual recipes/prices persist across refresh (migrate/normalize old juice-only saves). Sell Day still resolves **instantly** (no customer animation yet) and consumes the correct product recipe; demand may stay simple per active product until Phase 7 wires weather preference.
+
+**Locked schema notes**
+
+- Products: `juice` | `cocoa`
+- Cocoa recipe keys: `chocolate`, `milk`, `whippedCream`, `chocolateSprinkles`, plus `cups`
+- Juice keeps existing keys: `fruit`, `sugar`, `ice`, `cups`
+- Shared inventory bag holds all ingredient keys; document unit prices in `js/state.js`
+
+### Files to touch
+
+**Primary**
+
+- `js/state.js` — inventory keys, dual recipes/prices, migrate/normalize
+- `js/recipe.js`
+- `js/ui.js`
+- `js/main.js`
+- `js/economy.js`
+- `index.html`
+- `css/styles.css`
+
+### Play-test checklist
+
+- [ ] Player can switch between juice and hot cocoa
+- [ ] Cocoa recipe edits chocolate, milk, whipped cream, chocolate sprinkles, cups and saves
+- [ ] Buy UI purchases new cocoa ingredients; cash and inventory update
+- [ ] Player can set a cocoa sell price (and juice price remains independent)
+- [ ] Sell Day consumes inventory for the product being sold
+- [ ] Refresh keeps both products’ recipes, prices, and inventory
+- [ ] Old juice-only saves still load (migrate/normalize)
+- [ ] **Preview:** screenshots of cocoa recipe panel and buy rows for new ingredients — attach to the PR
+
+### Out of scope
+
+- Named weather UI / hot-vs-cold preference (Phase 7)
+- Customer sprites, 10-second Sell Day, day-end customer summary (Phase 8)
+- Food items
+- Multiple stands or employees
+
+---
+
+## Phase 7 — Weather and drink preference
+
+**Status:** not started
+
+### Goal
+
+Morning shows today’s weather as discrete **hot**, **mild**, or **cold** (rolled each new day; visible before Sell Day). Replace the anonymous `[0.75, 1.25]` weather noise with typed weather that **biases demand toward cold drinks (juice) on hot days and hot drinks (cocoa) on cold days**; mild is roughly even. Document the formula in comments. When both products are stocked, sales should favor the weather-matched drink; mismatch reduces interest in the wrong-temperature product.
+
+### Files to touch
+
+**Primary**
+
+- `js/weather.js` (new — weather types, labels, roll helpers)
+- `js/economy.js`
+- `js/ui.js`
+- `js/state.js`
+- `js/main.js`
+- `index.html`
+- `css/styles.css`
+
+### Play-test checklist
+
+- [ ] Status / morning UI shows today’s weather (hot / mild / cold)
+- [ ] Weather re-rolls for each new day (after Sell Day advances the day)
+- [ ] Hot day favors juice sales vs cocoa when both are stocked
+- [ ] Cold day favors cocoa sales vs juice when both are stocked
+- [ ] Mild day is roughly balanced between juice and cocoa
+- [ ] Formula is documented in code comments
+- [ ] Refresh keeps or correctly re-derives the current day’s weather as designed
+- [ ] **Preview:** screenshots of hot and cold weather in the status UI — attach to the PR
+
+### Out of scope
+
+- Customer sprites / timed Sell Day timeline (Phase 8)
+- Food items
+- Sound, frameworks, build tools
+
+---
+
+## Phase 8 — Animated customer day + summary
+
+**Status:** not started
+
+### Goal
+
+Sell Day runs about **10 seconds**. Customers appear gradually (slowed buy activity so one day plays out over ~10s). Each customer either **buys** or **leaves**:
+
+- **Leaves** → show an icon for why (price too high, sold out / no stock, weather mismatch). Use SVG/CSS icons, not emoji.
+- **Buys** → show an icon for what they like or don’t like about the drink/price/weather fit; if they are happy, show a **happy** icon.
+
+Block starting another Sell Day while the animation runs. After ~10s, show a **customer summary** (bought count, left-by-reason counts, likes / dislikes / happy) plus the existing P&L. Visual totals must match the economy results (Phase 8 visualizes demand as timed customer events; reuse `randomFn` where useful for determinism).
+
+### Files to touch
+
+**Primary**
+
+- `js/customers.js` (new — customer events, timing, summary aggregation)
+- `js/economy.js`
+- `js/ui.js`
+- `js/main.js`
+- `index.html`
+- `css/styles.css`
+
+**Allowed if needed**
+
+- `js/weather.js` — leave/buy reason helpers tied to weather preference
+
+### Play-test checklist
+
+- [ ] Sell Day lasts about 10 seconds (not instant)
+- [ ] Customers appear over the day; some buy and some leave
+- [ ] Leave shows readable reason icons (price / stock / weather mismatch)
+- [ ] Buy shows like / dislike / happy icons as appropriate
+- [ ] Cannot start another Sell Day while one is running
+- [ ] Day-end customer summary matches buy/leave totals and sits with P&L
+- [ ] Inventory, cash, and day still update correctly after the animation
+- [ ] **Preview:** short video of a full Sell Day plus a screenshot of the customer summary — attach to the PR
+
+### Out of scope
+
+- Sound effects
+- Employees / hiring
+- Food items
+- npm, frameworks, or a build step
+
+---
+
 ## Later than v1 (not phases)
 
 Do not implement these unless a future plan section is added and status checkboxes created:
 
-- Other beverages and food
+- Food items
 - Multiple stands
 - Hiring employees
 
@@ -221,7 +395,9 @@ junior-entrepreneur/
 │   ├── state.js
 │   ├── economy.js
 │   ├── recipe.js
-│   └── ui.js
+│   ├── ui.js
+│   ├── weather.js    (Phase 7+)
+│   └── customers.js  (Phase 8+)
 ├── .cursor/environment.json
 └── .gitignore
 ```
@@ -233,6 +409,10 @@ junior-entrepreneur/
 - **Do not parallelize Phase 2** (recipe + buy share UI/state wiring).
 - After Phase 2, optional split: Agent A = `js/economy.js` formulas; Agent B = day-report UI in `js/ui.js` + CSS — only if prompts strictly file-scope and one agent owns `main.js` wiring.
 - Avoid two agents changing `js/state.js` schema at the same time.
+- **Phase 5** may run alone (UI close controls only).
+- **Do not parallelize Phase 6** (dual-product schema + Recipe/Buy/Price/economy wiring).
+- **Do not parallelize Phase 8** (Sell Day animation + economy + UI must stay in one PR).
+- Phase 7 should land after Phase 6 (needs juice + cocoa for weather preference).
 
 ---
 
@@ -257,4 +437,36 @@ Phase 2 must already be done. Mark Phase 3 checked when finished.
 ```text
 Implement Phase 4 from PLAN.md. Open a PR.
 Phases 2 and 3 must already be done. Mark Phase 4 checked when finished.
+```
+
+**Phase 5**
+
+```text
+Implement Phase 5 from PLAN.md. Open a PR. Do not start Phase 6+.
+Include screenshot previews of each panel with Close visible.
+Mark Phase 5 checked when finished.
+```
+
+**Phase 6**
+
+```text
+Implement Phase 6 from PLAN.md. Open a PR. Do not start Phase 7 or 8.
+Phase 5 should already be done. Include screenshot previews of cocoa recipe and buy UI.
+Mark Phase 6 checked when finished.
+```
+
+**Phase 7**
+
+```text
+Implement Phase 7 from PLAN.md. Open a PR. Do not start Phase 8.
+Phases 5 and 6 must already be done. Include screenshots of hot and cold weather UI.
+Mark Phase 7 checked when finished.
+```
+
+**Phase 8**
+
+```text
+Implement Phase 8 from PLAN.md. Open a PR.
+Phases 5–7 must already be done. Include a short Sell Day video and a customer-summary screenshot.
+Mark Phase 8 checked when finished.
 ```
