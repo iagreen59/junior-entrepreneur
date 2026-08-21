@@ -274,6 +274,35 @@ body {
   animation: rise-in 0.35s ease-out both;
 }
 
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.65rem;
+}
+
+.panel-header .section-title {
+  margin: 0;
+}
+
+.btn-close {
+  flex-shrink: 0;
+  border-radius: 0.75rem;
+  border-color: transparent;
+  background: rgba(26, 46, 31, 0.08);
+  color: var(--ink-soft);
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 0.4rem 0.75rem;
+}
+
+.btn-close:hover {
+  background: rgba(26, 46, 31, 0.14);
+  color: var(--leaf-deep);
+  transform: none;
+}
+
 .panel-lead {
   margin: 0 0 0.85rem;
   color: var(--ink-soft);

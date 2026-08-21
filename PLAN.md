@@ -21,7 +21,7 @@ Future agents: skip anything already checked.
 - [x] Phase 2 — Recipe + buy ingredients
 - [x] Phase 3 — Price + real daily sales
 - [x] Phase 4 — Polish (validation, New Game, light balance)
-- [ ] Phase 5 — Panel close buttons
+- [x] Phase 5 — Panel close buttons
 - [ ] Phase 6 — Hot cocoa drink
 - [ ] Phase 7 — Weather and drink preference
 - [ ] Phase 8 — Animated customer day + summary
@@ -206,7 +206,7 @@ Morning guidance (what to do before Sell Day), basic validation messages (e.g. n
 
 ## Phase 5 — Panel close buttons
 
-**Status:** not started
+**Status:** done
 
 ### Goal
 
@@ -223,12 +223,12 @@ Every open menu (Recipe, Buy, Price) has an obvious **Close** control that hides
 
 ### Play-test checklist
 
-- [ ] Recipe panel Close hides the panel without applying unsaved edits
-- [ ] Buy panel Close hides the panel
-- [ ] Price panel Close hides the panel without applying unsaved price
-- [ ] Escape closes whichever panel is open
-- [ ] Save recipe / Buy / Set price still work after adding Close
-- [ ] **Preview:** screenshot of each panel (Recipe, Buy, Price) with the Close control visible — attach to the PR
+- [x] Recipe panel Close hides the panel without applying unsaved edits
+- [x] Buy panel Close hides the panel
+- [x] Price panel Close hides the panel without applying unsaved price
+- [x] Escape closes whichever panel is open
+- [x] Save recipe / Buy / Set price still work after adding Close
+- [x] **Preview:** screenshot of each panel (Recipe, Buy, Price) with the Close control visible — attach to the PR
 
 ### Out of scope
 

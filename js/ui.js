@@ -1,10 +1,16 @@
 /**
  * DOM updates / panel rendering.
- * Phase 4: morning guidance copy, Sell Day validation feedback, New Game UX.
+ * Phase 5: panel Close controls + Escape to dismiss without saving drafts.
  */
 (function (global) {
   const MORNING_COPY =
     "Good morning. Recipe → Buy → Price → Sell Day. Stock up before you open.";
+
+  const PANEL_IDS = {
+    recipe: "panel-recipe",
+    buy: "panel-buy",
+    price: "panel-price",
+  };
 
   function formatMoney(amount) {
     const sign = amount < 0 ? "-" : "";
@@ -54,12 +60,32 @@
   }
 
   function setPanel(name) {
-    const recipePanel = document.getElementById("panel-recipe");
-    const buyPanel = document.getElementById("panel-buy");
-    const pricePanel = document.getElementById("panel-price");
-    if (recipePanel) recipePanel.hidden = name !== "recipe";
-    if (buyPanel) buyPanel.hidden = name !== "buy";
-    if (pricePanel) pricePanel.hidden = name !== "price";
+    for (const [key, id] of Object.entries(PANEL_IDS)) {
+      const panel = document.getElementById(id);
+      if (panel) panel.hidden = name !== key;
+    }
+  }
+
+  function getOpenPanel() {
+    for (const [key, id] of Object.entries(PANEL_IDS)) {
+      const panel = document.getElementById(id);
+      if (panel && !panel.hidden) return key;
+    }
+    return null;
+  }
+
+  /**
+   * Hide any open panel and restore Recipe/Price fields from saved state
+   * so Close / Escape discard unsaved edits.
+   */
+  function closePanel(state) {
+    const wasOpen = getOpenPanel();
+    setPanel(null);
+    if (state) {
+      fillRecipeForm(state);
+      fillPriceForm(state);
+    }
+    return wasOpen;
   }
 
   function formatDayReport(report) {
@@ -174,6 +200,8 @@
     render,
     setReport,
     setPanel,
+    getOpenPanel,
+    closePanel,
     readRecipeForm,
     readPriceForm,
     readBuyQty,

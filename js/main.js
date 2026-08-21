@@ -1,6 +1,6 @@
 /**
  * Boot, wire events, day-loop orchestration.
- * Phase 4: morning guidance, Sell Day validation, New Game reset.
+ * Phase 5: Close / Escape dismiss panels without saving drafts.
  */
 (function () {
   let state = GameState.load();
@@ -27,6 +27,12 @@
       "Set your cup price. Current: " + GameUI.formatMoney(state.price) + ".",
       { flash: true }
     );
+  }
+
+  function onPanelClose() {
+    const closed = GameUI.closePanel(state);
+    if (!closed) return;
+    GameUI.setReport("Panel closed. Nothing new was saved.", { flash: true });
   }
 
   function onRecipeSave(event) {
@@ -162,6 +168,17 @@
     const btn = event.target.closest("[data-buy]");
     if (!btn) return;
     onBuy(btn.getAttribute("data-buy"));
+  });
+
+  document.querySelectorAll("[data-close-panel]").forEach((btn) => {
+    btn.addEventListener("click", onPanelClose);
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") return;
+    if (!GameUI.getOpenPanel()) return;
+    event.preventDefault();
+    onPanelClose();
   });
 
   refresh();
