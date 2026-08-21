@@ -37,9 +37,11 @@
   function onBuyOpen() {
     if (selling) return;
     GameUI.setPanel("buy");
-    GameUI.setReport("Buy supplies. Cash drops; inventory goes up.", {
-      flash: true,
-    });
+    GameUI.renderCart(state);
+    GameUI.setReport(
+      "Add supplies to your cart, then Buy at the bottom. Cart stays if you switch menus.",
+      { flash: true }
+    );
   }
 
   function onPriceOpen() {
@@ -72,6 +74,7 @@
     }
     GameState.save(state);
     refresh();
+    GameUI.closePanel(state);
     GameUI.setReport(result.message, { flash: true });
   }
 
@@ -85,19 +88,44 @@
     }
     GameState.save(state);
     refresh();
+    GameUI.closePanel(state);
     GameUI.setReport(result.message, { flash: true });
   }
 
-  function onBuy(key) {
+  function onAddToCart(key) {
     if (selling) return;
-    const result = GameState.buyIngredient(state, key, GameUI.readBuyQty(key));
+    const result = GameUI.addToCart(key, GameUI.readBuyQty(key));
+    GameUI.renderCart(state);
+    GameUI.setReport(result.message, { flash: true });
+  }
+
+  function onRemoveFromCart(key) {
+    if (selling) return;
+    const result = GameUI.removeFromCart(key);
+    GameUI.renderCart(state);
+    GameUI.setReport(result.message, { flash: true });
+  }
+
+  function onClearCart() {
+    if (selling) return;
+    const result = GameUI.clearCart();
+    GameUI.renderCart(state);
+    GameUI.setReport(result.message, { flash: true });
+  }
+
+  function onCartBuy() {
+    if (selling) return;
+    const result = GameState.buyCart(state, GameUI.getCart());
     if (!result.ok) {
+      GameUI.renderCart(state);
       GameUI.setReport(result.message, { flash: true });
       return;
     }
+    GameUI.resetCart();
     GameState.save(state);
     refresh();
-    GameUI.setReport(result.message, { flash: true });
+    GameUI.closePanel(state);
+    GameUI.setReport(result.message, { flash: true, receipt: true });
   }
 
   function validateSellDay(current) {
@@ -221,6 +249,7 @@
 
     state = GameState.defaultState();
     GameState.save(state);
+    GameUI.resetCart();
     GameUI.setPanel(null);
     GameUI.hideCustomerDay();
     refresh();
@@ -259,10 +288,20 @@
     ?.addEventListener("submit", onPriceSave);
 
   document.getElementById("panel-buy")?.addEventListener("click", (event) => {
-    const btn = event.target.closest("[data-buy]");
-    if (!btn) return;
-    onBuy(btn.getAttribute("data-buy"));
+    const addBtn = event.target.closest("[data-add-cart]");
+    if (addBtn) {
+      onAddToCart(addBtn.getAttribute("data-add-cart"));
+      return;
+    }
+    const removeBtn = event.target.closest("[data-remove-cart]");
+    if (removeBtn) {
+      onRemoveFromCart(removeBtn.getAttribute("data-remove-cart"));
+      return;
+    }
   });
+
+  document.getElementById("btn-clear-cart")?.addEventListener("click", onClearCart);
+  document.getElementById("btn-cart-buy")?.addEventListener("click", onCartBuy);
 
   document.querySelectorAll("[data-close-panel]").forEach((btn) => {
     btn.addEventListener("click", onPanelClose);

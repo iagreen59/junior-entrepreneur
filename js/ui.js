@@ -60,9 +60,78 @@
     return input ? input.value : "0";
   }
 
+  /** Session cart — survives panel switches until checkout, clear, or new game. */
+  let supplyCart = global.GameState.emptyCart();
+
+  function getCart() {
+    return supplyCart;
+  }
+
+  function resetCart() {
+    supplyCart = global.GameState.emptyCart();
+    return supplyCart;
+  }
+
   function readBuyQty(key) {
     const input = document.getElementById("buy-qty-" + key);
     return input ? input.value : "0";
+  }
+
+  function addToCart(key, qty) {
+    if (!global.GameState.INVENTORY_KEYS.includes(key)) {
+      return { ok: false, message: "Unknown ingredient." };
+    }
+    const amount = Number(qty);
+    if (!Number.isFinite(amount) || amount <= 0 || !Number.isInteger(amount)) {
+      return {
+        ok: false,
+        message: "Enter a whole number greater than zero to add.",
+      };
+    }
+    supplyCart[key] = (supplyCart[key] || 0) + amount;
+    const labels = global.GameState.inventoryLabels();
+    return {
+      ok: true,
+      key,
+      qty: amount,
+      inCart: supplyCart[key],
+      message:
+        "Added " +
+        amount +
+        " " +
+        labels[key].toLowerCase() +
+        " to cart (" +
+        supplyCart[key] +
+        " in cart).",
+    };
+  }
+
+  function removeFromCart(key) {
+    if (!global.GameState.INVENTORY_KEYS.includes(key)) {
+      return { ok: false, message: "Unknown ingredient." };
+    }
+    const had = supplyCart[key] || 0;
+    supplyCart[key] = 0;
+    const labels = global.GameState.inventoryLabels();
+    if (had <= 0) {
+      return {
+        ok: true,
+        message: "No " + labels[key].toLowerCase() + " in your cart.",
+      };
+    }
+    return {
+      ok: true,
+      message: "Removed " + labels[key].toLowerCase() + " from cart.",
+    };
+  }
+
+  function clearCart() {
+    const hadItems = global.GameState.cartHasItems(supplyCart);
+    resetCart();
+    return {
+      ok: true,
+      message: hadItems ? "Cart cleared." : "Cart is already empty.",
+    };
   }
 
   function renderBuyPrices() {
@@ -76,6 +145,33 @@
           formatMoney(global.GameState.unitPrice(key)) +
           " each";
       }
+    }
+  }
+
+  function renderCart(state) {
+    for (const key of global.GameState.INVENTORY_KEYS) {
+      const qtyEl = document.getElementById("cart-qty-" + key);
+      if (qtyEl) qtyEl.textContent = String(supplyCart[key] || 0);
+      const removeBtn = document.querySelector(
+        '[data-remove-cart="' + key + '"]'
+      );
+      if (removeBtn) {
+        removeBtn.disabled = !(supplyCart[key] > 0);
+      }
+    }
+
+    const total = global.GameState.cartTotal(supplyCart);
+    const totalEl = document.getElementById("cart-total");
+    if (totalEl) {
+      totalEl.textContent = formatMoney(total);
+      const overBudget =
+        total > 0 && state && total > Number(state.cash) + 1e-9;
+      totalEl.classList.toggle("is-over-budget", overBudget);
+    }
+
+    const clearBtn = document.getElementById("btn-clear-cart");
+    if (clearBtn) {
+      clearBtn.disabled = !global.GameState.cartHasItems(supplyCart);
     }
   }
 
@@ -292,18 +388,23 @@
     fillRecipeForm(state);
     fillPriceForm(state);
     renderBuyPrices();
+    renderCart(state);
     renderMorningHint(state);
 
     if (reportEl) {
       const text = formatDayReport(state.lastDayReport);
       reportEl.textContent = text || MORNING_COPY;
+      reportEl.classList.remove("is-receipt");
     }
   }
 
-  function setReport(message, { flash } = {}) {
+  function setReport(message, { flash, receipt } = {}) {
     const reportEl = document.getElementById("report-body");
     const panel = document.querySelector(".report");
-    if (reportEl) reportEl.textContent = message;
+    if (reportEl) {
+      reportEl.textContent = message;
+      reportEl.classList.toggle("is-receipt", !!receipt);
+    }
     if (flash && panel) {
       panel.classList.remove("is-fresh");
       void panel.offsetWidth;
@@ -477,6 +578,12 @@
     readRecipeForm,
     readPriceForm,
     readBuyQty,
+    getCart,
+    resetCart,
+    addToCart,
+    removeFromCart,
+    clearCart,
+    renderCart,
     morningHint,
     setSellDayLocked,
     startCustomerDay,
