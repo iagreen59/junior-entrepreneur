@@ -4,6 +4,7 @@
  * Phase 6: sells the active product (juice or cocoa).
  * Phase 7: typed weather (hot/mild/cold) biases demand toward the
  * weather-matched drink instead of anonymous [0.75, 1.25] noise.
+ * Phase 10: coldCups / hotCups keys; costOfGoodsPerServing for recipe UI.
  *
  * Demand formula (documented for play-testers / future balance):
  *   preference = GameWeather.preferenceFactor(weather, product)
@@ -33,10 +34,12 @@
   /**
    * How many cups inventory can support for a product recipe.
    * Defaults to the active product when `product` is omitted.
+   * Optional `recipeOverride` lets the recipe UI preview draft amounts.
    */
-  function maxCupsFromStock(state, product) {
+  function maxCupsFromStock(state, product, recipeOverride) {
     const drink = product || activeProduct(state);
     const recipe =
+      recipeOverride ||
       (state.recipes && state.recipes[drink]) ||
       global.GameState.activeRecipe(state) ||
       {};
@@ -55,6 +58,27 @@
 
     if (!anyRequirement) return 0;
     return Math.max(0, maxCups === Infinity ? 0 : maxCups);
+  }
+
+  /**
+   * COGS for one serving of `product` given its recipe (or draft override).
+   * Sum of unitPrice(key) × recipe amount per serving.
+   */
+  function costOfGoodsPerServing(state, product, recipeOverride) {
+    const drink = product || activeProduct(state);
+    const recipe =
+      recipeOverride ||
+      (state.recipes && state.recipes[drink]) ||
+      global.GameState.activeRecipe(state) ||
+      {};
+    const keys = global.GameState.recipeKeysFor(drink);
+    let total = 0;
+    for (const key of keys) {
+      const perCup = Number(recipe[key]) || 0;
+      if (perCup <= 0) continue;
+      total += perCup * global.GameState.unitPrice(key);
+    }
+    return +total.toFixed(2);
   }
 
   /**
@@ -249,6 +273,7 @@
     REF_PRICE,
     ELASTICITY,
     maxCupsFromStock,
+    costOfGoodsPerServing,
     demandForPrice,
     planSellDay,
     applySellDay,

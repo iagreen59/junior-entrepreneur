@@ -2,6 +2,7 @@
  * DOM updates / panel rendering.
  * Phase 7: weather status + preference tips for juice vs cocoa.
  * Phase 9: stand ownership gate + hideable instructions panel.
+ * Phase 10: coldCups / hotCups fields; recipe yield + COGS display.
  */
 (function (global) {
   const MORNING_COPY =
@@ -13,6 +14,9 @@
     price: "panel-price",
   };
 
+  /** Latest state from render() — used for live recipe yield/COGS updates. */
+  let cachedState = null;
+
   function formatMoney(amount) {
     const sign = amount < 0 ? "-" : "";
     return sign + "$" + Math.abs(amount).toFixed(2);
@@ -22,19 +26,14 @@
     return state.activeProduct === "cocoa" ? "cocoa" : "juice";
   }
 
-  function recipeCupsInputId(product) {
-    return product === "cocoa" ? "recipe-cocoa-cups" : "recipe-juice-cups";
-  }
-
   function fillRecipeForm(state) {
     const product = activeProduct(state);
     const recipe = global.GameState.activeRecipe(state) || {};
     for (const key of global.GameState.recipeKeysFor(product)) {
-      const inputId =
-        key === "cups" ? recipeCupsInputId(product) : "recipe-" + key;
-      const input = document.getElementById(inputId);
+      const input = document.getElementById("recipe-" + key);
       if (input) input.value = String(recipe[key] ?? 0);
     }
+    renderRecipeStats(state);
   }
 
   function fillPriceForm(state) {
@@ -45,15 +44,58 @@
   }
 
   function readRecipeForm(state) {
-    const product = activeProduct(state);
+    const product = activeProduct(state || cachedState || { activeProduct: "juice" });
     const draft = {};
     for (const key of global.GameState.recipeKeysFor(product)) {
-      const inputId =
-        key === "cups" ? recipeCupsInputId(product) : "recipe-" + key;
-      const input = document.getElementById(inputId);
+      const input = document.getElementById("recipe-" + key);
       draft[key] = input ? input.value : 0;
     }
     return draft;
+  }
+
+  /**
+   * Show max sellable servings from current inventory + COGS per item
+   * for the product being edited (uses draft form values when present).
+   */
+  function renderRecipeStats(state) {
+    const source = state || cachedState;
+    if (!source) return;
+
+    const product = activeProduct(source);
+    const draft = readRecipeForm(source);
+    const parsed = global.GameRecipe.parseDraft(product, draft);
+    const recipe = parsed.ok
+      ? parsed.recipe
+      : global.GameState.activeRecipe(source) || {};
+
+    const servings = global.GameEconomy.maxCupsFromStock(
+      source,
+      product,
+      recipe
+    );
+    const cogs = global.GameEconomy.costOfGoodsPerServing(
+      source,
+      product,
+      recipe
+    );
+    const drink = global.GameState.productLabel(product);
+
+    const yieldEl = document.getElementById("recipe-yield");
+    const cogsEl = document.getElementById("recipe-cogs");
+    if (yieldEl) {
+      yieldEl.textContent =
+        "Can make " +
+        servings +
+        " serving" +
+        (servings === 1 ? "" : "s") +
+        " of " +
+        drink +
+        " from current stock.";
+    }
+    if (cogsEl) {
+      cogsEl.textContent =
+        "COGS per " + drink + ": " + formatMoney(cogs) + ".";
+    }
   }
 
   function readPriceForm() {
@@ -243,7 +285,9 @@
     }
     if (recipeLead) {
       recipeLead.textContent =
-        "Units of each ingredient used per cup of " + drink + ".";
+        "Units of each ingredient used per cup of " +
+        drink +
+        ". Juice uses cold cups; cocoa uses hot cups.";
     }
 
     const priceTitle = document.getElementById("price-panel-title");
@@ -416,6 +460,7 @@
   }
 
   function render(state) {
+    cachedState = state;
     const dayEl = document.getElementById("stat-day");
     const cashEl = document.getElementById("stat-cash");
     const listEl = document.getElementById("inventory-list");
@@ -631,6 +676,14 @@
     setSellDayLocked(false, state);
   }
 
+  // Live-update recipe yield / COGS while editing amounts (no main.js change).
+  const recipeForm = document.getElementById("form-recipe");
+  if (recipeForm) {
+    recipeForm.addEventListener("input", function () {
+      renderRecipeStats(cachedState);
+    });
+  }
+
   global.GameUI = {
     MORNING_COPY,
     formatMoney,
@@ -648,6 +701,7 @@
     removeFromCart,
     clearCart,
     renderCart,
+    renderRecipeStats,
     morningHint,
     renderStand,
     renderInstructions,

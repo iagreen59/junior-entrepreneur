@@ -1,7 +1,7 @@
 /**
  * Product recipe helpers + validation.
- * Phase 6: juice (fruit/sugar/ice/cups) and cocoa
- * (chocolate/milk/whippedCream/chocolateSprinkles/cups) recipes.
+ * Phase 6: juice and cocoa recipes.
+ * Phase 10: juice uses coldCups; cocoa uses hotCups (no shared cups).
  */
 (function (global) {
   function describe(product, recipe) {
@@ -38,10 +38,14 @@
       recipe[key] = Math.floor(value);
     }
 
-    if (recipe.cups < 1) {
+    const cupKey = global.GameState.cupKeyFor(product);
+    if (recipe[cupKey] < 1) {
       return {
         ok: false,
-        message: "Each drink needs at least 1 cup.",
+        message:
+          product === "cocoa"
+            ? "Each drink needs at least 1 hot cup."
+            : "Each drink needs at least 1 cold cup.",
       };
     }
 

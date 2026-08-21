@@ -3,10 +3,16 @@
  * Phase 6: dual products (juice | cocoa), shared inventory bag, dual recipes/prices.
  * Phase 9: starting cash $50; must buy first stand ($20) before Sell Day;
  * hideable instructions preference; migrate legacy saves with an implicit stand.
+ * Phase 10: split shared `cups` into coldCups (juice) and hotCups (cocoa);
+ * recipe yield + COGS helpers consume these keys.
  * Migrates Phase 1–5 juice-only saves (legacy `recipe` / `price` → recipes.juice / prices.juice).
  *
  * Buy unit prices (cash per inventory unit) — not stored in the save blob;
  * constants live here so Buy UI / helpers share one source.
+ *
+ * Migration (Phase 10): legacy inventory `cups` is copied into BOTH coldCups
+ * and hotCups when those keys are absent, so neither drink loses cup stock.
+ * Legacy recipe `cups` maps to coldCups (juice) or hotCups (cocoa).
  */
 (function (global) {
   const STORAGE_KEY = "junior-entrepreneur-v1";
@@ -18,16 +24,16 @@
 
   const PRODUCTS = ["juice", "cocoa"];
 
-  /** Juice recipe keys (units per cup). */
-  const JUICE_KEYS = ["fruit", "sugar", "ice", "cups"];
+  /** Juice recipe keys (units per serving). Cold cups only. */
+  const JUICE_KEYS = ["fruit", "sugar", "ice", "coldCups"];
 
-  /** Cocoa recipe keys (units per cup). Shared cups with juice. */
+  /** Cocoa recipe keys (units per serving). Hot cups only. */
   const COCOA_KEYS = [
     "chocolate",
     "milk",
     "whippedCream",
     "chocolateSprinkles",
-    "cups",
+    "hotCups",
   ];
 
   /** Full shared inventory bag (all buyable ingredients). */
@@ -39,7 +45,8 @@
     "milk",
     "whippedCream",
     "chocolateSprinkles",
-    "cups",
+    "coldCups",
+    "hotCups",
   ];
 
   /** Cash cost per inventory unit when buying supplies. */
@@ -51,11 +58,16 @@
     milk: 0.3,
     whippedCream: 0.25,
     chocolateSprinkles: 0.15,
-    cups: 0.15,
+    coldCups: 0.15,
+    hotCups: 0.15,
   };
 
+  function cupKeyFor(product) {
+    return product === "cocoa" ? "hotCups" : "coldCups";
+  }
+
   function defaultJuiceRecipe() {
-    return { fruit: 2, sugar: 1, ice: 1, cups: 1 };
+    return { fruit: 2, sugar: 1, ice: 1, coldCups: 1 };
   }
 
   function defaultCocoaRecipe() {
@@ -64,7 +76,7 @@
       milk: 1,
       whippedCream: 1,
       chocolateSprinkles: 1,
-      cups: 1,
+      hotCups: 1,
     };
   }
 
@@ -178,12 +190,32 @@
     return product === "cocoa" ? COCOA_KEYS.slice() : JUICE_KEYS.slice();
   }
 
+  /**
+   * Map legacy shared `cups` on a recipe blob to coldCups / hotCups.
+   * Does not mutate the original object.
+   */
+  function migrateRecipeCups(product, rawRecipe) {
+    if (!rawRecipe || typeof rawRecipe !== "object") return rawRecipe;
+    const cupKey = cupKeyFor(product);
+    const out = Object.assign({}, rawRecipe);
+    if (
+      !Number.isFinite(out[cupKey]) &&
+      Number.isFinite(out.cups) &&
+      out.cups >= 0
+    ) {
+      out[cupKey] = out.cups;
+    }
+    delete out.cups;
+    return out;
+  }
+
   function normalizeRecipe(product, rawRecipe, fallback) {
     const keys = recipeKeysFor(product);
     const recipe = { ...fallback };
-    if (!rawRecipe || typeof rawRecipe !== "object") return recipe;
+    const migrated = migrateRecipeCups(product, rawRecipe);
+    if (!migrated || typeof migrated !== "object") return recipe;
     for (const key of keys) {
-      const value = rawRecipe[key];
+      const value = migrated[key];
       if (Number.isFinite(value) && value >= 0) recipe[key] = value;
     }
     return recipe;
@@ -206,6 +238,16 @@
     for (const key of INVENTORY_KEYS) {
       const value = rawInv[key];
       inventory[key] = Number.isFinite(value) ? Math.max(0, value) : 0;
+    }
+
+    // Phase 10: legacy shared `cups` → both coldCups and hotCups when missing,
+    // so juice and cocoa keep cup stock from older saves (no progress lost).
+    const legacyCups = Number.isFinite(rawInv.cups)
+      ? Math.max(0, rawInv.cups)
+      : 0;
+    if (legacyCups > 0) {
+      if (!Number.isFinite(rawInv.coldCups)) inventory.coldCups = legacyCups;
+      if (!Number.isFinite(rawInv.hotCups)) inventory.hotCups = legacyCups;
     }
 
     const legacyRecipe =
@@ -322,7 +364,8 @@
       milk: "Milk",
       whippedCream: "Whipped cream",
       chocolateSprinkles: "Chocolate sprinkles",
-      cups: "Cups",
+      coldCups: "Cold cups",
+      hotCups: "Hot cups",
     };
   }
 
@@ -535,6 +578,7 @@
     unitPrice,
     productLabel,
     recipeKeysFor,
+    cupKeyFor,
     activeRecipe,
     activePrice,
     setActiveProduct,
