@@ -4,6 +4,8 @@
  *
  * Day length ≈ DAY_MS (10s). Events are spaced across the day; leave
  * reasons: price | stock | weather. Buy reactions: like | dislike | happy.
+ * Stock ("sold out") leaves always follow the buy window so successful
+ * purchases never appear after the stand runs out.
  */
 (function (global) {
   const DAY_MS = 10000;
@@ -110,7 +112,19 @@
       events.push({ outcome: "leave", reason: "price", reaction: null });
     }
 
-    const ordered = shuffle(events, randomFn);
+    // Sold-out (stock) leaves must come after all buys — once cups run out,
+    // later visitors cannot succeed. Price/weather walk-aways still shuffle
+    // among the buying window so the day feels mixed, then stock leftovers.
+    const stockEvents = [];
+    const earlyEvents = [];
+    for (const event of events) {
+      if (event.outcome === "leave" && event.reason === "stock") {
+        stockEvents.push(event);
+      } else {
+        earlyEvents.push(event);
+      }
+    }
+    const ordered = shuffle(earlyEvents, randomFn).concat(stockEvents);
     const n = ordered.length;
     const timeline = ordered.map(function (event, index) {
       const t =

@@ -442,8 +442,8 @@ body {
 
 .buy-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 4.5rem auto;
-  gap: 0.5rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.5rem 0.75rem;
   align-items: center;
 }
 
@@ -456,6 +456,26 @@ body {
   font-weight: 700;
   color: var(--leaf-deep);
   font-size: 0.95rem;
+}
+
+.buy-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-shrink: 0;
+}
+
+.buy-controls .field-inline {
+  width: 4.5rem;
+}
+
+.buy-controls .field-inline input {
+  width: 100%;
+}
+
+.buy-controls .btn-panel {
+  margin: 0;
+  white-space: nowrap;
 }
 
 .field-inline {
@@ -618,6 +638,11 @@ body {
 
   .buy-row {
     grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .buy-controls {
+    justify-content: flex-start;
   }
 
   .summary-list {
