@@ -1,10 +1,10 @@
 /**
  * DOM updates / panel rendering.
- * Phase 6: product picker, dual recipe/price forms, full inventory/buy list.
+ * Phase 7: weather status + preference tips for juice vs cocoa.
  */
 (function (global) {
   const MORNING_COPY =
-    "Good morning. Pick a drink → Recipe → Buy → Price → Sell Day.";
+    "Good morning. Check the weather, pick a drink → Recipe → Buy → Price → Sell Day.";
 
   const PANEL_IDS = {
     recipe: "panel-recipe",
@@ -79,8 +79,31 @@
     }
   }
 
+  function renderWeather(state) {
+    const weather = state.weather || "mild";
+    const weatherEl = document.getElementById("stat-weather");
+    const card = document.getElementById("stat-weather-card");
+    if (weatherEl && global.GameWeather) {
+      weatherEl.textContent = global.GameWeather.label(weather);
+    }
+    if (card) {
+      card.setAttribute("data-weather", weather);
+      let tipEl = document.getElementById("weather-tip");
+      if (!tipEl) {
+        tipEl = document.createElement("p");
+        tipEl.id = "weather-tip";
+        tipEl.className = "weather-tip";
+        card.appendChild(tipEl);
+      }
+      tipEl.textContent = global.GameWeather
+        ? global.GameWeather.tip(weather)
+        : "";
+    }
+  }
+
   function renderProductPicker(state) {
     const product = activeProduct(state);
+    const weather = state.weather || "mild";
     document.querySelectorAll("[data-product]").forEach(function (btn) {
       const isActive = btn.getAttribute("data-product") === product;
       btn.classList.toggle("is-active", isActive);
@@ -89,10 +112,25 @@
 
     const hint = document.getElementById("product-hint");
     if (hint) {
+      const favor = global.GameWeather
+        ? global.GameWeather.favorsProduct(weather, product)
+        : null;
+      let fit = "Mild weather — either drink is fine.";
+      if (favor === true) {
+        fit =
+          global.GameWeather.label(weather) +
+          " weather favors " +
+          global.GameState.productLabel(product) +
+          ".";
+      } else if (favor === false) {
+        fit =
+          global.GameWeather.label(weather) +
+          " weather is a mismatch for " +
+          global.GameState.productLabel(product) +
+          ".";
+      }
       hint.textContent =
-        "Selling " +
-        global.GameState.productLabel(product) +
-        ". Recipe, price, and Sell Day use this drink.";
+        "Selling " + global.GameState.productLabel(product) + ". " + fit;
     }
 
     document.querySelectorAll("[data-recipe-product]").forEach(function (block) {
@@ -140,10 +178,6 @@
     return null;
   }
 
-  /**
-   * Hide any open panel and restore Recipe/Price fields from saved state
-   * so Close / Escape discard unsaved edits.
-   */
   function closePanel(state) {
     const wasOpen = getOpenPanel();
     setPanel(null);
@@ -180,8 +214,13 @@
   function morningHint(state) {
     const product = activeProduct(state);
     const drink = global.GameState.productLabel(product);
-    const stockCups = global.GameEconomy.maxCupsFromStock(state);
+    const weather = state.weather || "mild";
+    const stockCups = global.GameEconomy.maxCupsFromStock(state, product);
     const price = Number(global.GameState.activePrice(state));
+    const favor = global.GameWeather
+      ? global.GameWeather.favorsProduct(weather, product)
+      : null;
+
     if (stockCups <= 0) {
       return (
         "No " +
@@ -192,6 +231,11 @@
     if (!Number.isFinite(price) || price <= 0) {
       return "Set a sell price for " + drink + " before you open.";
     }
+
+    let fit = "";
+    if (favor === true) fit = " Weather match.";
+    if (favor === false) fit = " Weather mismatch — expect fewer buyers.";
+
     return (
       "Ready for about " +
       stockCups +
@@ -201,7 +245,8 @@
       (stockCups === 1 ? "" : "s") +
       " at " +
       formatMoney(price) +
-      "."
+      "." +
+      fit
     );
   }
 
@@ -242,6 +287,7 @@
       }
     }
 
+    renderWeather(state);
     renderProductPicker(state);
     fillRecipeForm(state);
     fillPriceForm(state);

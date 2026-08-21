@@ -107,6 +107,29 @@ body {
   margin-bottom: 1.25rem;
 }
 
+.stat-weather {
+  grid-column: 1 / -1;
+}
+
+.stat-weather[data-weather="hot"] {
+  background: linear-gradient(135deg, #ffe08a 0%, #ffc14d 100%);
+}
+
+.stat-weather[data-weather="cold"] {
+  background: linear-gradient(135deg, #d7efff 0%, #b7d8f5 100%);
+}
+
+.stat-weather[data-weather="mild"] {
+  background: var(--cream-juice);
+}
+
+.weather-tip {
+  margin: 0.35rem 0 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
 .product-picker {
   margin-bottom: 1.25rem;
 }

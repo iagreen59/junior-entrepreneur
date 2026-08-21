@@ -23,7 +23,7 @@ Future agents: skip anything already checked.
 - [x] Phase 4 — Polish (validation, New Game, light balance)
 - [x] Phase 5 — Panel close buttons
 - [x] Phase 6 — Hot cocoa drink
-- [ ] Phase 7 — Weather and drink preference
+- [x] Phase 7 — Weather and drink preference
 - [ ] Phase 8 — Animated customer day + summary
 
 ---
@@ -287,7 +287,7 @@ Player can sell **juice** (cold) or **hot cocoa** (hot). Cocoa ingredients: choc
 
 ## Phase 7 — Weather and drink preference
 
-**Status:** not started
+**Status:** done
 
 ### Goal
 
@@ -307,14 +307,14 @@ Morning shows today’s weather as discrete **hot**, **mild**, or **cold** (roll
 
 ### Play-test checklist
 
-- [ ] Status / morning UI shows today’s weather (hot / mild / cold)
-- [ ] Weather re-rolls for each new day (after Sell Day advances the day)
-- [ ] Hot day favors juice sales vs cocoa when both are stocked
-- [ ] Cold day favors cocoa sales vs juice when both are stocked
-- [ ] Mild day is roughly balanced between juice and cocoa
-- [ ] Formula is documented in code comments
-- [ ] Refresh keeps or correctly re-derives the current day’s weather as designed
-- [ ] **Preview:** screenshots of hot and cold weather in the status UI — attach to the PR
+- [x] Status / morning UI shows today’s weather (hot / mild / cold)
+- [x] Weather re-rolls for each new day (after Sell Day advances the day)
+- [x] Hot day favors juice sales vs cocoa when both are stocked
+- [x] Cold day favors cocoa sales vs juice when both are stocked
+- [x] Mild day is roughly balanced between juice and cocoa
+- [x] Formula is documented in code comments
+- [x] Refresh keeps or correctly re-derives the current day’s weather as designed
+- [x] **Preview:** screenshots of hot and cold weather in the status UI — attach to the PR
 
 ### Out of scope
 

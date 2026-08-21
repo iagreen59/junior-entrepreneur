@@ -1,6 +1,6 @@
 /**
  * Boot, wire events, day-loop orchestration.
- * Phase 6: product picker (juice / cocoa) + dual recipe/price sell path.
+ * Phase 7: roll typed weather each new day; demand uses weather preference.
  */
 (function () {
   let state = GameState.load();
@@ -90,10 +90,6 @@
     GameUI.setReport(result.message, { flash: true });
   }
 
-  /**
-   * Block Sell Day when the active product cannot make any cups
-   * or when its sell price is not usable. Does not burn a day.
-   */
   function validateSellDay(current) {
     const drink = GameState.productLabel(current.activeProduct);
     const price = Number(GameState.activePrice(current));
@@ -138,8 +134,12 @@
     const result = GameEconomy.runSellDay(state);
     state.cash = result.cashAfter;
     state.day += 1;
+    // New morning: re-roll typed weather for the next day.
+    state.weather = GameWeather.roll();
     state.lastDayReport = {
       product: result.product,
+      weather: result.weather,
+      preference: result.preference,
       cupsSold: result.cupsSold,
       demand: result.demand,
       stockCups: result.stockCups,
@@ -156,7 +156,7 @@
 
   function onNewGame() {
     const confirmed = window.confirm(
-      "Start a new game? This clears your saved day, cash, inventory, recipes, and prices."
+      "Start a new game? This clears your saved day, cash, inventory, recipes, prices, and weather."
     );
     if (!confirmed) return;
 
@@ -171,7 +171,10 @@
     GameUI.setPanel(null);
     refresh();
     GameUI.setReport(
-      "New game started. Day 1, $20.00 cash. " + GameUI.MORNING_COPY,
+      "New game started. Day 1, $20.00 cash. Weather: " +
+        GameWeather.label(state.weather) +
+        ". " +
+        GameUI.MORNING_COPY,
       { flash: true }
     );
   }
