@@ -155,7 +155,7 @@
           </button>
         </div>
         <p class="panel-lead" id="recipe-panel-lead">
-          Units of each ingredient used per cup.
+          Units of each ingredient used per cup. Juice uses cold cups; cocoa uses hot cups.
         </p>
         <form id="form-recipe" class="panel-form">
           <div class="recipe-fields" data-recipe-product="juice">
@@ -172,8 +172,8 @@
               <input type="number" id="recipe-ice" name="ice" min="0" step="1" />
             </label>
             <label class="field">
-              <span class="field-label">Cups</span>
-              <input type="number" id="recipe-juice-cups" name="cups" min="1" step="1" />
+              <span class="field-label">Cold cups</span>
+              <input type="number" id="recipe-coldCups" name="coldCups" min="1" step="1" />
             </label>
           </div>
           <div class="recipe-fields" data-recipe-product="cocoa" hidden>
@@ -206,9 +206,13 @@
               />
             </label>
             <label class="field">
-              <span class="field-label">Cups</span>
-              <input type="number" id="recipe-cocoa-cups" name="cups" min="1" step="1" />
+              <span class="field-label">Hot cups</span>
+              <input type="number" id="recipe-hotCups" name="hotCups" min="1" step="1" />
             </label>
+          </div>
+          <div class="recipe-stats" id="recipe-stats" aria-live="polite">
+            <p class="recipe-stat" id="recipe-yield">Can make 0 servings from current stock.</p>
+            <p class="recipe-stat" id="recipe-cogs">COGS per item: $0.00.</p>
           </div>
           <button type="submit" class="btn btn-panel">Save recipe</button>
         </form>
@@ -223,7 +227,7 @@
         </div>
         <p class="panel-lead">
           Add supplies to your cart, then Buy once at the bottom. Your cart stays
-          while you switch menus. Cups are shared by juice and cocoa.
+          while you switch menus. Cold cups are for juice; hot cups are for cocoa.
         </p>
         <div class="buy-head" aria-hidden="true">
           <span class="buy-head-item">Item</span>
@@ -428,24 +432,49 @@
           </li>
           <li class="buy-row">
             <div class="buy-meta">
-              <span class="buy-name" id="buy-price-cups">Cups</span>
+              <span class="buy-name" id="buy-price-coldCups">Cold cups</span>
             </div>
             <div class="buy-controls">
               <label class="field field-inline">
-                <span class="visually-hidden">Quantity of cups</span>
-                <input type="number" id="buy-qty-cups" min="1" step="1" value="10" />
+                <span class="visually-hidden">Quantity of cold cups</span>
+                <input type="number" id="buy-qty-coldCups" min="1" step="1" value="10" />
               </label>
-              <button type="button" class="btn btn-panel" data-add-cart="cups">
+              <button type="button" class="btn btn-panel" data-add-cart="coldCups">
                 Add to cart
               </button>
             </div>
             <div class="buy-cart-cell">
-              <span class="buy-cart-qty" id="cart-qty-cups" aria-live="polite">0</span>
+              <span class="buy-cart-qty" id="cart-qty-coldCups" aria-live="polite">0</span>
               <button
                 type="button"
                 class="btn btn-quiet-inline"
-                data-remove-cart="cups"
-                aria-label="Remove cups from cart"
+                data-remove-cart="coldCups"
+                aria-label="Remove cold cups from cart"
+              >
+                Remove
+              </button>
+            </div>
+          </li>
+          <li class="buy-row">
+            <div class="buy-meta">
+              <span class="buy-name" id="buy-price-hotCups">Hot cups</span>
+            </div>
+            <div class="buy-controls">
+              <label class="field field-inline">
+                <span class="visually-hidden">Quantity of hot cups</span>
+                <input type="number" id="buy-qty-hotCups" min="1" step="1" value="10" />
+              </label>
+              <button type="button" class="btn btn-panel" data-add-cart="hotCups">
+                Add to cart
+              </button>
+            </div>
+            <div class="buy-cart-cell">
+              <span class="buy-cart-qty" id="cart-qty-hotCups" aria-live="polite">0</span>
+              <button
+                type="button"
+                class="btn btn-quiet-inline"
+                data-remove-cart="hotCups"
+                aria-label="Remove hot cups from cart"
               >
                 Remove
               </button>

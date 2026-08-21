@@ -71,7 +71,7 @@ Future agents: skip anything already checked.
 - [x] Phase 7 — Weather and drink preference
 - [x] Phase 8 — Animated customer day + summary
 - [x] Phase 9 — Starting cash, first stand, hideable instructions
-- [ ] Phase 10 — Hot/cold cups + recipe yield and COGS
+- [x] Phase 10 — Hot/cold cups + recipe yield and COGS
 - [ ] Phase 11 — Four-item menu + daily offers + per-item prices
 - [ ] Phase 12 — Multi-item Sell Day + purchase feedback icons
 - [ ] Phase 13 — Multi-stand unlock, selector, map
@@ -466,7 +466,7 @@ Start at **$50** cash. Player must **buy the first stand for $20** before Sell D
 
 ## Phase 10 — Hot/cold cups + recipe yield and COGS display
 
-**Status:** not started — start only after Phase 9 is checked done
+**Status:** done
 
 ### Goal
 
@@ -485,12 +485,12 @@ Replace shared `cups` with **coldCups** (juice) and **hotCups** (cocoa). Recipe 
 
 ### Play-test checklist
 
-- [ ] Juice uses coldCups; cocoa uses hotCups (no shared cups key)
-- [ ] Buy UI offers both cup types
-- [ ] Recipe panel shows max sellable servings from stock
-- [ ] Recipe panel shows COGS for the item
-- [ ] Old saves with `cups` migrate without losing progress
-- [ ] **Preview:** screenshots of recipe yield/COGS and buy rows for cup types — attach to the PR
+- [x] Juice uses coldCups; cocoa uses hotCups (no shared cups key)
+- [x] Buy UI offers both cup types
+- [x] Recipe panel shows max sellable servings from stock
+- [x] Recipe panel shows COGS for the item
+- [x] Old saves with `cups` migrate without losing progress
+- [x] **Preview:** screenshots of recipe yield/COGS and buy rows for cup types — attach to the PR
 
 ### Out of scope
 
