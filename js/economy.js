@@ -5,12 +5,14 @@
  * Phase 7: typed weather (hot/mild/cold) biases demand toward the
  * weather-matched drink instead of anonymous [0.75, 1.25] noise.
  * Phase 10: coldCups / hotCups keys; costOfGoodsPerServing for recipe UI.
+ * Phase 11: activeProduct may be juice|cocoa|burger|soup; Sell Day still
+ * resolves a single product (multi-item menu Sell Day is Phase 12).
  *
  * Demand formula (documented for play-testers / future balance):
  *   preference = GameWeather.preferenceFactor(weather, product)
- *                hot+juice / cold+cocoa → 1.35 (match)
- *                hot+cocoa / cold+juice → 0.65 (mismatch)
- *                mild + either         → 1.00
+ *                hot+juice|burger / cold+cocoa|soup → 1.35 (match)
+ *                hot+cocoa|soup / cold+juice|burger → 0.65 (mismatch)
+ *                mild + any                          → 1.00
  *   interest   = BASE_INTEREST * (REF_PRICE / price) ^ ELASTICITY * preference
  *   demand     = floor(max(0, interest))
  *   stockCups  = min over active-recipe ingredients of floor(inv[k] / recipe[k])
@@ -28,7 +30,14 @@
   const ELASTICITY = 1.05;
 
   function activeProduct(state) {
-    return state.activeProduct === "cocoa" ? "cocoa" : "juice";
+    return global.GameState.normalizeProduct(state.activeProduct, "juice");
+  }
+
+  function servingWord(product, count) {
+    if (product === "burger" || product === "soup") {
+      return count === 1 ? "serving" : "servings";
+    }
+    return count === 1 ? "cup" : "cups";
   }
 
   /**
@@ -180,8 +189,8 @@
       cupsSold +
       " " +
       drink +
-      " cup" +
-      (cupsSold === 1 ? "" : "s") +
+      " " +
+      servingWord(product, cupsSold) +
       " at " +
       formatMoney(price) +
       ". Revenue " +
@@ -196,7 +205,9 @@
       message =
         "No stock for today's " +
         drink +
-        " recipe — sold 0 cups. Revenue $0.00, costs $0.00, profit $0.00.";
+        " recipe — sold 0 " +
+        servingWord(product, 0) +
+        ". Revenue $0.00, costs $0.00, profit $0.00.";
     } else if (soldOut) {
       message += " Sold out!";
     } else {
@@ -255,6 +266,8 @@
       return { ok: false, message: "Keep the cup price at $100.00 or less." };
     }
     state.prices[product] = +price.toFixed(2);
+    const unit =
+      product === "burger" || product === "soup" ? "serving" : "cup";
     return {
       ok: true,
       product,
@@ -264,7 +277,9 @@
         global.GameState.productLabel(product) +
         " set to " +
         formatMoney(state.prices[product]) +
-        " per cup.",
+        " per " +
+        unit +
+        ".",
     };
   }
 

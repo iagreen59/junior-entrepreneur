@@ -5,7 +5,9 @@
  * hideable instructions preference; migrate legacy saves with an implicit stand.
  * Phase 10: split shared `cups` into coldCups (juice) and hotCups (cocoa);
  * recipe yield + COGS helpers consume these keys.
- * Migrates Phase 1–5 juice-only saves (legacy `recipe` / `price` → recipes.juice / prices.juice).
+ * Phase 11: four products (juice, cocoa, burger, soup); unique ingredient recipes;
+ * per-item prices; menuOffered daily toggles (drinks on by default, food off);
+ * migrate dual-drink saves.
  *
  * Buy unit prices (cash per inventory unit) — not stored in the save blob;
  * constants live here so Buy UI / helpers share one source.
@@ -13,6 +15,9 @@
  * Migration (Phase 10): legacy inventory `cups` is copied into BOTH coldCups
  * and hotCups when those keys are absent, so neither drink loses cup stock.
  * Legacy recipe `cups` maps to coldCups (juice) or hotCups (cocoa).
+ *
+ * Migration (Phase 11): dual-drink saves gain burger/soup default recipes + prices
+ * and menuOffered (juice/cocoa true, burger/soup false).
  */
 (function (global) {
   const STORAGE_KEY = "junior-entrepreneur-v1";
@@ -22,7 +27,7 @@
   const STARTING_CASH = 50;
   const STAND_COST = 20;
 
-  const PRODUCTS = ["juice", "cocoa"];
+  const PRODUCTS = ["juice", "cocoa", "burger", "soup"];
 
   /** Juice recipe keys (units per serving). Cold cups only. */
   const JUICE_KEYS = ["fruit", "sugar", "ice", "coldCups"];
@@ -36,6 +41,12 @@
     "hotCups",
   ];
 
+  /** Burger recipe keys — no shared ingredients with other products. */
+  const BURGER_KEYS = ["bun", "beefPatty", "cheese", "lettuce", "tomato"];
+
+  /** Soup recipe keys — no shared ingredients with other products. */
+  const SOUP_KEYS = ["broth", "noodles", "carrot", "celery", "herbs"];
+
   /** Full shared inventory bag (all buyable ingredients). */
   const INVENTORY_KEYS = [
     "fruit",
@@ -47,6 +58,16 @@
     "chocolateSprinkles",
     "coldCups",
     "hotCups",
+    "bun",
+    "beefPatty",
+    "cheese",
+    "lettuce",
+    "tomato",
+    "broth",
+    "noodles",
+    "carrot",
+    "celery",
+    "herbs",
   ];
 
   /** Cash cost per inventory unit when buying supplies. */
@@ -60,10 +81,31 @@
     chocolateSprinkles: 0.15,
     coldCups: 0.15,
     hotCups: 0.15,
+    bun: 0.35,
+    beefPatty: 0.8,
+    cheese: 0.3,
+    lettuce: 0.15,
+    tomato: 0.2,
+    broth: 0.4,
+    noodles: 0.25,
+    carrot: 0.15,
+    celery: 0.15,
+    herbs: 0.2,
   };
 
+  function isProduct(value) {
+    return PRODUCTS.includes(value);
+  }
+
+  function normalizeProduct(value, fallback) {
+    return isProduct(value) ? value : fallback || "juice";
+  }
+
+  /** Cup key for drink products; null for food (burger / soup). */
   function cupKeyFor(product) {
-    return product === "cocoa" ? "hotCups" : "coldCups";
+    if (product === "cocoa") return "hotCups";
+    if (product === "juice") return "coldCups";
+    return null;
   }
 
   function defaultJuiceRecipe() {
@@ -77,6 +119,28 @@
       whippedCream: 1,
       chocolateSprinkles: 1,
       hotCups: 1,
+    };
+  }
+
+  function defaultBurgerRecipe() {
+    return { bun: 1, beefPatty: 1, cheese: 1, lettuce: 1, tomato: 1 };
+  }
+
+  function defaultSoupRecipe() {
+    return { broth: 1, noodles: 1, carrot: 1, celery: 1, herbs: 1 };
+  }
+
+  /**
+   * Default daily menu: drinks offered, food off until the player opts in.
+   * Phase 12 will use this for multi-item Sell Day; Phase 11 still sells
+   * the single activeProduct.
+   */
+  function defaultMenuOffered() {
+    return {
+      juice: true,
+      cocoa: true,
+      burger: false,
+      soup: false,
     };
   }
 
@@ -101,7 +165,13 @@
       /** Owned stands; empty until the player buys the first stand ($20). */
       stands: [],
       activeStandId: null,
+      /** Product being edited / sold (Phase 11 Sell Day still single-product). */
       activeProduct: "juice",
+      /**
+       * Which products are on today's menu. Independent of activeProduct.
+       * Defaults: juice + cocoa on; burger + soup off.
+       */
+      menuOffered: defaultMenuOffered(),
       weather: global.GameWeather
         ? global.GameWeather.roll(randomFn)
         : "mild",
@@ -109,10 +179,14 @@
       recipes: {
         juice: defaultJuiceRecipe(),
         cocoa: defaultCocoaRecipe(),
+        burger: defaultBurgerRecipe(),
+        soup: defaultSoupRecipe(),
       },
       prices: {
         juice: 1.5,
         cocoa: 2.0,
+        burger: 4.0,
+        soup: 3.5,
       },
       lastDayReport: null,
     };
@@ -183,11 +257,16 @@
 
   function productLabel(product) {
     if (product === "cocoa") return "hot cocoa";
+    if (product === "burger") return "burger";
+    if (product === "soup") return "soup";
     return "juice";
   }
 
   function recipeKeysFor(product) {
-    return product === "cocoa" ? COCOA_KEYS.slice() : JUICE_KEYS.slice();
+    if (product === "cocoa") return COCOA_KEYS.slice();
+    if (product === "burger") return BURGER_KEYS.slice();
+    if (product === "soup") return SOUP_KEYS.slice();
+    return JUICE_KEYS.slice();
   }
 
   /**
@@ -197,6 +276,11 @@
   function migrateRecipeCups(product, rawRecipe) {
     if (!rawRecipe || typeof rawRecipe !== "object") return rawRecipe;
     const cupKey = cupKeyFor(product);
+    if (!cupKey) {
+      const out = Object.assign({}, rawRecipe);
+      delete out.cups;
+      return out;
+    }
     const out = Object.assign({}, rawRecipe);
     if (
       !Number.isFinite(out[cupKey]) &&
@@ -225,9 +309,24 @@
     return Number.isFinite(raw) && raw >= 0 ? raw : fallback;
   }
 
+  function normalizeMenuOffered(raw) {
+    const base = defaultMenuOffered();
+    if (!raw || typeof raw !== "object") return base;
+    const out = {};
+    for (const product of PRODUCTS) {
+      if (typeof raw[product] === "boolean") {
+        out[product] = raw[product];
+      } else {
+        out[product] = base[product];
+      }
+    }
+    return out;
+  }
+
   /**
    * Normalize any save blob (including pre–Phase 6 juice-only shapes).
    * Legacy: top-level `recipe` / `price` become recipes.juice / prices.juice.
+   * Phase 11: dual-drink saves get burger/soup defaults + menuOffered.
    */
   function normalize(raw) {
     const base = defaultState();
@@ -266,6 +365,12 @@
         recipesRaw.cocoa,
         base.recipes.cocoa
       ),
+      burger: normalizeRecipe(
+        "burger",
+        recipesRaw.burger,
+        base.recipes.burger
+      ),
+      soup: normalizeRecipe("soup", recipesRaw.soup, base.recipes.soup),
     };
 
     const pricesRaw =
@@ -276,11 +381,12 @@
         base.prices.juice
       ),
       cocoa: normalizePrice(pricesRaw.cocoa, base.prices.cocoa),
+      burger: normalizePrice(pricesRaw.burger, base.prices.burger),
+      soup: normalizePrice(pricesRaw.soup, base.prices.soup),
     };
 
-    const activeProduct = PRODUCTS.includes(raw.activeProduct)
-      ? raw.activeProduct
-      : "juice";
+    const activeProduct = normalizeProduct(raw.activeProduct, "juice");
+    const menuOffered = normalizeMenuOffered(raw.menuOffered);
 
     const weather = global.GameWeather
       ? global.GameWeather.normalize(raw.weather)
@@ -330,6 +436,7 @@
       stands,
       activeStandId,
       activeProduct,
+      menuOffered,
       weather,
       inventory,
       recipes,
@@ -366,6 +473,16 @@
       chocolateSprinkles: "Chocolate sprinkles",
       coldCups: "Cold cups",
       hotCups: "Hot cups",
+      bun: "Bun",
+      beefPatty: "Beef patty",
+      cheese: "Cheese",
+      lettuce: "Lettuce",
+      tomato: "Tomato",
+      broth: "Broth",
+      noodles: "Noodles",
+      carrot: "Carrot",
+      celery: "Celery",
+      herbs: "Herbs",
     };
   }
 
@@ -374,12 +491,12 @@
   }
 
   function activeRecipe(state) {
-    const product = state.activeProduct === "cocoa" ? "cocoa" : "juice";
+    const product = normalizeProduct(state.activeProduct, "juice");
     return state.recipes[product];
   }
 
   function activePrice(state) {
-    const product = state.activeProduct === "cocoa" ? "cocoa" : "juice";
+    const product = normalizeProduct(state.activeProduct, "juice");
     return state.prices[product];
   }
 
@@ -391,8 +508,41 @@
     return {
       ok: true,
       product,
-      message: "Now selling " + productLabel(product) + ".",
+      message: "Now editing / selling " + productLabel(product) + ".",
     };
+  }
+
+  /**
+   * Toggle whether a product is on today's menu.
+   * Independent of activeProduct (which product you are editing).
+   */
+  function setMenuOffered(state, product, offered) {
+    if (!PRODUCTS.includes(product)) {
+      return { ok: false, message: "Unknown product." };
+    }
+    if (!state.menuOffered || typeof state.menuOffered !== "object") {
+      state.menuOffered = defaultMenuOffered();
+    }
+    state.menuOffered[product] = !!offered;
+    const label = productLabel(product);
+    return {
+      ok: true,
+      product,
+      offered: state.menuOffered[product],
+      message: state.menuOffered[product]
+        ? label.charAt(0).toUpperCase() + label.slice(1) + " is on today's menu."
+        : label.charAt(0).toUpperCase() +
+          label.slice(1) +
+          " is off today's menu.",
+    };
+  }
+
+  function isMenuOffered(state, product) {
+    if (!PRODUCTS.includes(product)) return false;
+    if (!state.menuOffered || typeof state.menuOffered !== "object") {
+      return defaultMenuOffered()[product];
+    }
+    return !!state.menuOffered[product];
   }
 
   function emptyCart() {
@@ -562,9 +712,12 @@
     PRODUCTS,
     JUICE_KEYS,
     COCOA_KEYS,
+    BURGER_KEYS,
+    SOUP_KEYS,
     INVENTORY_KEYS,
     UNIT_PRICES,
     defaultState,
+    defaultMenuOffered,
     load,
     save,
     normalize,
@@ -579,9 +732,13 @@
     productLabel,
     recipeKeysFor,
     cupKeyFor,
+    isProduct,
+    normalizeProduct,
     activeRecipe,
     activePrice,
     setActiveProduct,
+    setMenuOffered,
+    isMenuOffered,
     buyIngredient,
     emptyCart,
     cartTotal,
