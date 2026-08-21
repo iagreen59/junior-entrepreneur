@@ -1,15 +1,16 @@
 /**
  * Costs, demand, sales, profit.
  * Phase 3: real Sell Day — price-sensitive demand, weather noise, inventory
- * consumption, and end-of-day P&L. Replaces the Phase 1 stub.
- * Phase 4: light balance — slightly more traffic, softer price sensitivity so
- * default recipe (COGS ≈ $1.50) at about $2/cup can profit over a few days.
+ * consumption, and end-of-day P&L.
+ * Phase 4: light balance — slightly more traffic, softer price sensitivity.
+ * Phase 6: sells the active product (juice or cocoa) using that product's
+ * recipe + price; shared inventory bag; demand still simple until Phase 7.
  *
  * Demand formula (documented for play-testers / future balance):
  *   interest = BASE_INTEREST * (REF_PRICE / price) ^ ELASTICITY * weather
  *   weather  = uniform random in [WEATHER_MIN, WEATHER_MAX]
  *   demand   = floor(max(0, interest))
- *   stockCups = min over ingredients of floor(inv[k] / recipe[k])
+ *   stockCups = min over active-recipe ingredients of floor(inv[k] / recipe[k])
  *               (ingredients with recipe[k] === 0 are ignored)
  *   cupsSold = min(demand, stockCups)
  *
@@ -32,18 +33,22 @@
     return WEATHER_MIN + (WEATHER_MAX - WEATHER_MIN) * roll;
   }
 
+  function activeProduct(state) {
+    return state.activeProduct === "cocoa" ? "cocoa" : "juice";
+  }
+
   /**
-   * How many cups inventory can support for the current recipe.
-   * Returns 0 if the recipe cannot produce any cups (e.g. cups recipe = 0
-   * should not happen after Phase 2 validation, but guard anyway).
+   * How many cups inventory can support for the active product recipe.
    */
   function maxCupsFromStock(state) {
-    const recipe = state.recipe || {};
+    const product = activeProduct(state);
+    const recipe = global.GameState.activeRecipe(state) || {};
     const inventory = state.inventory || {};
+    const keys = global.GameState.recipeKeysFor(product);
     let maxCups = Infinity;
     let anyRequirement = false;
 
-    for (const key of global.GameState.INVENTORY_KEYS) {
+    for (const key of keys) {
       const perCup = Number(recipe[key]) || 0;
       if (perCup <= 0) continue;
       anyRequirement = true;
@@ -70,9 +75,12 @@
 
   function costOfGoods(state, cupsSold) {
     if (cupsSold <= 0) return 0;
+    const product = activeProduct(state);
+    const recipe = global.GameState.activeRecipe(state) || {};
+    const keys = global.GameState.recipeKeysFor(product);
     let total = 0;
-    for (const key of global.GameState.INVENTORY_KEYS) {
-      const perCup = Number(state.recipe[key]) || 0;
+    for (const key of keys) {
+      const perCup = Number(recipe[key]) || 0;
       if (perCup <= 0) continue;
       const unitCost = global.GameState.unitPrice(key);
       total += perCup * cupsSold * unitCost;
@@ -82,8 +90,11 @@
 
   function consumeInventory(state, cupsSold) {
     if (cupsSold <= 0) return;
-    for (const key of global.GameState.INVENTORY_KEYS) {
-      const perCup = Number(state.recipe[key]) || 0;
+    const product = activeProduct(state);
+    const recipe = global.GameState.activeRecipe(state) || {};
+    const keys = global.GameState.recipeKeysFor(product);
+    for (const key of keys) {
+      const perCup = Number(recipe[key]) || 0;
       if (perCup <= 0) continue;
       state.inventory[key] = Math.max(
         0,
@@ -93,13 +104,14 @@
   }
 
   /**
-   * Run one real sell day. Mutates inventory on success path.
+   * Run one real sell day for the active product. Mutates inventory on success.
    * Returns report fields; caller advances day and cash.
    *
    * Optional `randomFn` (0..1) is for tests / deterministic play-checks.
    */
   function runSellDay(state, randomFn) {
-    const price = Number(state.price);
+    const product = activeProduct(state);
+    const price = Number(global.GameState.activePrice(state));
     const stockCups = maxCupsFromStock(state);
     const demand = demandForPrice(price, randomFn);
     const cupsSold = Math.min(demand, stockCups);
@@ -111,6 +123,7 @@
     consumeInventory(state, cupsSold);
 
     const soldOut = stockCups > 0 && cupsSold === stockCups && demand > stockCups;
+    const drink = global.GameState.productLabel(product);
     const weatherNote =
       demand === 0 && stockCups > 0
         ? " Almost nobody stopped by at that price."
@@ -119,6 +132,8 @@
     let message =
       "Sold " +
       cupsSold +
+      " " +
+      drink +
       " cup" +
       (cupsSold === 1 ? "" : "s") +
       " at " +
@@ -133,7 +148,9 @@
 
     if (stockCups === 0) {
       message =
-        "No stock for today's recipe — sold 0 cups. Revenue $0.00, costs $0.00, profit $0.00.";
+        "No stock for today's " +
+        drink +
+        " recipe — sold 0 cups. Revenue $0.00, costs $0.00, profit $0.00.";
     } else if (soldOut) {
       message += " Sold out!";
     } else {
@@ -141,6 +158,7 @@
     }
 
     return {
+      product,
       cupsSold,
       demand,
       stockCups,
@@ -161,23 +179,29 @@
   }
 
   /**
-   * Validate and apply a sell-price draft from the Price panel.
+   * Validate and apply a sell-price draft for the active product.
    * Returns { ok, message, price? } — mutates state only on success.
    */
   function applyPrice(state, rawPrice) {
+    const product = activeProduct(state);
     const price = Number(rawPrice);
     if (!Number.isFinite(price) || price < 0) {
       return { ok: false, message: "Enter a price of $0.00 or more." };
     }
-    // Cap absurd inputs so demand math stays sane.
     if (price > 100) {
       return { ok: false, message: "Keep the cup price at $100.00 or less." };
     }
-    state.price = +price.toFixed(2);
+    state.prices[product] = +price.toFixed(2);
     return {
       ok: true,
-      price: state.price,
-      message: "Price set to " + formatMoney(state.price) + " per cup.",
+      product,
+      price: state.prices[product],
+      message:
+        "Price for " +
+        global.GameState.productLabel(product) +
+        " set to " +
+        formatMoney(state.prices[product]) +
+        " per cup.",
     };
   }
 

@@ -1,6 +1,6 @@
 /**
  * Boot, wire events, day-loop orchestration.
- * Phase 5: Close / Escape dismiss panels without saving drafts.
+ * Phase 6: product picker (juice / cocoa) + dual recipe/price sell path.
  */
 (function () {
   let state = GameState.load();
@@ -9,9 +9,25 @@
     GameUI.render(state);
   }
 
+  function onProductSelect(product) {
+    const result = GameState.setActiveProduct(state, product);
+    if (!result.ok) {
+      GameUI.setReport(result.message, { flash: true });
+      return;
+    }
+    GameState.save(state);
+    refresh();
+    GameUI.setReport(result.message, { flash: true });
+  }
+
   function onRecipeOpen() {
     GameUI.setPanel("recipe");
-    GameUI.setReport("Edit units per cup, then save your mix.", { flash: true });
+    GameUI.setReport(
+      "Edit the " +
+        GameState.productLabel(state.activeProduct) +
+        " recipe, then save.",
+      { flash: true }
+    );
   }
 
   function onBuyOpen() {
@@ -24,7 +40,11 @@
   function onPriceOpen() {
     GameUI.setPanel("price");
     GameUI.setReport(
-      "Set your cup price. Current: " + GameUI.formatMoney(state.price) + ".",
+      "Set " +
+        GameState.productLabel(state.activeProduct) +
+        " price. Current: " +
+        GameUI.formatMoney(GameState.activePrice(state)) +
+        ".",
       { flash: true }
     );
   }
@@ -37,7 +57,7 @@
 
   function onRecipeSave(event) {
     event.preventDefault();
-    const result = GameRecipe.apply(state, GameUI.readRecipeForm());
+    const result = GameRecipe.apply(state, GameUI.readRecipeForm(state));
     if (!result.ok) {
       GameUI.setReport(result.message, { flash: true });
       return;
@@ -71,22 +91,25 @@
   }
 
   /**
-   * Block Sell Day when the stand cannot make any cups (empty / mismatched stock)
-   * or when the sell price is not usable. Explains what to fix; does not burn a day.
+   * Block Sell Day when the active product cannot make any cups
+   * or when its sell price is not usable. Does not burn a day.
    */
   function validateSellDay(current) {
-    const price = Number(current.price);
+    const drink = GameState.productLabel(current.activeProduct);
+    const price = Number(GameState.activePrice(current));
     if (!Number.isFinite(price) || price < 0) {
       return {
         ok: false,
-        message: "Set a valid sell price before Sell Day.",
+        message: "Set a valid " + drink + " sell price before Sell Day.",
       };
     }
     if (price === 0) {
       return {
         ok: false,
         message:
-          "A $0.00 price will not earn cash. Set a price above ingredient cost first.",
+          "A $0.00 " +
+          drink +
+          " price will not earn cash. Set a price above ingredient cost first.",
       };
     }
 
@@ -95,7 +118,9 @@
       return {
         ok: false,
         message:
-          "No stock for today's recipe — buy ingredients (or fix the recipe) before Sell Day.",
+          "No stock for today's " +
+          drink +
+          " recipe — buy ingredients (or fix the recipe) before Sell Day.",
       };
     }
 
@@ -114,6 +139,7 @@
     state.cash = result.cashAfter;
     state.day += 1;
     state.lastDayReport = {
+      product: result.product,
       cupsSold: result.cupsSold,
       demand: result.demand,
       stockCups: result.stockCups,
@@ -130,7 +156,7 @@
 
   function onNewGame() {
     const confirmed = window.confirm(
-      "Start a new game? This clears your saved day, cash, inventory, recipe, and price."
+      "Start a new game? This clears your saved day, cash, inventory, recipes, and prices."
     );
     if (!confirmed) return;
 
@@ -149,6 +175,17 @@
       { flash: true }
     );
   }
+
+  document
+    .getElementById("btn-product-juice")
+    ?.addEventListener("click", function () {
+      onProductSelect("juice");
+    });
+  document
+    .getElementById("btn-product-cocoa")
+    ?.addEventListener("click", function () {
+      onProductSelect("cocoa");
+    });
 
   document.getElementById("btn-recipe")?.addEventListener("click", onRecipeOpen);
   document.getElementById("btn-buy")?.addEventListener("click", onBuyOpen);

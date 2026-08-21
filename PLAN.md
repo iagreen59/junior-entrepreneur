@@ -22,7 +22,7 @@ Future agents: skip anything already checked.
 - [x] Phase 3 — Price + real daily sales
 - [x] Phase 4 — Polish (validation, New Game, light balance)
 - [x] Phase 5 — Panel close buttons
-- [ ] Phase 6 — Hot cocoa drink
+- [x] Phase 6 — Hot cocoa drink
 - [ ] Phase 7 — Weather and drink preference
 - [ ] Phase 8 — Animated customer day + summary
 
@@ -240,7 +240,7 @@ Every open menu (Recipe, Buy, Price) has an obvious **Close** control that hides
 
 ## Phase 6 — Hot cocoa drink
 
-**Status:** not started
+**Status:** done
 
 ### Goal
 
@@ -267,14 +267,14 @@ Player can sell **juice** (cold) or **hot cocoa** (hot). Cocoa ingredients: choc
 
 ### Play-test checklist
 
-- [ ] Player can switch between juice and hot cocoa
-- [ ] Cocoa recipe edits chocolate, milk, whipped cream, chocolate sprinkles, cups and saves
-- [ ] Buy UI purchases new cocoa ingredients; cash and inventory update
-- [ ] Player can set a cocoa sell price (and juice price remains independent)
-- [ ] Sell Day consumes inventory for the product being sold
-- [ ] Refresh keeps both products’ recipes, prices, and inventory
-- [ ] Old juice-only saves still load (migrate/normalize)
-- [ ] **Preview:** screenshots of cocoa recipe panel and buy rows for new ingredients — attach to the PR
+- [x] Player can switch between juice and hot cocoa
+- [x] Cocoa recipe edits chocolate, milk, whipped cream, chocolate sprinkles, cups and saves
+- [x] Buy UI purchases new cocoa ingredients; cash and inventory update
+- [x] Player can set a cocoa sell price (and juice price remains independent)
+- [x] Sell Day consumes inventory for the product being sold
+- [x] Refresh keeps both products’ recipes, prices, and inventory
+- [x] Old juice-only saves still load (migrate/normalize)
+- [x] **Preview:** screenshots of cocoa recipe panel and buy rows for new ingredients — attach to the PR
 
 ### Out of scope
 

@@ -1,10 +1,10 @@
 /**
  * DOM updates / panel rendering.
- * Phase 5: panel Close controls + Escape to dismiss without saving drafts.
+ * Phase 6: product picker, dual recipe/price forms, full inventory/buy list.
  */
 (function (global) {
   const MORNING_COPY =
-    "Good morning. Recipe → Buy → Price → Sell Day. Stock up before you open.";
+    "Good morning. Pick a drink → Recipe → Buy → Price → Sell Day.";
 
   const PANEL_IDS = {
     recipe: "panel-recipe",
@@ -17,22 +17,39 @@
     return sign + "$" + Math.abs(amount).toFixed(2);
   }
 
+  function activeProduct(state) {
+    return state.activeProduct === "cocoa" ? "cocoa" : "juice";
+  }
+
+  function recipeCupsInputId(product) {
+    return product === "cocoa" ? "recipe-cocoa-cups" : "recipe-juice-cups";
+  }
+
   function fillRecipeForm(state) {
-    for (const key of global.GameState.INVENTORY_KEYS) {
-      const input = document.getElementById("recipe-" + key);
-      if (input) input.value = String(state.recipe[key] ?? 0);
+    const product = activeProduct(state);
+    const recipe = global.GameState.activeRecipe(state) || {};
+    for (const key of global.GameState.recipeKeysFor(product)) {
+      const inputId =
+        key === "cups" ? recipeCupsInputId(product) : "recipe-" + key;
+      const input = document.getElementById(inputId);
+      if (input) input.value = String(recipe[key] ?? 0);
     }
   }
 
   function fillPriceForm(state) {
     const input = document.getElementById("sell-price");
-    if (input) input.value = Number(state.price).toFixed(2);
+    if (input) {
+      input.value = Number(global.GameState.activePrice(state)).toFixed(2);
+    }
   }
 
-  function readRecipeForm() {
+  function readRecipeForm(state) {
+    const product = activeProduct(state);
     const draft = {};
-    for (const key of global.GameState.INVENTORY_KEYS) {
-      const input = document.getElementById("recipe-" + key);
+    for (const key of global.GameState.recipeKeysFor(product)) {
+      const inputId =
+        key === "cups" ? recipeCupsInputId(product) : "recipe-" + key;
+      const input = document.getElementById(inputId);
       draft[key] = input ? input.value : 0;
     }
     return draft;
@@ -54,8 +71,57 @@
       const priceEl = document.getElementById("buy-price-" + key);
       if (priceEl) {
         priceEl.textContent =
-          labels[key] + " — " + formatMoney(global.GameState.unitPrice(key)) + " each";
+          labels[key] +
+          " — " +
+          formatMoney(global.GameState.unitPrice(key)) +
+          " each";
       }
+    }
+  }
+
+  function renderProductPicker(state) {
+    const product = activeProduct(state);
+    document.querySelectorAll("[data-product]").forEach(function (btn) {
+      const isActive = btn.getAttribute("data-product") === product;
+      btn.classList.toggle("is-active", isActive);
+      btn.setAttribute("aria-pressed", isActive ? "true" : "false");
+    });
+
+    const hint = document.getElementById("product-hint");
+    if (hint) {
+      hint.textContent =
+        "Selling " +
+        global.GameState.productLabel(product) +
+        ". Recipe, price, and Sell Day use this drink.";
+    }
+
+    document.querySelectorAll("[data-recipe-product]").forEach(function (block) {
+      block.hidden = block.getAttribute("data-recipe-product") !== product;
+    });
+
+    const recipeTitle = document.getElementById("recipe-panel-title");
+    const recipeLead = document.getElementById("recipe-panel-lead");
+    const drink = global.GameState.productLabel(product);
+    if (recipeTitle) {
+      recipeTitle.textContent =
+        product === "cocoa" ? "Hot cocoa recipe" : "Juice recipe";
+    }
+    if (recipeLead) {
+      recipeLead.textContent =
+        "Units of each ingredient used per cup of " + drink + ".";
+    }
+
+    const priceTitle = document.getElementById("price-panel-title");
+    const priceLead = document.getElementById("price-panel-lead");
+    if (priceTitle) {
+      priceTitle.textContent =
+        product === "cocoa" ? "Hot cocoa price" : "Juice price";
+    }
+    if (priceLead) {
+      priceLead.textContent =
+        "Set what you charge per cup of " +
+        drink +
+        ". Higher prices usually mean fewer buyers. Juice and cocoa prices are saved separately.";
     }
   }
 
@@ -111,21 +177,26 @@
     );
   }
 
-  /**
-   * Short readiness line under the morning checklist (stock / price hints).
-   */
   function morningHint(state) {
+    const product = activeProduct(state);
+    const drink = global.GameState.productLabel(product);
     const stockCups = global.GameEconomy.maxCupsFromStock(state);
-    const price = Number(state.price);
+    const price = Number(global.GameState.activePrice(state));
     if (stockCups <= 0) {
-      return "No cups ready — buy ingredients that match your recipe first.";
+      return (
+        "No " +
+        drink +
+        " cups ready — buy ingredients that match that recipe first."
+      );
     }
     if (!Number.isFinite(price) || price <= 0) {
-      return "Set a sell price before you open.";
+      return "Set a sell price for " + drink + " before you open.";
     }
     return (
       "Ready for about " +
       stockCups +
+      " " +
+      drink +
       " cup" +
       (stockCups === 1 ? "" : "s") +
       " at " +
@@ -171,6 +242,7 @@
       }
     }
 
+    renderProductPicker(state);
     fillRecipeForm(state);
     fillPriceForm(state);
     renderBuyPrices();
@@ -188,7 +260,6 @@
     if (reportEl) reportEl.textContent = message;
     if (flash && panel) {
       panel.classList.remove("is-fresh");
-      // Restart animation
       void panel.offsetWidth;
       panel.classList.add("is-fresh");
     }

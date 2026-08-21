@@ -107,6 +107,42 @@ body {
   margin-bottom: 1.25rem;
 }
 
+.product-picker {
+  margin-bottom: 1.25rem;
+}
+
+.product-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.55rem;
+}
+
+.btn-product {
+  border-radius: 0.9rem;
+}
+
+.btn-product.is-active {
+  border-color: transparent;
+  background: linear-gradient(135deg, #6ec6a0 0%, var(--leaf) 100%);
+  color: #fff;
+  box-shadow: 0 6px 14px rgba(47, 125, 74, 0.28);
+}
+
+.btn-product.is-active:hover {
+  background: linear-gradient(135deg, #7ed0ab 0%, var(--leaf-deep) 100%);
+}
+
+.product-hint {
+  margin: 0.65rem 0 0;
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.recipe-fields {
+  display: contents;
+}
+
 .stat {
   padding: 0.85rem 1rem;
   background: var(--cream-juice);

@@ -19,7 +19,7 @@
       <header class="brand">
         <p class="brand-kicker">Corner stand</p>
         <h1 class="brand-name">Junior Entrepreneur</h1>
-        <p class="brand-tag">Mix juice. Set a price. Make the day pay.</p>
+        <p class="brand-tag">Mix a drink. Set a price. Make the day pay.</p>
       </header>
 
       <section class="status" aria-label="Stand status">
@@ -33,13 +33,40 @@
         </div>
       </section>
 
+      <section class="product-picker" aria-label="Drink for sale today">
+        <h2 class="section-title">Selling today</h2>
+        <div class="product-toggle" role="group" aria-label="Choose drink">
+          <button
+            type="button"
+            class="btn btn-product is-active"
+            id="btn-product-juice"
+            data-product="juice"
+            aria-pressed="true"
+          >
+            Juice
+          </button>
+          <button
+            type="button"
+            class="btn btn-product"
+            id="btn-product-cocoa"
+            data-product="cocoa"
+            aria-pressed="false"
+          >
+            Hot cocoa
+          </button>
+        </div>
+        <p class="product-hint" id="product-hint">
+          Recipe, price, and Sell Day use the drink you pick here.
+        </p>
+      </section>
+
       <section class="morning" aria-label="Morning checklist">
         <h2 class="section-title">Before you sell</h2>
         <ol class="morning-list" id="morning-list">
-          <li>Check your <strong>Recipe</strong> (units per cup).</li>
-          <li><strong>Buy</strong> fruit, sugar, ice, and cups so you have stock.</li>
-          <li>Set a <strong>Price</strong> a bit above ingredient cost (around $2 works).</li>
-          <li>Hit <strong>Sell Day</strong> when you are ready.</li>
+          <li>Pick <strong>Juice</strong> or <strong>Hot cocoa</strong>.</li>
+          <li>Check that drink’s <strong>Recipe</strong> (units per cup).</li>
+          <li><strong>Buy</strong> the ingredients you need (cups are shared).</li>
+          <li>Set that drink’s <strong>Price</strong>, then <strong>Sell Day</strong>.</li>
         </ol>
       </section>
 
@@ -58,57 +85,67 @@
 
       <section class="panel" id="panel-recipe" hidden aria-label="Recipe editor">
         <div class="panel-header">
-          <h2 class="section-title">Recipe</h2>
+          <h2 class="section-title" id="recipe-panel-title">Recipe</h2>
           <button type="button" class="btn btn-close" data-close-panel aria-label="Close recipe panel">
             Close
           </button>
         </div>
-        <p class="panel-lead">Units of each ingredient used per cup of juice.</p>
+        <p class="panel-lead" id="recipe-panel-lead">
+          Units of each ingredient used per cup.
+        </p>
         <form id="form-recipe" class="panel-form">
-          <label class="field">
-            <span class="field-label">Fruit</span>
-            <input
-              type="number"
-              id="recipe-fruit"
-              name="fruit"
-              min="0"
-              step="1"
-              required
-            />
-          </label>
-          <label class="field">
-            <span class="field-label">Sugar</span>
-            <input
-              type="number"
-              id="recipe-sugar"
-              name="sugar"
-              min="0"
-              step="1"
-              required
-            />
-          </label>
-          <label class="field">
-            <span class="field-label">Ice</span>
-            <input
-              type="number"
-              id="recipe-ice"
-              name="ice"
-              min="0"
-              step="1"
-              required
-            />
-          </label>
-          <label class="field">
-            <span class="field-label">Cups</span>
-            <input
-              type="number"
-              id="recipe-cups"
-              name="cups"
-              min="1"
-              step="1"
-              required
-            />
-          </label>
+          <div class="recipe-fields" data-recipe-product="juice">
+            <label class="field">
+              <span class="field-label">Fruit</span>
+              <input type="number" id="recipe-fruit" name="fruit" min="0" step="1" />
+            </label>
+            <label class="field">
+              <span class="field-label">Sugar</span>
+              <input type="number" id="recipe-sugar" name="sugar" min="0" step="1" />
+            </label>
+            <label class="field">
+              <span class="field-label">Ice</span>
+              <input type="number" id="recipe-ice" name="ice" min="0" step="1" />
+            </label>
+            <label class="field">
+              <span class="field-label">Cups</span>
+              <input type="number" id="recipe-juice-cups" name="cups" min="1" step="1" />
+            </label>
+          </div>
+          <div class="recipe-fields" data-recipe-product="cocoa" hidden>
+            <label class="field">
+              <span class="field-label">Chocolate</span>
+              <input type="number" id="recipe-chocolate" name="chocolate" min="0" step="1" />
+            </label>
+            <label class="field">
+              <span class="field-label">Milk</span>
+              <input type="number" id="recipe-milk" name="milk" min="0" step="1" />
+            </label>
+            <label class="field">
+              <span class="field-label">Whipped cream</span>
+              <input
+                type="number"
+                id="recipe-whippedCream"
+                name="whippedCream"
+                min="0"
+                step="1"
+              />
+            </label>
+            <label class="field">
+              <span class="field-label">Chocolate sprinkles</span>
+              <input
+                type="number"
+                id="recipe-chocolateSprinkles"
+                name="chocolateSprinkles"
+                min="0"
+                step="1"
+              />
+            </label>
+            <label class="field">
+              <span class="field-label">Cups</span>
+              <input type="number" id="recipe-cocoa-cups" name="cups" min="1" step="1" />
+            </label>
+          </div>
           <button type="submit" class="btn btn-panel">Save recipe</button>
         </form>
       </section>
@@ -120,21 +157,17 @@
             Close
           </button>
         </div>
-        <p class="panel-lead">Spend cash to stock your stand. You cannot buy more than you can afford.</p>
-        <ul class="buy-list">
+        <p class="panel-lead">
+          Spend cash to stock your stand. Cups are shared by juice and cocoa.
+        </p>
+        <ul class="buy-list" id="buy-list">
           <li class="buy-row">
             <div class="buy-meta">
               <span class="buy-name" id="buy-price-fruit">Fruit</span>
             </div>
             <label class="field field-inline">
               <span class="visually-hidden">Quantity of fruit</span>
-              <input
-                type="number"
-                id="buy-qty-fruit"
-                min="1"
-                step="1"
-                value="10"
-              />
+              <input type="number" id="buy-qty-fruit" min="1" step="1" value="10" />
             </label>
             <button type="button" class="btn btn-panel" data-buy="fruit">Buy</button>
           </li>
@@ -144,13 +177,7 @@
             </div>
             <label class="field field-inline">
               <span class="visually-hidden">Quantity of sugar</span>
-              <input
-                type="number"
-                id="buy-qty-sugar"
-                min="1"
-                step="1"
-                value="10"
-              />
+              <input type="number" id="buy-qty-sugar" min="1" step="1" value="10" />
             </label>
             <button type="button" class="btn btn-panel" data-buy="sugar">Buy</button>
           </li>
@@ -160,15 +187,63 @@
             </div>
             <label class="field field-inline">
               <span class="visually-hidden">Quantity of ice</span>
+              <input type="number" id="buy-qty-ice" min="1" step="1" value="10" />
+            </label>
+            <button type="button" class="btn btn-panel" data-buy="ice">Buy</button>
+          </li>
+          <li class="buy-row">
+            <div class="buy-meta">
+              <span class="buy-name" id="buy-price-chocolate">Chocolate</span>
+            </div>
+            <label class="field field-inline">
+              <span class="visually-hidden">Quantity of chocolate</span>
+              <input type="number" id="buy-qty-chocolate" min="1" step="1" value="10" />
+            </label>
+            <button type="button" class="btn btn-panel" data-buy="chocolate">Buy</button>
+          </li>
+          <li class="buy-row">
+            <div class="buy-meta">
+              <span class="buy-name" id="buy-price-milk">Milk</span>
+            </div>
+            <label class="field field-inline">
+              <span class="visually-hidden">Quantity of milk</span>
+              <input type="number" id="buy-qty-milk" min="1" step="1" value="10" />
+            </label>
+            <button type="button" class="btn btn-panel" data-buy="milk">Buy</button>
+          </li>
+          <li class="buy-row">
+            <div class="buy-meta">
+              <span class="buy-name" id="buy-price-whippedCream">Whipped cream</span>
+            </div>
+            <label class="field field-inline">
+              <span class="visually-hidden">Quantity of whipped cream</span>
               <input
                 type="number"
-                id="buy-qty-ice"
+                id="buy-qty-whippedCream"
                 min="1"
                 step="1"
                 value="10"
               />
             </label>
-            <button type="button" class="btn btn-panel" data-buy="ice">Buy</button>
+            <button type="button" class="btn btn-panel" data-buy="whippedCream">Buy</button>
+          </li>
+          <li class="buy-row">
+            <div class="buy-meta">
+              <span class="buy-name" id="buy-price-chocolateSprinkles">Chocolate sprinkles</span>
+            </div>
+            <label class="field field-inline">
+              <span class="visually-hidden">Quantity of chocolate sprinkles</span>
+              <input
+                type="number"
+                id="buy-qty-chocolateSprinkles"
+                min="1"
+                step="1"
+                value="10"
+              />
+            </label>
+            <button type="button" class="btn btn-panel" data-buy="chocolateSprinkles">
+              Buy
+            </button>
           </li>
           <li class="buy-row">
             <div class="buy-meta">
@@ -176,13 +251,7 @@
             </div>
             <label class="field field-inline">
               <span class="visually-hidden">Quantity of cups</span>
-              <input
-                type="number"
-                id="buy-qty-cups"
-                min="1"
-                step="1"
-                value="10"
-              />
+              <input type="number" id="buy-qty-cups" min="1" step="1" value="10" />
             </label>
             <button type="button" class="btn btn-panel" data-buy="cups">Buy</button>
           </li>
@@ -191,13 +260,13 @@
 
       <section class="panel" id="panel-price" hidden aria-label="Set sell price">
         <div class="panel-header">
-          <h2 class="section-title">Price</h2>
+          <h2 class="section-title" id="price-panel-title">Price</h2>
           <button type="button" class="btn btn-close" data-close-panel aria-label="Close price panel">
             Close
           </button>
         </div>
-        <p class="panel-lead">
-          Set what you charge per cup. Higher prices usually mean fewer buyers.
+        <p class="panel-lead" id="price-panel-lead">
+          Set what you charge per cup for the drink you are selling today.
         </p>
         <form id="form-price" class="panel-form panel-form-price">
           <label class="field">
@@ -219,7 +288,7 @@
       <section class="report" aria-live="polite">
         <h2 class="section-title">Day report</h2>
         <p class="report-body" id="report-body">
-          Good morning. Recipe → Buy → Price → Sell Day. Stock up before you open.
+          Good morning. Pick a drink → Recipe → Buy → Price → Sell Day.
         </p>
       </section>
     </main>
