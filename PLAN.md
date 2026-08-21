@@ -1,14 +1,59 @@
 # Junior Entrepreneur — PLAN.md
 
-Cloud Agent brief for the v1 corner juice stand game (vanilla HTML / CSS / JS).
+Cloud Agent brief for the Junior Entrepreneur game (vanilla HTML / CSS / JS). Phases 0–8 shipped the dual-drink stand loop. Phases **9–19** expand into a larger entrepreneur game (menu, multi-stand, employees, restaurants, ledger, events).
 
 **Read this file first.** Honor the Phase status checkboxes. Do not re-do checked phases. Implement **one phase per PR**. Touch only the files listed for that phase. Open a PR when done. In the same PR (or a tiny follow-up), mark the phase checkbox `[x]` when the work is complete.
 
-**Stack rules:** no npm, no frameworks, no build step. Persist with `localStorage` via `js/state.js`. GitHub Pages is in scope (live site from `main` `/`). Keep the Phase 1 Sell Day stub until Phase 3 replaces it.
+**Stack rules:** no npm, no frameworks, no build step. Persist with `localStorage` via `js/state.js`. GitHub Pages is in scope (live site from `main` `/`). Migrate/normalize older saves when schema changes.
 
 **Preview artifacts (required for Phase 5+):** Every phase PR must include **screenshot(s) and/or a short screen recording** of the new UI/behavior before the change is accepted or merged. Attach artifacts under `/opt/cursor/artifacts/` and embed or link them in the PR body so a human can review the look and feel without running the game. Each Phase 5+ play-test checklist includes a preview checkbox — do not mark the phase done until that preview is in the PR.
 
 **Suggested prompt:** `Implement Phase N from PLAN.md. Open a PR. Do not start later phases. Mark Phase N done in the Phase status list when finished. Include screenshot or video preview artifacts before asking for review.`
+
+---
+
+## Locked design (Phases 9–19)
+
+Agents must follow these rules unless a later phase explicitly changes a constant.
+
+| Topic | Rule |
+| ----- | ---- |
+| Start | Cash **$50**; must **buy first stand for $20** before selling |
+| Extra stands | When **cash > $100**, unlock buy another stand for **$20**; max **4** stands; notify when eligible; player chooses when to buy |
+| Stand UI | Dropdown of owned stands + **Add** (buy) when unlocked; switch active stand for management UI |
+| Inventory | **One shared supply bag** consumed by all locations |
+| Menu | 4 products: **juice, cocoa, burger, soup**; player picks **which are offered today**; customers choose among offered items each Sell Day |
+| Prices | **Per menu item** |
+| Cups split | **coldCups** (juice) / **hotCups** (cocoa) — remove shared `cups` overlap |
+| Food prefs | Burger preferred **hot**; soup preferred **cold** (extend weather helpers) |
+| Ingredients | **No shared ingredients** across the four recipes (4–5 each) |
+| Recipe UI | Show **max sellable from stock** + **COGS per item** |
+| Feedback | Per-customer icons for bought item / leave reason / reaction (extend Phase 8) |
+| Employees (stands) | At **2+ stands**, each stand needs staffing; player may run **one** stand; others need an employee; or all employee-run; **hire/layoff**; paid **each day** |
+| Wage default | **$5/day** per stand employee; **$8/day** per restaurant employee (tunable in Phase 19) |
+| Map | In-page **cartoon SVG/CSS map** of owned stands / restaurant(s) |
+| Instructions | In-game help covering new systems; **hideable** |
+| Restaurant gate | Own **4 stands** and **cash > $1000** → may buy restaurant for **$400**; **stands forfeited**; cannot own stands + restaurants together |
+| More restaurants | When **cash > $1000**, unlock buy another restaurant for **$400**; max **4** |
+| Restaurant staff | Min **2**, max **4** employees **per restaurant**; player **cannot** work a restaurant shift |
+| Restaurant rent | **Daily rent per restaurant** (default **$15/day** each, tunable in Phase 19). Charged on Sell Day with wages |
+| Stay open | Must pay **today’s wages + rent** to stay open; underfunded/understaffed → clear block message. Overhead should push profitability or a return to stands via selling restaurants |
+| Per-restaurant P&L | UI shows **sales and profitability per restaurant** so the player sees employee-count (and rent) effects |
+| Sell locations | Sell a stand for **$10** (keep ≥1 in stand mode); sell a restaurant for **$200** (keep ≥1 in restaurant mode) |
+| Sell last restaurant | Player receives **one stand** to restart stand mode |
+| Random events | **Less than 1 per week** (~chance per day); good and bad; always manageable; banner message |
+| Ledger | Openable **business metrics** panel + info tooltips; include rent and per-location rollups in restaurant mode |
+
+### Default unique recipes (Phases 10–11+)
+
+- **Juice:** fruit, sugar, ice, coldCups
+- **Cocoa:** chocolate, milk, whippedCream, chocolateSprinkles, hotCups
+- **Burger:** bun, beefPatty, cheese, lettuce, tomato
+- **Soup:** broth, noodles, carrot, celery, herbs
+
+### Save / migration
+
+Extend `junior-entrepreneur-v1` normalize path so old saves migrate: `cups` → cold/hot as needed; invent default stands/menu/ledger fields; gate Sell Day until a stand exists.
 
 ---
 
@@ -25,6 +70,17 @@ Future agents: skip anything already checked.
 - [x] Phase 6 — Hot cocoa drink
 - [x] Phase 7 — Weather and drink preference
 - [x] Phase 8 — Animated customer day + summary
+- [ ] Phase 9 — Starting cash, first stand, hideable instructions
+- [ ] Phase 10 — Hot/cold cups + recipe yield and COGS
+- [ ] Phase 11 — Four-item menu + daily offers + per-item prices
+- [ ] Phase 12 — Multi-item Sell Day + purchase feedback icons
+- [ ] Phase 13 — Multi-stand unlock, selector, map
+- [ ] Phase 14 — Employees for multi-stand
+- [ ] Phase 15 — Sell stands + random events
+- [ ] Phase 16 — First restaurant (rent + per-location P&L)
+- [ ] Phase 17 — Multi-restaurant, sell, restart stand
+- [ ] Phase 18 — Business ledger and educational metrics
+- [ ] Phase 19 — Instructions refresh + balance + event polish
 
 ---
 
@@ -372,13 +428,403 @@ Block starting another Sell Day while the animation runs. After ~10s, show a **c
 
 ---
 
-## Later than v1 (not phases)
+## Phase 9 — Starting cash, first stand purchase, hideable instructions
 
-Do not implement these unless a future plan section is added and status checkboxes created:
+**Status:** not started — **do this next**
 
+### Goal
+
+Start at **$50** cash. Player must **buy the first stand for $20** before Sell Day is allowed. Add a **hideable instructions** panel that explains buying your stand and the basic loop (expand copy further in later phases).
+
+### Files to touch
+
+**Primary**
+
+- `js/state.js`
+- `js/ui.js`
+- `js/main.js`
+- `index.html`
+- `css/styles.css`
+
+### Play-test checklist
+
+- [ ] New game shows $50 cash and no owned stand (or equivalent gate)
+- [ ] Sell Day blocked until stand purchased
+- [ ] Buying stand costs $20 → cash $30 and selling unlocked
+- [ ] Instructions panel can hide and show
+- [ ] Old saves migrate sensibly (grant a stand or prompt purchase without soft-locking)
+- [ ] **Preview:** screenshot of buy-stand gate + instructions panel — attach to the PR
+
+### Out of scope
+
+- Multi-stand unlocks
 - Food items
-- Multiple stands
-- Hiring employees
+- Employees
+- Restaurant
+
+---
+
+## Phase 10 — Hot/cold cups + recipe yield and COGS display
+
+**Status:** not started — start only after Phase 9 is checked done
+
+### Goal
+
+Replace shared `cups` with **coldCups** (juice) and **hotCups** (cocoa). Recipe UI shows **servings possible from current inventory** and **COGS per item** for the recipes being edited. Migrate legacy `cups` inventory.
+
+### Files to touch
+
+**Primary**
+
+- `js/state.js`
+- `js/recipe.js`
+- `js/economy.js`
+- `js/ui.js`
+- `index.html`
+- `css/styles.css`
+
+### Play-test checklist
+
+- [ ] Juice uses coldCups; cocoa uses hotCups (no shared cups key)
+- [ ] Buy UI offers both cup types
+- [ ] Recipe panel shows max sellable servings from stock
+- [ ] Recipe panel shows COGS for the item
+- [ ] Old saves with `cups` migrate without losing progress
+- [ ] **Preview:** screenshots of recipe yield/COGS and buy rows for cup types — attach to the PR
+
+### Out of scope
+
+- Burger / soup
+- Multi-stand
+- Changing Sell Day multi-item resolution (Phase 12)
+
+---
+
+## Phase 11 — Four-item menu + daily offer toggles + per-item prices
+
+**Status:** not started — start only after Phase 10 is checked done
+
+### Goal
+
+Add **burger** and **soup** with the locked unique ingredient lists. Player enables/disables which items are on **today’s menu**. Set **price per menu item**. Buy lists all ingredients. Extend weather prefs: burger favored on **hot**, soup on **cold**.
+
+### Files to touch
+
+**Primary**
+
+- `js/state.js`
+- `js/recipe.js`
+- `js/weather.js`
+- `js/ui.js`
+- `js/main.js`
+- `index.html`
+- `css/styles.css`
+
+**Allowed if needed**
+
+- `js/economy.js` — only enough to keep single-product sell working until Phase 12
+
+### Play-test checklist
+
+- [ ] All four recipes editable with unique ingredients
+- [ ] Daily menu toggles persist
+- [ ] Player can offer a subset (e.g. no soup on a hot day)
+- [ ] Independent prices per item persist
+- [ ] Buy UI covers all new ingredients
+- [ ] **Preview:** screenshots of menu toggles, food recipes, and buy list — attach to the PR
+
+### Out of scope
+
+- Full multi-item customer resolution (Phase 12)
+- Multi-stand / employees
+
+---
+
+## Phase 12 — Multi-item Sell Day + richer purchase/feedback icons
+
+**Status:** not started — start only after Phase 11 is checked done
+
+### Goal
+
+One Sell Day serves **all offered menu items**. Customers choose among offered items. Icons show **what they bought** (or leave reason) and reaction. Day-end summary aggregates by item. Empty menu blocked. P&L and animation totals must match.
+
+### Files to touch
+
+**Primary**
+
+- `js/economy.js`
+- `js/customers.js`
+- `js/ui.js`
+- `js/main.js`
+- `index.html`
+- `css/styles.css`
+
+**Allowed if needed**
+
+- `js/weather.js` — preference helpers for food + drinks
+
+### Play-test checklist
+
+- [ ] Two or more offered items → mixed purchases in one Sell Day
+- [ ] Weather skews burger/juice vs soup/cocoa as designed
+- [ ] Icons show purchased item and/or leave reason + reaction
+- [ ] Summary aggregates by item and matches economy
+- [ ] Empty menu cannot start Sell Day
+- [ ] **Preview:** short Sell Day video + summary screenshot — attach to the PR
+
+### Out of scope
+
+- Multi-stand staffing
+- Restaurant
+
+---
+
+## Phase 13 — Multi-stand unlock, selector, shared inventory, map
+
+**Status:** not started — start only after Phase 12 is checked done
+
+### Goal
+
+When **cash > $100**, notify the player and allow **Add stand ($20)** up to **4**. Dropdown switches the active stand for management UI. Inventory remains **shared**. Cartoon **map** (SVG/CSS) shows owned stands.
+
+### Files to touch
+
+**Primary**
+
+- `js/state.js` (stands array / mode)
+- `js/map.js` (new — or map section in UI)
+- `js/ui.js`
+- `js/main.js`
+- `index.html`
+- `css/styles.css`
+
+### Play-test checklist
+
+- [ ] Unlock / notify when cash > $100
+- [ ] Buy 2nd–4th stand at $20 each; cannot exceed 4
+- [ ] Dropdown switches active stand
+- [ ] Inventory shared across stands
+- [ ] Map updates with owned stands
+- [ ] **Preview:** screenshots of stand dropdown, Add flow, and map — attach to the PR
+
+### Out of scope
+
+- Employees
+- Restaurant
+
+---
+
+## Phase 14 — Employees for multi-stand
+
+**Status:** not started — start only after Phase 13 is checked done
+
+### Goal
+
+With **2+ stands**, each stand must be staffed. Player may assign themselves to **one** stand; other stands need employees; or all stands employee-run. **Hire/layoff**. Daily wage (**$5** default) deducted on Sell Day. **Default:** block Sell Day with a clear message if understaffed.
+
+### Files to touch
+
+**Primary**
+
+- `js/state.js`
+- `js/economy.js`
+- `js/ui.js`
+- `js/main.js`
+- `index.html`
+- `css/styles.css`
+
+### Play-test checklist
+
+- [ ] 2+ stands require staffing rules as above
+- [ ] Wages reduce cash on Sell Day
+- [ ] Hire and layoff work and persist
+- [ ] Player-run one stand + employee others works
+- [ ] All-employee mode works
+- [ ] Understaffed → Sell Day blocked with clear message
+- [ ] **Preview:** staff panel screenshots — attach to the PR
+
+### Out of scope
+
+- Restaurant staffing / rent
+
+---
+
+## Phase 15 — Sell stands + random events (v1 set)
+
+**Status:** not started — start only after Phase 14 is checked done
+
+### Goal
+
+Sell any stand for **$10** (must keep ≥1 stand in stand mode). Add random events at **less than 1 per week** (good and bad): e.g. supply price bump/drop, employee quit, foot-traffic surge. Always manageable; show a **banner message**.
+
+### Files to touch
+
+**Primary**
+
+- `js/events.js` (new)
+- `js/state.js`
+- `js/economy.js` / buy unit prices as needed
+- `js/ui.js`
+- `js/main.js`
+- `index.html`
+- `css/styles.css`
+
+### Play-test checklist
+
+- [ ] Sell stand updates cash, dropdown, and map
+- [ ] Cannot sell the last stand
+- [ ] Events are rare (< ~1/week expected)
+- [ ] Event message banner displays
+- [ ] Impacts are recoverable (no instant lose)
+- [ ] **Preview:** sell-stand UI + an event banner screenshot — attach to the PR
+
+### Out of scope
+
+- Restaurant purchase
+
+---
+
+## Phase 16 — First restaurant conversion (rent + per-location P&L)
+
+**Status:** not started — start only after Phase 15 is checked done
+
+### Goal
+
+With **4 stands** and **cash > $1000**, offer buy restaurant for **$400**. On buy, **forfeit all stands**; enter restaurant mode (map shows restaurant). **2–4 employees required** (player cannot staff). Shared menu/inventory continues. Each Sell Day charges **daily rent** (default **$15**) plus wages. Day report and location panel show **that restaurant’s sales, wages, rent, and profit**. Demand/capacity scales with employee count (document formula) so more staff can raise sales but also raise wage cost against fixed rent. Must afford wages + rent (and be staffed) to stay open.
+
+### Files to touch
+
+**Primary**
+
+- `js/state.js`
+- `js/map.js` and/or `js/ui.js`
+- `js/economy.js`
+- `js/main.js`
+- `index.html`
+- `css/styles.css`
+- Instructions copy as needed
+
+### Play-test checklist
+
+- [ ] Gate enforced (4 stands + cash > $1000)
+- [ ] After buy: no stands; restaurant mode active
+- [ ] Must have 2+ employees and afford wages+rent to Sell Day
+- [ ] Day report breaks out sales vs wages vs rent vs profit
+- [ ] Changing employee count visibly changes sales and profitability
+- [ ] Understaffed or can’t cover overhead → clear block message
+- [ ] **Preview:** buy-restaurant flow + per-location P&L screenshot — attach to the PR
+
+### Out of scope
+
+- Multiple restaurants
+- Selling restaurants
+
+---
+
+## Phase 17 — Multi-restaurant, sell restaurants, restart stand
+
+**Status:** not started — start only after Phase 16 is checked done
+
+### Goal
+
+In restaurant mode, **cash > $1000** unlocks another restaurant for **$400** (max **4**). Each restaurant has its own staff (2–4) and pays its own **daily rent**. Sell one for **$200** (keep ≥1). Selling the **last** restaurant grants **one stand** and returns to stand mode. UI lists **per-restaurant sales and profitability** (compare locations / staffing). Unprofitable overhead should make selling back to stands a viable strategy. Never own stands and restaurants at the same time.
+
+### Files to touch
+
+**Primary**
+
+- `js/state.js`
+- `js/map.js` and/or `js/ui.js`
+- `js/economy.js`
+- `js/main.js`
+- `index.html`
+- `css/styles.css`
+
+### Play-test checklist
+
+- [ ] Buy 2nd–4th restaurant when cash > $1000; cost $400 each
+- [ ] Each restaurant shows separate sales/profit and employee-count effect
+- [ ] Rent × number of restaurants charged daily
+- [ ] Sell one restaurant for $200; cannot sell last except via last-restaurant rule
+- [ ] Sell last restaurant → one stand; stand UI returns
+- [ ] Never own stands + restaurants together
+- [ ] **Preview:** multi-restaurant map/P&L + sell-last → stand restart — attach to the PR
+
+### Out of scope
+
+- Deep ledger (Phase 18)
+
+---
+
+## Phase 18 — Business ledger and educational metrics
+
+**Status:** not started — start only after Phase 17 is checked done
+
+### Goal
+
+Openable **Business** menu with running totals: revenue, COGS, **wages**, **rent**, other overhead, profit, cash, days operated, etc. Include **per-restaurant** rollups in restaurant mode. Each metric has an **info** control with a short educational blurb. Updates from daily results and events.
+
+### Files to touch
+
+**Primary**
+
+- `js/ledger.js` (new)
+- `js/state.js`
+- `js/economy.js`
+- `js/ui.js`
+- `js/main.js`
+- `index.html`
+- `css/styles.css`
+
+### Play-test checklist
+
+- [ ] After several days, ledger matches summed history including rent and wages
+- [ ] Per-restaurant lines match day reports when applicable
+- [ ] Info blurbs present for metrics
+- [ ] Panel open/close works
+- [ ] **Preview:** ledger panel screenshot with info open — attach to the PR
+
+### Out of scope
+
+- New location types beyond stands/restaurants
+
+---
+
+## Phase 19 — Instructions refresh + balance pass + event pack polish
+
+**Status:** not started — start only after Phase 18 is checked done
+
+### Goal
+
+Instructions cover stands, menu, employees, **restaurant rent/wages**, ledger, events, and the choice to stay in restaurants or sell back to stands; remain **hideable**. Tune wages, **rent**, demand, and event rates so failure is avoidable but restaurants feel like a profitability challenge.
+
+### Files to touch
+
+**Primary**
+
+- Instructions copy in `index.html` / `js/ui.js`
+- Light constant tweaks in `js/economy.js`, `js/events.js`, `js/state.js`
+
+### Play-test checklist
+
+- [ ] New player can learn core rules from in-game help alone
+- [ ] Smoke path: stand → multi-stand → restaurant works
+- [ ] Rent + wages create visible pressure without instant loss
+- [ ] Event rates still feel rare and manageable
+- [ ] **Preview:** instructions panel screenshots covering new systems — attach to the PR
+
+### Out of scope
+
+- Features beyond this roadmap
+
+---
+
+## Explicitly deferred (not in Phases 9–19)
+
+- Sound, frameworks, npm
+- More than 4 stands or 4 restaurants
+- Owning stands and restaurants simultaneously
+- Player working as a restaurant employee
 
 ---
 
@@ -396,8 +842,11 @@ junior-entrepreneur/
 │   ├── economy.js
 │   ├── recipe.js
 │   ├── ui.js
-│   ├── weather.js    (Phase 7+)
-│   └── customers.js  (Phase 8+)
+│   ├── weather.js     (Phase 7+)
+│   ├── customers.js   (Phase 8+)
+│   ├── map.js         (Phase 13+)
+│   ├── events.js      (Phase 15+)
+│   └── ledger.js      (Phase 18+)
 ├── .cursor/environment.json
 └── .gitignore
 ```
@@ -413,60 +862,106 @@ junior-entrepreneur/
 - **Do not parallelize Phase 6** (dual-product schema + Recipe/Buy/Price/economy wiring).
 - **Do not parallelize Phase 8** (Sell Day animation + economy + UI must stay in one PR).
 - Phase 7 should land after Phase 6 (needs juice + cocoa for weather preference).
+- **Do not parallelize Phases 11–12** (menu schema + multi-item Sell Day).
+- **Do not parallelize Phases 13–14** (stands + staffing).
+- **Do not parallelize Phases 16–17** (restaurant conversion + multi-restaurant).
 
 ---
 
 ## Suggested phone prompts
 
-**Phase 2**
-
-```text
-Implement Phase 2 from PLAN.md. Open a PR. Do not start Phase 3 or 4.
-When done, mark Phase 2 checked in the Phase status list.
-```
-
-**Phase 3**
-
-```text
-Implement Phase 3 from PLAN.md. Open a PR. Do not start Phase 4.
-Phase 2 must already be done. Mark Phase 3 checked when finished.
-```
-
-**Phase 4**
-
-```text
-Implement Phase 4 from PLAN.md. Open a PR.
-Phases 2 and 3 must already be done. Mark Phase 4 checked when finished.
-```
-
-**Phase 5**
-
-```text
-Implement Phase 5 from PLAN.md. Open a PR. Do not start Phase 6+.
-Include screenshot previews of each panel with Close visible.
-Mark Phase 5 checked when finished.
-```
-
-**Phase 6**
-
-```text
-Implement Phase 6 from PLAN.md. Open a PR. Do not start Phase 7 or 8.
-Phase 5 should already be done. Include screenshot previews of cocoa recipe and buy UI.
-Mark Phase 6 checked when finished.
-```
-
-**Phase 7**
-
-```text
-Implement Phase 7 from PLAN.md. Open a PR. Do not start Phase 8.
-Phases 5 and 6 must already be done. Include screenshots of hot and cold weather UI.
-Mark Phase 7 checked when finished.
-```
-
-**Phase 8**
+**Phase 8** (already done — kept for history)
 
 ```text
 Implement Phase 8 from PLAN.md. Open a PR.
 Phases 5–7 must already be done. Include a short Sell Day video and a customer-summary screenshot.
 Mark Phase 8 checked when finished.
+```
+
+**Phase 9**
+
+```text
+Implement Phase 9 from PLAN.md. Open a PR. Do not start Phase 10+.
+Include screenshot previews of the buy-stand gate and hideable instructions.
+Mark Phase 9 checked when finished.
+```
+
+**Phase 10**
+
+```text
+Implement Phase 10 from PLAN.md. Open a PR. Do not start Phase 11+.
+Phase 9 must already be done. Include screenshots of cold/hot cups and recipe yield/COGS.
+Mark Phase 10 checked when finished.
+```
+
+**Phase 11**
+
+```text
+Implement Phase 11 from PLAN.md. Open a PR. Do not start Phase 12+.
+Phase 10 must already be done. Include screenshots of menu toggles and food recipes.
+Mark Phase 11 checked when finished.
+```
+
+**Phase 12**
+
+```text
+Implement Phase 12 from PLAN.md. Open a PR. Do not start Phase 13+.
+Phase 11 must already be done. Include a short multi-item Sell Day video and summary screenshot.
+Mark Phase 12 checked when finished.
+```
+
+**Phase 13**
+
+```text
+Implement Phase 13 from PLAN.md. Open a PR. Do not start Phase 14+.
+Phase 12 must already be done. Include screenshots of stand dropdown, Add stand, and map.
+Mark Phase 13 checked when finished.
+```
+
+**Phase 14**
+
+```text
+Implement Phase 14 from PLAN.md. Open a PR. Do not start Phase 15+.
+Phase 13 must already be done. Include staff panel screenshots.
+Mark Phase 14 checked when finished.
+```
+
+**Phase 15**
+
+```text
+Implement Phase 15 from PLAN.md. Open a PR. Do not start Phase 16+.
+Phase 14 must already be done. Include sell-stand and event banner screenshots.
+Mark Phase 15 checked when finished.
+```
+
+**Phase 16**
+
+```text
+Implement Phase 16 from PLAN.md. Open a PR. Do not start Phase 17+.
+Phase 15 must already be done. Include buy-restaurant and per-location P&L screenshots.
+Mark Phase 16 checked when finished.
+```
+
+**Phase 17**
+
+```text
+Implement Phase 17 from PLAN.md. Open a PR. Do not start Phase 18+.
+Phase 16 must already be done. Include multi-restaurant P&L and sell-last→stand restart previews.
+Mark Phase 17 checked when finished.
+```
+
+**Phase 18**
+
+```text
+Implement Phase 18 from PLAN.md. Open a PR. Do not start Phase 19.
+Phase 17 must already be done. Include ledger panel screenshot with a metric info blurb open.
+Mark Phase 18 checked when finished.
+```
+
+**Phase 19**
+
+```text
+Implement Phase 19 from PLAN.md. Open a PR.
+Phase 18 must already be done. Include instructions screenshots covering restaurant rent/wages and ledger.
+Mark Phase 19 checked when finished.
 ```
