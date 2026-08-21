@@ -130,6 +130,63 @@ body {
   color: var(--ink-soft);
 }
 
+.instructions {
+  margin-bottom: 1.25rem;
+  padding: 1rem 1.1rem 1.1rem;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.55) 0%, rgba(232, 245, 200, 0.65) 100%);
+  border: 1px solid var(--stroke);
+  border-radius: 1.1rem;
+  animation: rise-in 0.45s ease-out both;
+}
+
+.instructions-list {
+  margin: 0;
+  padding-left: 1.2rem;
+  color: var(--ink-soft);
+  font-size: 0.95rem;
+  line-height: 1.45;
+}
+
+.instructions-list li + li {
+  margin-top: 0.4rem;
+}
+
+.instructions-reveal {
+  margin: 0 0 1.25rem;
+  text-align: center;
+}
+
+.stand-gate {
+  margin-bottom: 1.25rem;
+  padding: 1.1rem 1.15rem;
+  background: linear-gradient(145deg, #fff3c4 0%, #ffe08a 55%, #f4c430 120%);
+  border: 1px solid rgba(240, 154, 26, 0.35);
+  border-radius: 1.1rem;
+  text-align: center;
+  animation: stand-gate-pulse 2.4s ease-in-out infinite;
+}
+
+.stand-gate[hidden] {
+  display: none !important;
+}
+
+.stand-gate-copy {
+  margin: 0 0 0.85rem;
+  color: var(--ink-soft);
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
+@keyframes stand-gate-pulse {
+  0%,
+  100% {
+    box-shadow: 0 8px 18px rgba(240, 154, 26, 0.18);
+  }
+  50% {
+    box-shadow: 0 10px 24px rgba(240, 154, 26, 0.3);
+  }
+}
+
 .product-picker {
   margin-bottom: 1.25rem;
 }

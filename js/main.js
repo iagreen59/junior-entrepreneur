@@ -129,6 +129,16 @@
   }
 
   function validateSellDay(current) {
+    if (!GameState.ownsStand(current)) {
+      return {
+        ok: false,
+        message:
+          "Buy your first stand for $" +
+          GameState.STAND_COST.toFixed(2) +
+          " before Sell Day.",
+      };
+    }
+
     const drink = GameState.productLabel(current.activeProduct);
     const price = Number(GameState.activePrice(current));
     if (!Number.isFinite(price) || price < 0) {
@@ -184,7 +194,7 @@
     selling = false;
     playback = null;
     refresh();
-    GameUI.showCustomerSummary(summary, plan);
+    GameUI.showCustomerSummary(summary, plan, state);
   }
 
   function onSellDay() {
@@ -211,7 +221,7 @@
 
     selling = true;
     GameUI.setPanel(null);
-    GameUI.hideCustomerDay();
+    GameUI.hideCustomerDay(state);
     GameUI.startCustomerDay();
     GameUI.setReport(
       "Sell Day is under way — watch the customers for about 10 seconds.",
@@ -228,16 +238,36 @@
     });
   }
 
+  function onBuyStand() {
+    if (selling) return;
+    const result = GameState.buyStand(state);
+    if (!result.ok) {
+      GameUI.setReport(result.message, { flash: true });
+      return;
+    }
+    GameState.save(state);
+    refresh();
+    GameUI.setReport(result.message, { flash: true });
+  }
+
+  function onHideInstructions() {
+    GameUI.setInstructionsHidden(true);
+  }
+
+  function onShowInstructions() {
+    GameUI.setInstructionsHidden(false);
+  }
+
   function onNewGame() {
     if (selling) {
       if (playback) playback.cancel();
       selling = false;
       playback = null;
-      GameUI.hideCustomerDay();
+      GameUI.hideCustomerDay(state);
     }
 
     const confirmed = window.confirm(
-      "Start a new game? This clears your saved day, cash, inventory, recipes, prices, and weather."
+      "Start a new game? This clears your saved day, cash, stand, inventory, recipes, prices, and weather."
     );
     if (!confirmed) return;
 
@@ -251,10 +281,12 @@
     GameState.save(state);
     GameUI.resetCart();
     GameUI.setPanel(null);
-    GameUI.hideCustomerDay();
+    GameUI.hideCustomerDay(state);
     refresh();
     GameUI.setReport(
-      "New game started. Day 1, $20.00 cash. Weather: " +
+      "New game started. Day 1, $" +
+        Number(GameState.STARTING_CASH).toFixed(2) +
+        " cash, no stand yet. Weather: " +
         GameWeather.label(state.weather) +
         ". " +
         GameUI.MORNING_COPY,
@@ -278,6 +310,13 @@
   document.getElementById("btn-price")?.addEventListener("click", onPriceOpen);
   document.getElementById("btn-sell")?.addEventListener("click", onSellDay);
   document.getElementById("btn-new-game")?.addEventListener("click", onNewGame);
+  document.getElementById("btn-buy-stand")?.addEventListener("click", onBuyStand);
+  document
+    .getElementById("btn-hide-instructions")
+    ?.addEventListener("click", onHideInstructions);
+  document
+    .getElementById("btn-show-instructions")
+    ?.addEventListener("click", onShowInstructions);
 
   document
     .getElementById("form-recipe")

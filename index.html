@@ -29,12 +29,58 @@
         </div>
         <div class="stat">
           <span class="stat-label">Cash</span>
-          <span class="stat-value" id="stat-cash">$20.00</span>
+          <span class="stat-value" id="stat-cash">$50.00</span>
+        </div>
+        <div class="stat" id="stat-stand-card">
+          <span class="stat-label">Stand</span>
+          <span class="stat-value" id="stat-stand">None yet</span>
         </div>
         <div class="stat stat-weather" id="stat-weather-card">
           <span class="stat-label">Weather</span>
           <span class="stat-value" id="stat-weather">Mild</span>
         </div>
+      </section>
+
+      <section class="instructions" id="instructions" aria-label="How to play">
+        <div class="panel-header">
+          <h2 class="section-title">How to play</h2>
+          <button
+            type="button"
+            class="btn btn-close"
+            id="btn-hide-instructions"
+            aria-label="Hide instructions"
+          >
+            Hide
+          </button>
+        </div>
+        <ol class="instructions-list">
+          <li>
+            Start with <strong>$50</strong>. Buy your first <strong>stand for $20</strong>
+            before you can Sell Day.
+          </li>
+          <li>Check today’s <strong>Weather</strong>, then pick Juice or Hot cocoa.</li>
+          <li>
+            Set the <strong>Recipe</strong>, <strong>Buy</strong> ingredients, set a
+            <strong>Price</strong>, then <strong>Sell Day</strong>.
+          </li>
+          <li>Use <strong>New Game</strong> anytime to reset your save.</li>
+        </ol>
+      </section>
+      <p class="instructions-reveal" id="instructions-reveal" hidden>
+        <button type="button" class="btn btn-quiet" id="btn-show-instructions">
+          Show instructions
+        </button>
+      </p>
+
+      <section class="stand-gate" id="stand-gate" aria-label="Buy your stand">
+        <h2 class="section-title">Your stand</h2>
+        <p class="stand-gate-copy" id="stand-gate-copy">
+          You need a corner stand before customers can buy. Cost:
+          <strong>$20.00</strong>.
+        </p>
+        <button type="button" class="btn btn-primary" id="btn-buy-stand">
+          Buy stand ($20)
+        </button>
       </section>
 
       <section class="product-picker" aria-label="Drink for sale today">
@@ -67,6 +113,7 @@
       <section class="morning" aria-label="Morning checklist">
         <h2 class="section-title">Before you sell</h2>
         <ol class="morning-list" id="morning-list">
+          <li>Own a <strong>stand</strong> (buy one if you haven’t yet).</li>
           <li>Check today’s <strong>Weather</strong> (hot / mild / cold).</li>
           <li>Pick <strong>Juice</strong> or <strong>Hot cocoa</strong> to match the day.</li>
           <li>Check that drink’s <strong>Recipe</strong>, then <strong>Buy</strong> stock.</li>
@@ -449,7 +496,7 @@
       <section class="report" aria-live="polite">
         <h2 class="section-title">Day report</h2>
         <p class="report-body" id="report-body">
-          Good morning. Pick a drink → Recipe → Buy → Price → Sell Day.
+          Good morning. Buy your stand ($20), then Recipe → Buy → Price → Sell Day.
         </p>
       </section>
     </main>

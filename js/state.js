@@ -1,6 +1,8 @@
 /**
  * Game state + localStorage persistence.
  * Phase 6: dual products (juice | cocoa), shared inventory bag, dual recipes/prices.
+ * Phase 9: starting cash $50; must buy first stand ($20) before Sell Day;
+ * hideable instructions preference; migrate legacy saves with an implicit stand.
  * Migrates Phase 1–5 juice-only saves (legacy `recipe` / `price` → recipes.juice / prices.juice).
  *
  * Buy unit prices (cash per inventory unit) — not stored in the save blob;
@@ -8,6 +10,11 @@
  */
 (function (global) {
   const STORAGE_KEY = "junior-entrepreneur-v1";
+  const INSTRUCTIONS_HIDDEN_KEY = "junior-entrepreneur-instructions-hidden";
+
+  /** Phase 9 locked constants. */
+  const STARTING_CASH = 50;
+  const STAND_COST = 20;
 
   const PRODUCTS = ["juice", "cocoa"];
 
@@ -67,10 +74,21 @@
     return inventory;
   }
 
+  function createStand(index) {
+    const n = Number.isFinite(index) && index >= 1 ? Math.floor(index) : 1;
+    return {
+      id: "stand-" + n,
+      name: "Stand " + n,
+    };
+  }
+
   function defaultState(randomFn) {
     return {
       day: 1,
-      cash: 20,
+      cash: STARTING_CASH,
+      /** Owned stands; empty until the player buys the first stand ($20). */
+      stands: [],
+      activeStandId: null,
       activeProduct: "juice",
       weather: global.GameWeather
         ? global.GameWeather.roll(randomFn)
@@ -86,6 +104,69 @@
       },
       lastDayReport: null,
     };
+  }
+
+  function ownsStand(state) {
+    return Array.isArray(state.stands) && state.stands.length > 0;
+  }
+
+  function standCount(state) {
+    return ownsStand(state) ? state.stands.length : 0;
+  }
+
+  /**
+   * Buy the first stand (Phase 9) or an extra stand (Phase 13+).
+   * Phase 9 only allows the first purchase when none are owned.
+   */
+  function buyStand(state) {
+    if (ownsStand(state)) {
+      return {
+        ok: false,
+        message: "You already own a stand. Extra stands unlock later.",
+      };
+    }
+    if (state.cash + 1e-9 < STAND_COST) {
+      return {
+        ok: false,
+        message:
+          "Not enough cash to buy a stand (need $" +
+          STAND_COST.toFixed(2) +
+          ", have $" +
+          Number(state.cash).toFixed(2) +
+          ").",
+      };
+    }
+    state.cash = +(state.cash - STAND_COST).toFixed(2);
+    const stand = createStand(1);
+    state.stands = [stand];
+    state.activeStandId = stand.id;
+    return {
+      ok: true,
+      stand,
+      cost: STAND_COST,
+      message:
+        "Bought your first stand for $" +
+        STAND_COST.toFixed(2) +
+        "! Cash left: $" +
+        state.cash.toFixed(2) +
+        ". You can Sell Day when stock and price are ready.",
+    };
+  }
+
+  function loadInstructionsHidden() {
+    try {
+      return localStorage.getItem(INSTRUCTIONS_HIDDEN_KEY) === "1";
+    } catch {
+      return false;
+    }
+  }
+
+  function saveInstructionsHidden(hidden) {
+    try {
+      localStorage.setItem(INSTRUCTIONS_HIDDEN_KEY, hidden ? "1" : "0");
+    } catch {
+      // Ignore storage failures; UI still toggles in-session.
+    }
   }
 
   function productLabel(product) {
@@ -165,9 +246,47 @@
         ? raw.weather
         : "mild";
 
+    // Phase 9 stands: missing `stands` on a legacy save → grant one stand
+    // (pre–Phase 9 games already had an implicit stand). Explicit empty array
+    // means the player has not bought a stand yet (new Phase 9 save).
+    let stands;
+    if (!Object.prototype.hasOwnProperty.call(raw, "stands")) {
+      stands = [createStand(1)];
+    } else if (Array.isArray(raw.stands)) {
+      stands = raw.stands
+        .filter(function (s) {
+          return s && typeof s === "object";
+        })
+        .map(function (s, i) {
+          const n = i + 1;
+          return {
+            id: typeof s.id === "string" && s.id ? s.id : "stand-" + n,
+            name:
+              typeof s.name === "string" && s.name ? s.name : "Stand " + n,
+          };
+        });
+    } else {
+      stands = [createStand(1)];
+    }
+
+    let activeStandId =
+      typeof raw.activeStandId === "string" ? raw.activeStandId : null;
+    if (stands.length === 0) {
+      activeStandId = null;
+    } else if (
+      !activeStandId ||
+      !stands.some(function (s) {
+        return s.id === activeStandId;
+      })
+    ) {
+      activeStandId = stands[0].id;
+    }
+
     return {
       day: Number.isFinite(raw.day) && raw.day >= 1 ? Math.floor(raw.day) : 1,
       cash: Number.isFinite(raw.cash) ? raw.cash : base.cash,
+      stands,
+      activeStandId,
       activeProduct,
       weather,
       inventory,
@@ -394,6 +513,9 @@
 
   global.GameState = {
     STORAGE_KEY,
+    INSTRUCTIONS_HIDDEN_KEY,
+    STARTING_CASH,
+    STAND_COST,
     PRODUCTS,
     JUICE_KEYS,
     COCOA_KEYS,
@@ -403,6 +525,12 @@
     load,
     save,
     normalize,
+    createStand,
+    ownsStand,
+    standCount,
+    buyStand,
+    loadInstructionsHidden,
+    saveInstructionsHidden,
     inventoryLabels,
     unitPrice,
     productLabel,

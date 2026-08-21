@@ -70,7 +70,7 @@ Future agents: skip anything already checked.
 - [x] Phase 6 — Hot cocoa drink
 - [x] Phase 7 — Weather and drink preference
 - [x] Phase 8 — Animated customer day + summary
-- [ ] Phase 9 — Starting cash, first stand, hideable instructions
+- [x] Phase 9 — Starting cash, first stand, hideable instructions
 - [ ] Phase 10 — Hot/cold cups + recipe yield and COGS
 - [ ] Phase 11 — Four-item menu + daily offers + per-item prices
 - [ ] Phase 12 — Multi-item Sell Day + purchase feedback icons
@@ -430,7 +430,7 @@ Block starting another Sell Day while the animation runs. After ~10s, show a **c
 
 ## Phase 9 — Starting cash, first stand purchase, hideable instructions
 
-**Status:** not started — **do this next**
+**Status:** done
 
 ### Goal
 
@@ -448,12 +448,12 @@ Start at **$50** cash. Player must **buy the first stand for $20** before Sell D
 
 ### Play-test checklist
 
-- [ ] New game shows $50 cash and no owned stand (or equivalent gate)
-- [ ] Sell Day blocked until stand purchased
-- [ ] Buying stand costs $20 → cash $30 and selling unlocked
-- [ ] Instructions panel can hide and show
-- [ ] Old saves migrate sensibly (grant a stand or prompt purchase without soft-locking)
-- [ ] **Preview:** screenshot of buy-stand gate + instructions panel — attach to the PR
+- [x] New game shows $50 cash and no owned stand (or equivalent gate)
+- [x] Sell Day blocked until stand purchased
+- [x] Buying stand costs $20 → cash $30 and selling unlocked
+- [x] Instructions panel can hide and show
+- [x] Old saves migrate sensibly (grant a stand or prompt purchase without soft-locking)
+- [x] **Preview:** screenshot of buy-stand gate + instructions panel — attach to the PR
 
 ### Out of scope
 
