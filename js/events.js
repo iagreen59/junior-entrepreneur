@@ -71,6 +71,33 @@
   }
 
   function applyEmployeeQuit(state) {
+    // Restaurant mode: reduce restaurant employee count (player cannot cover the shift).
+    if (
+      global.GameState.isRestaurantMode &&
+      global.GameState.isRestaurantMode(state)
+    ) {
+      const restaurant =
+        global.GameState.getActiveRestaurant &&
+        global.GameState.getActiveRestaurant(state);
+      if (!restaurant || (Number(restaurant.employeeCount) || 0) <= 0) {
+        return applyFootTraffic(state);
+      }
+      restaurant.employeeCount = Math.max(
+        0,
+        (Number(restaurant.employeeCount) || 0) - 1
+      );
+      const message =
+        "An employee quit at " +
+        restaurant.name +
+        "! Hire again before Sell Day — restaurants need at least 2 staff (you cannot work the shift). No cash lost.";
+      global.GameState.setEventBanner(state, message, "bad", state.day);
+      return {
+        id: "employee_quit",
+        tone: "bad",
+        message: message,
+        restaurantId: restaurant.id,
+      };
+    }
     if (!global.GameState.ownsStand(state)) {
       return applyFootTraffic(state);
     }

@@ -7,14 +7,20 @@
  * Phase 14: deduct stand employee wages ($5/day each) from cash/profit.
  * Phase 15: demandMult (foot-traffic event) scales planned demand;
  *           unit prices for COGS respect temporary supplyPriceMult.
+ * Phase 16: restaurant mode — capacityMult = 0.7 + 0.2 * employeeCount
+ *           scales demand; wages $8/employee + rent $15/day; P&L breaks out
+ *           sales vs wages vs rent vs profit.
  *
- * Demand formula (Phase 12 multi-item):
+ * Demand formula (Phase 12 multi-item, Phase 16 capacity):
  *   offered   = products with menuOffered[p] === true
  *   weight[p] = GameWeather.preferenceFactor(weather, p)
  *               * (REF_PRICE / price[p]) ^ ELASTICITY
  *               (preference: match 1.35, mismatch 0.65, mild 1.00 —
  *                hot favors juice+burger; cold favors cocoa+soup)
- *   demand[p] = floor(max(0, BASE_INTEREST * weight[p] * demandMult))
+ *   capacityMult = 1 in stand mode;
+ *                = 0.7 + 0.2 * restaurantEmployeeCount in restaurant mode
+ *                  (2 staff → 1.1, 3 → 1.3, 4 → 1.5)
+ *   demand[p] = floor(max(0, BASE_INTEREST * weight[p] * demandMult * capacityMult))
  *               (invalid / ≤0 price → treat as very cheap: BASE * 4 * pref)
  *               demandMult defaults to 1; foot-traffic surge uses ~1.4
  *   stock[p]  = maxCupsFromStock for that product's recipe
@@ -23,15 +29,16 @@
  *   demand    = sum_p demand[p]
  *   revenue   = sum_p sold[p] * price[p]
  *   cogs      = sum_p costOfGoodsPerServing(p) * sold[p]
- *   wages     = employeeCount * STAND_EMPLOYEE_WAGE ($5 default)
- *   profit    = revenue − cogs − wages
+ *   wages     = stand: employeeCount * $5; restaurant: employeeCount * $8
+ *   rent      = restaurant: $15/day (0 in stand mode)
+ *   profit    = revenue − cogs − wages − rent
  *
  * Single offered item reduces to the Phase 7 single-product formula.
  * Customers “choose among” offered items in proportion to weight[p]
  * (each item draws its own interest from the foot-traffic pool).
  *
- * Cash: ingredients were already paid when bought, so cash += revenue − wages.
- * Reported profit = revenue − COGS − wages.
+ * Cash: ingredients were already paid when bought, so cash += revenue − wages − rent.
+ * Reported profit = revenue − COGS − wages − rent.
  */
 (function (global) {
   /** Typical daily foot traffic at the reference price (per item weight). */
@@ -230,6 +237,17 @@
       : Number(state.demandMult) > 0
         ? Number(state.demandMult)
         : 1;
+    /**
+     * Phase 16 restaurant capacity:
+     *   capacityMult = 0.7 + 0.2 * employeeCount  (stand mode → 1)
+     * More staff raises demand/sales capacity but also wage cost vs fixed rent.
+     */
+    const capacityMult =
+      global.GameState.isRestaurantMode &&
+      global.GameState.isRestaurantMode(state) &&
+      global.GameState.restaurantCapacityMult
+        ? global.GameState.restaurantCapacityMult(state)
+        : 1;
 
     for (const product of offered) {
       const price = priceOf(state, product);
@@ -243,7 +261,9 @@
       const stock = maxCupsFromStock(state, product);
       const want = Math.max(
         0,
-        Math.floor(demandForPrice(price, weather, product) * demandMult)
+        Math.floor(
+          demandForPrice(price, weather, product) * demandMult * capacityMult
+        )
       );
       const sold = Math.min(want, stock);
 
@@ -264,12 +284,27 @@
 
     revenue = +revenue.toFixed(2);
     cogs = +cogs.toFixed(2);
+    const isRestaurant =
+      global.GameState.isRestaurantMode &&
+      global.GameState.isRestaurantMode(state);
     const employeeCount = global.GameState.employeeCount
       ? global.GameState.employeeCount(state)
       : 0;
-    const wageRate = Number(global.GameState.STAND_EMPLOYEE_WAGE) || 5;
-    const wages = +(employeeCount * wageRate).toFixed(2);
-    const profit = +(revenue - cogs - wages).toFixed(2);
+    const wageRate = isRestaurant
+      ? Number(global.GameState.RESTAURANT_WAGE) || 8
+      : Number(global.GameState.STAND_EMPLOYEE_WAGE) || 5;
+    const wages = global.GameState.dailyWageCost
+      ? global.GameState.dailyWageCost(state)
+      : +(employeeCount * wageRate).toFixed(2);
+    const rent =
+      isRestaurant && global.GameState.dailyRestaurantRent
+        ? global.GameState.dailyRestaurantRent(state)
+        : 0;
+    const restaurant =
+      isRestaurant && global.GameState.getActiveRestaurant
+        ? global.GameState.getActiveRestaurant(state)
+        : null;
+    const profit = +(revenue - cogs - wages - rent).toFixed(2);
     const preference =
       offered.length > 0 ? preferenceSum / offered.length : 1;
 
@@ -321,9 +356,47 @@
           formatMoney(wageRate) +
           ")"
         : "";
+    const rentNote =
+      rent > 0 ? ", rent " + formatMoney(rent) : "";
+    const locationNote =
+      isRestaurant && restaurant
+        ? (restaurant.name || "Restaurant") +
+          " P&L — sales " +
+          formatMoney(revenue) +
+          wageNote +
+          rentNote +
+          ", profit " +
+          formatMoney(profit) +
+          " (capacity ×" +
+          capacityMult.toFixed(2) +
+          ")."
+        : null;
 
     let message;
-    if (offered.length === 0) {
+    if (locationNote) {
+      if (offered.length === 0) {
+        message =
+          locationNote + " No items on today's menu — sold 0 servings.";
+      } else if (stockCups === 0) {
+        message =
+          locationNote + " No stock for today's offered menu — sold 0 servings.";
+      } else if (breakdown.length === 0) {
+        message =
+          locationNote +
+          " Sold 0 servings from today's menu." +
+          weatherNote;
+      } else {
+        message =
+          locationNote +
+          " Sold " +
+          breakdown.join("; ") +
+          ", COGS " +
+          formatMoney(cogs) +
+          ".";
+        if (soldOut) message += " Sold out of at least one item!";
+        else message += weatherNote;
+      }
+    } else if (offered.length === 0) {
       message =
         "No items on today's menu — sold 0 servings. Revenue $0.00, costs $0.00" +
         wageNote +
@@ -387,10 +460,15 @@
       revenue: revenue,
       cogs: cogs,
       wages: wages,
+      rent: rent,
       employeeCount: employeeCount,
+      capacityMult: capacityMult,
+      isRestaurant: !!isRestaurant,
+      restaurantId: restaurant ? restaurant.id : null,
+      restaurantName: restaurant ? restaurant.name : null,
       profit: profit,
       demandMult: demandMult,
-      cashAfter: +(state.cash + revenue - wages).toFixed(2),
+      cashAfter: +(state.cash + revenue - wages - rent).toFixed(2),
       soldOut: soldOut,
       message: message,
     };
