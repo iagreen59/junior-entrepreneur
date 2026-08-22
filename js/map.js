@@ -1,10 +1,11 @@
 /**
- * Cartoon neighborhood map of owned stands / restaurant (Phases 13–16).
- * Shared inventory — map is location display only; active stand is highlighted.
- * Phase 16: restaurant mode draws a single restaurant building instead of stands.
+ * Cartoon neighborhood map of owned stands / restaurants (Phases 13–17).
+ * Shared inventory — map is location display only; active location is highlighted.
+ * Phase 16: restaurant mode draws restaurant building(s) instead of stands.
+ * Phase 17: up to 4 restaurants on the same slot layout as stands.
  */
 (function (global) {
-  /** Fixed slots on the cartoon map (max 4 stands). */
+  /** Fixed slots on the cartoon map (max 4 stands / restaurants). */
   const SLOTS = [
     { x: 52, y: 118, labelX: 52, labelY: 178 },
     { x: 168, y: 98, labelX: 168, labelY: 158 },
@@ -47,7 +48,6 @@
     legL.setAttribute("height", "10");
     legL.setAttribute("class", "map-booth-leg");
     g.appendChild(legL);
-
     const legR = document.createElementNS(ns, "rect");
     legR.setAttribute("x", "12");
     legR.setAttribute("y", "28");
@@ -92,78 +92,77 @@
     return g;
   }
 
-  /** Simple storefront for restaurant mode (Phase 16). */
-  function restaurantSvg(ns, restaurant) {
+  /** Compact storefront for multi-restaurant map slots (Phase 17). */
+  function restaurantBoothSvg(ns, x, y, restaurant, active) {
     const g = document.createElementNS(ns, "g");
-    g.setAttribute("class", "map-restaurant is-active");
-    g.setAttribute("transform", "translate(170 105)");
+    g.setAttribute("class", "map-restaurant" + (active ? " is-active" : ""));
+    g.setAttribute("transform", "translate(" + x + " " + y + ")");
 
-    const ring = document.createElementNS(ns, "circle");
-    ring.setAttribute("cx", "0");
-    ring.setAttribute("cy", "10");
-    ring.setAttribute("r", "62");
-    ring.setAttribute("class", "map-booth-ring");
-    g.appendChild(ring);
+    if (active) {
+      const ring = document.createElementNS(ns, "circle");
+      ring.setAttribute("cx", "0");
+      ring.setAttribute("cy", "8");
+      ring.setAttribute("r", "38");
+      ring.setAttribute("class", "map-booth-ring");
+      g.appendChild(ring);
+    }
 
     const roof = document.createElementNS(ns, "path");
-    roof.setAttribute("d", "M-58 -6 L0 -42 L58 -6 Z");
+    roof.setAttribute("d", "M-30 -6 L0 -30 L30 -6 Z");
     roof.setAttribute("class", "map-restaurant-roof");
     g.appendChild(roof);
 
     const body = document.createElementNS(ns, "rect");
-    body.setAttribute("x", "-48");
+    body.setAttribute("x", "-24");
     body.setAttribute("y", "-6");
-    body.setAttribute("width", "96");
-    body.setAttribute("height", "56");
-    body.setAttribute("rx", "4");
+    body.setAttribute("width", "48");
+    body.setAttribute("height", "34");
+    body.setAttribute("rx", "3");
     body.setAttribute("class", "map-restaurant-body");
     g.appendChild(body);
 
     const door = document.createElementNS(ns, "rect");
-    door.setAttribute("x", "-8");
-    door.setAttribute("y", "18");
-    door.setAttribute("width", "16");
-    door.setAttribute("height", "32");
+    door.setAttribute("x", "-5");
+    door.setAttribute("y", "12");
+    door.setAttribute("width", "10");
+    door.setAttribute("height", "16");
     door.setAttribute("class", "map-restaurant-door");
     g.appendChild(door);
 
     const winL = document.createElementNS(ns, "rect");
-    winL.setAttribute("x", "-38");
-    winL.setAttribute("y", "8");
-    winL.setAttribute("width", "20");
-    winL.setAttribute("height", "16");
-    winL.setAttribute("rx", "2");
+    winL.setAttribute("x", "-18");
+    winL.setAttribute("y", "2");
+    winL.setAttribute("width", "10");
+    winL.setAttribute("height", "10");
+    winL.setAttribute("rx", "1");
     winL.setAttribute("class", "map-restaurant-window");
     g.appendChild(winL);
 
     const winR = document.createElementNS(ns, "rect");
-    winR.setAttribute("x", "18");
-    winR.setAttribute("y", "8");
-    winR.setAttribute("width", "20");
-    winR.setAttribute("height", "16");
-    winR.setAttribute("rx", "2");
+    winR.setAttribute("x", "8");
+    winR.setAttribute("y", "2");
+    winR.setAttribute("width", "10");
+    winR.setAttribute("height", "10");
+    winR.setAttribute("rx", "1");
     winR.setAttribute("class", "map-restaurant-window");
     g.appendChild(winR);
 
     const sign = document.createElementNS(ns, "rect");
-    sign.setAttribute("x", "-28");
+    sign.setAttribute("x", "-14");
     sign.setAttribute("y", "-2");
-    sign.setAttribute("width", "56");
-    sign.setAttribute("height", "12");
-    sign.setAttribute("rx", "2");
+    sign.setAttribute("width", "28");
+    sign.setAttribute("height", "9");
+    sign.setAttribute("rx", "1");
     sign.setAttribute("class", "map-restaurant-sign");
     g.appendChild(sign);
 
     const signText = document.createElementNS(ns, "text");
     signText.setAttribute("x", "0");
-    signText.setAttribute("y", "7");
+    signText.setAttribute("y", "5");
     signText.setAttribute("text-anchor", "middle");
     signText.setAttribute("class", "map-restaurant-sign-text");
-    const staff =
-      restaurant && Number(restaurant.employeeCount) > 0
-        ? " · " + restaurant.employeeCount + " staff"
-        : "";
-    signText.textContent = "EAT" + staff;
+    const staff = restaurant ? Number(restaurant.employeeCount) || 0 : 0;
+    signText.textContent = staff > 0 ? "EAT·" + staff : "EAT";
     g.appendChild(signText);
 
     return g;
@@ -221,48 +220,74 @@
       global.GameState &&
       typeof global.GameState.isRestaurantMode === "function" &&
       global.GameState.isRestaurantMode(state);
-    const restaurant =
-      isRestaurant && global.GameState.getActiveRestaurant
-        ? global.GameState.getActiveRestaurant(state)
-        : null;
+    const restaurants =
+      isRestaurant && Array.isArray(state && state.restaurants)
+        ? state.restaurants
+        : [];
+    const activeRestaurantId = state && state.activeRestaurantId;
     const stands = Array.isArray(state && state.stands) ? state.stands : [];
     const activeId = state && state.activeStandId;
     const max =
-      (global.GameState && global.GameState.MAX_STANDS) || SLOTS.length;
+      (global.GameState &&
+        (isRestaurant
+          ? global.GameState.MAX_RESTAURANTS
+          : global.GameState.MAX_STANDS)) ||
+      SLOTS.length;
 
     const svg = document.createElementNS(ns, "svg");
     svg.setAttribute("viewBox", "0 0 340 200");
     svg.setAttribute("class", "stand-map-svg");
     svg.setAttribute("role", "img");
 
-    if (isRestaurant && restaurant) {
+    if (isRestaurant && restaurants.length > 0) {
       svg.setAttribute(
         "aria-label",
-        "Neighborhood map showing " + restaurant.name
+        "Neighborhood map showing " +
+          restaurants.length +
+          " restaurant" +
+          (restaurants.length === 1 ? "" : "s")
       );
       drawBackground(ns, svg);
-      svg.appendChild(restaurantSvg(ns, restaurant));
 
-      const label = document.createElementNS(ns, "text");
-      label.setAttribute("x", "170");
-      label.setAttribute("y", "178");
-      label.setAttribute("text-anchor", "middle");
-      label.setAttribute("class", "map-restaurant-label");
-      const n = Number(restaurant.employeeCount) || 0;
-      label.textContent =
-        restaurant.name +
-        " ★ · " +
-        n +
-        " employee" +
-        (n === 1 ? "" : "s");
-      svg.appendChild(label);
+      for (let i = 0; i < max && i < SLOTS.length; i++) {
+        const slot = SLOTS[i];
+        const restaurant = restaurants[i];
+        if (restaurant) {
+          const active = restaurant.id === activeRestaurantId;
+          svg.appendChild(
+            restaurantBoothSvg(ns, slot.x, slot.y, restaurant, active)
+          );
+          const label = document.createElementNS(ns, "text");
+          label.setAttribute("x", String(slot.labelX));
+          label.setAttribute("y", String(slot.labelY));
+          label.setAttribute("text-anchor", "middle");
+          label.setAttribute(
+            "class",
+            "map-restaurant-label" + (active ? " is-active" : "")
+          );
+          const n = Number(restaurant.employeeCount) || 0;
+          label.textContent =
+            restaurant.name +
+            (active ? " ★" : "") +
+            " · " +
+            n +
+            " staff";
+          svg.appendChild(label);
+        } else {
+          svg.appendChild(emptySlotSvg(ns, slot.x, slot.y));
+        }
+      }
 
       const caption = document.createElementNS(ns, "text");
       caption.setAttribute("x", "170");
       caption.setAttribute("y", "196");
       caption.setAttribute("text-anchor", "middle");
       caption.setAttribute("class", "map-caption");
-      caption.textContent = "Restaurant mode · shared supply bag";
+      caption.textContent =
+        restaurants.length +
+        " of " +
+        max +
+        " restaurants · shared supply bag";
       svg.appendChild(caption);
     } else {
       svg.setAttribute(
