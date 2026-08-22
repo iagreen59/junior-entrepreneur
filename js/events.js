@@ -71,17 +71,20 @@
   }
 
   function applyEmployeeQuit(state) {
-    // Restaurant mode: reduce restaurant employee count (player cannot cover the shift).
+    // Restaurant mode: reduce a restaurant with staff (player cannot cover).
     if (
       global.GameState.isRestaurantMode &&
       global.GameState.isRestaurantMode(state)
     ) {
-      const restaurant =
-        global.GameState.getActiveRestaurant &&
-        global.GameState.getActiveRestaurant(state);
-      if (!restaurant || (Number(restaurant.employeeCount) || 0) <= 0) {
+      const list = Array.isArray(state.restaurants) ? state.restaurants : [];
+      const staffed = list.filter(function (r) {
+        return (Number(r.employeeCount) || 0) > 0;
+      });
+      if (staffed.length === 0) {
         return applyFootTraffic(state);
       }
+      const restaurant =
+        staffed[Math.floor(rand() * staffed.length)] || staffed[0];
       restaurant.employeeCount = Math.max(
         0,
         (Number(restaurant.employeeCount) || 0) - 1
@@ -89,7 +92,7 @@
       const message =
         "An employee quit at " +
         restaurant.name +
-        "! Hire again before Sell Day — restaurants need at least 2 staff (you cannot work the shift). No cash lost.";
+        "! Hire again before Sell Day — every restaurant needs at least 2 staff (you cannot work the shift). No cash lost.";
       global.GameState.setEventBanner(state, message, "bad", state.day);
       return {
         id: "employee_quit",
