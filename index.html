@@ -64,6 +64,11 @@
             managing. All stands share one supply bag.
           </li>
           <li>
+            With <strong>2+ stands</strong>, staff every stand: you may run <strong>one</strong>
+            yourself; hire employees for the others (or run all with employees). Wage is
+            <strong>$5/day</strong> per employee, paid on Sell Day. Understaffed stands block Sell Day.
+          </li>
+          <li>
             Check today’s <strong>Weather</strong>, toggle today’s <strong>Menu</strong>,
             then pick which item to edit (Juice, Hot cocoa, Burger, or Soup).
           </li>
@@ -109,6 +114,17 @@
             Add stand ($20)
           </button>
         </div>
+      </section>
+
+      <section class="staff-panel" id="staff-panel" hidden aria-label="Stand staffing">
+        <h2 class="section-title">Staff</h2>
+        <p class="staff-lead" id="staff-lead">
+          With 2 or more stands, every stand needs a worker. You may run one stand yourself;
+          hire employees for the rest ($5/day each, paid on Sell Day). Or staff every stand
+          with employees.
+        </p>
+        <p class="staff-status" id="staff-status" role="status"></p>
+        <ul class="staff-list" id="staff-list"></ul>
       </section>
 
       <section class="stand-map-section" id="stand-map-section" aria-label="Neighborhood map">
@@ -198,10 +214,11 @@
         <h2 class="section-title">Before you sell</h2>
         <ol class="morning-list" id="morning-list">
           <li>Own a <strong>stand</strong> (buy one if you haven’t yet; add more when cash &gt; $100).</li>
+          <li>With 2+ stands, <strong>staff</strong> every location (you +/or employees).</li>
           <li>Check today’s <strong>Weather</strong> (hot / mild / cold).</li>
           <li>Set <strong>Today’s menu</strong> toggles (at least one item on).</li>
           <li>For each offered item: check <strong>Recipe</strong>, <strong>Buy</strong> stock, set <strong>Price</strong>.</li>
-          <li>Press <strong>Sell Day</strong> — customers choose among offered items (~10s).</li>
+          <li>Press <strong>Sell Day</strong> — customers choose among offered items (~10s); wages are paid then.</li>
         </ol>
       </section>
 
