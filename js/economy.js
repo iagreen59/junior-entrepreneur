@@ -4,6 +4,7 @@
  * Phase 6–11: per-product recipes/prices (juice|cocoa|burger|soup).
  * Phase 12: one Sell Day serves every offered menu item; customers choose
  * among offered items weighted by weather preference + price.
+ * Phase 14: deduct stand employee wages ($5/day each) from cash/profit.
  *
  * Demand formula (Phase 12 multi-item):
  *   offered   = products with menuOffered[p] === true
@@ -19,14 +20,15 @@
  *   demand    = sum_p demand[p]
  *   revenue   = sum_p sold[p] * price[p]
  *   cogs      = sum_p costOfGoodsPerServing(p) * sold[p]
- *   profit    = revenue − cogs
+ *   wages     = employeeCount * STAND_EMPLOYEE_WAGE ($5 default)
+ *   profit    = revenue − cogs − wages
  *
  * Single offered item reduces to the Phase 7 single-product formula.
  * Customers “choose among” offered items in proportion to weight[p]
  * (each item draws its own interest from the foot-traffic pool).
  *
- * Cash: ingredients were already paid when bought, so cash += revenue.
- * Reported profit = revenue − COGS (unit buy prices × recipe × sold).
+ * Cash: ingredients were already paid when bought, so cash += revenue − wages.
+ * Reported profit = revenue − COGS − wages.
  */
 (function (global) {
   /** Typical daily foot traffic at the reference price (per item weight). */
@@ -251,7 +253,12 @@
 
     revenue = +revenue.toFixed(2);
     cogs = +cogs.toFixed(2);
-    const profit = +(revenue - cogs).toFixed(2);
+    const employeeCount = global.GameState.employeeCount
+      ? global.GameState.employeeCount(state)
+      : 0;
+    const wageRate = Number(global.GameState.STAND_EMPLOYEE_WAGE) || 5;
+    const wages = +(employeeCount * wageRate).toFixed(2);
+    const profit = +(revenue - cogs - wages).toFixed(2);
     const preference =
       offered.length > 0 ? preferenceSum / offered.length : 1;
 
@@ -291,16 +298,41 @@
       }
     }
 
+    const wageNote =
+      wages > 0
+        ? ", wages " +
+          formatMoney(wages) +
+          " (" +
+          employeeCount +
+          " employee" +
+          (employeeCount === 1 ? "" : "s") +
+          " × " +
+          formatMoney(wageRate) +
+          ")"
+        : "";
+
     let message;
     if (offered.length === 0) {
       message =
-        "No items on today's menu — sold 0 servings. Revenue $0.00, costs $0.00, profit $0.00.";
+        "No items on today's menu — sold 0 servings. Revenue $0.00, costs $0.00" +
+        wageNote +
+        ", profit " +
+        formatMoney(profit) +
+        ".";
     } else if (stockCups === 0) {
       message =
-        "No stock for today's offered menu — sold 0 servings. Revenue $0.00, costs $0.00, profit $0.00.";
+        "No stock for today's offered menu — sold 0 servings. Revenue $0.00, costs $0.00" +
+        wageNote +
+        ", profit " +
+        formatMoney(profit) +
+        ".";
     } else if (breakdown.length === 0) {
       message =
-        "Sold 0 servings from today's menu. Revenue $0.00, costs $0.00, profit $0.00." +
+        "Sold 0 servings from today's menu. Revenue $0.00, costs $0.00" +
+        wageNote +
+        ", profit " +
+        formatMoney(profit) +
+        "." +
         weatherNote;
     } else {
       message =
@@ -310,6 +342,7 @@
         formatMoney(revenue) +
         ", costs " +
         formatMoney(cogs) +
+        wageNote +
         ", profit " +
         formatMoney(profit) +
         ".";
@@ -342,8 +375,10 @@
       stockCups: stockCups,
       revenue: revenue,
       cogs: cogs,
+      wages: wages,
+      employeeCount: employeeCount,
       profit: profit,
-      cashAfter: +(state.cash + revenue).toFixed(2),
+      cashAfter: +(state.cash + revenue - wages).toFixed(2),
       soldOut: soldOut,
       message: message,
     };

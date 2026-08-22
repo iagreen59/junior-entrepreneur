@@ -75,7 +75,7 @@ Future agents: skip anything already checked.
 - [x] Phase 11 — Four-item menu + daily offers + per-item prices
 - [x] Phase 12 — Multi-item Sell Day + purchase feedback icons
 - [x] Phase 13 — Multi-stand unlock, selector, map
-- [ ] Phase 14 — Employees for multi-stand
+- [x] Phase 14 — Employees for multi-stand
 - [ ] Phase 15 — Sell stands + random events
 - [ ] Phase 16 — First restaurant (rent + per-location P&L)
 - [ ] Phase 17 — Multi-restaurant, sell, restart stand
@@ -616,7 +616,7 @@ When **cash > $100**, notify the player and allow **Add stand ($20)** up to **4*
 
 ## Phase 14 — Employees for multi-stand
 
-**Status:** not started — start only after Phase 13 is checked done
+**Status:** done
 
 ### Goal
 
@@ -635,13 +635,13 @@ With **2+ stands**, each stand must be staffed. Player may assign themselves to 
 
 ### Play-test checklist
 
-- [ ] 2+ stands require staffing rules as above
-- [ ] Wages reduce cash on Sell Day
-- [ ] Hire and layoff work and persist
-- [ ] Player-run one stand + employee others works
-- [ ] All-employee mode works
-- [ ] Understaffed → Sell Day blocked with clear message
-- [ ] **Preview:** staff panel screenshots — attach to the PR
+- [x] 2+ stands require staffing rules as above
+- [x] Wages reduce cash on Sell Day
+- [x] Hire and layoff work and persist
+- [x] Player-run one stand + employee others works
+- [x] All-employee mode works
+- [x] Understaffed → Sell Day blocked with clear message
+- [x] **Preview:** staff panel screenshots — attach to the PR
 
 ### Out of scope
 

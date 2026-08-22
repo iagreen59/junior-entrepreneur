@@ -10,6 +10,8 @@
  * migrate dual-drink saves.
  * Phase 13: multi-stand unlock when cash > $100; buy 2nd–4th stand for $20;
  * activeStandId selector; shared inventory; unlock notify flag.
+ * Phase 14: stand staffing — with 2+ stands each must be player-run (at most
+ * one) or have an employee; hire/layoff; $5/day wage per employee on Sell Day.
  *
  * Buy unit prices (cash per inventory unit) — not stored in the save blob;
  * constants live here so Buy UI / helpers share one source.
@@ -32,6 +34,11 @@
   const MAX_STANDS = 4;
   /** Cash must be strictly greater than this to unlock buying stands 2–4. */
   const EXTRA_STAND_UNLOCK_CASH = 100;
+  /** Phase 14: daily wage per stand employee (deducted on Sell Day). */
+  const STAND_EMPLOYEE_WAGE = 5;
+  /** Staffing modes on a stand: player | employee | null (unstaffed). */
+  const STAFF_PLAYER = "player";
+  const STAFF_EMPLOYEE = "employee";
 
   const PRODUCTS = ["juice", "cocoa", "burger", "soup"];
 
@@ -161,7 +168,14 @@
     return {
       id: "stand-" + n,
       name: "Stand " + n,
+      /** "player" | "employee" | null — null means unstaffed. */
+      staffedBy: null,
     };
+  }
+
+  function normalizeStaffedBy(value) {
+    if (value === STAFF_PLAYER || value === STAFF_EMPLOYEE) return value;
+    return null;
   }
 
   function defaultState(randomFn) {
@@ -357,12 +371,227 @@
         STAND_COST.toFixed(2) +
         "! You now own " +
         state.stands.length +
-        " stand" +
-        (state.stands.length === 1 ? "" : "s") +
-        ". Cash left: $" +
+        " stands. Staff every stand (you may run one; hire for the rest) before Sell Day. Cash left: $" +
         state.cash.toFixed(2) +
         ". Inventory stays shared.",
     };
+  }
+
+  /** Find a stand by id, or null. */
+  function findStand(state, standId) {
+    if (!ownsStand(state) || typeof standId !== "string") return null;
+    return (
+      state.stands.find(function (s) {
+        return s.id === standId;
+      }) || null
+    );
+  }
+
+  /** Id of the stand the player is running, or null. */
+  function playerStandId(state) {
+    if (!ownsStand(state)) return null;
+    const stand = state.stands.find(function (s) {
+      return s.staffedBy === STAFF_PLAYER;
+    });
+    return stand ? stand.id : null;
+  }
+
+  /** Number of stands with a hired employee. */
+  function employeeCount(state) {
+    if (!ownsStand(state)) return 0;
+    let n = 0;
+    for (const stand of state.stands) {
+      if (stand.staffedBy === STAFF_EMPLOYEE) n += 1;
+    }
+    return n;
+  }
+
+  /** Daily wage bill for current employees ($5 each). */
+  function dailyWageCost(state) {
+    return +(employeeCount(state) * STAND_EMPLOYEE_WAGE).toFixed(2);
+  }
+
+  /**
+   * Staffing is required only with 2+ stands.
+   * With 0–1 stands, the player can run alone (no hire needed).
+   */
+  function staffingRequired(state) {
+    return standCount(state) >= 2;
+  }
+
+  /** Stands that have neither player nor employee when staffing is required. */
+  function unstaffedStands(state) {
+    if (!ownsStand(state)) return [];
+    if (!staffingRequired(state)) return [];
+    return state.stands.filter(function (s) {
+      return s.staffedBy !== STAFF_PLAYER && s.staffedBy !== STAFF_EMPLOYEE;
+    });
+  }
+
+  function isFullyStaffed(state) {
+    if (!ownsStand(state)) return false;
+    if (!staffingRequired(state)) return true;
+    return unstaffedStands(state).length === 0;
+  }
+
+  /**
+   * Human-readable staffing check for Sell Day / morning hint.
+   * Returns { ok, message, unstaffed }.
+   */
+  function staffingCheck(state) {
+    if (!ownsStand(state)) {
+      return {
+        ok: false,
+        message:
+          "Buy your first stand for $" +
+          STAND_COST.toFixed(2) +
+          " before Sell Day.",
+        unstaffed: [],
+      };
+    }
+    if (!staffingRequired(state)) {
+      return { ok: true, message: "", unstaffed: [] };
+    }
+    const missing = unstaffedStands(state);
+    if (missing.length === 0) {
+      return { ok: true, message: "", unstaffed: [] };
+    }
+    const names = missing
+      .map(function (s) {
+        return s.name;
+      })
+      .join(", ");
+    return {
+      ok: false,
+      unstaffed: missing,
+      message:
+        "Understaffed — every stand needs a worker when you own 2+. " +
+        "Unstaffed: " +
+        names +
+        ". Assign yourself to one stand and/or Hire employees for the others before Sell Day.",
+    };
+  }
+
+  /**
+   * Hire an employee for a stand (no upfront cost; wage on Sell Day).
+   * If the player was running this stand, they step aside.
+   */
+  function hireEmployee(state, standId) {
+    const stand = findStand(state, standId);
+    if (!stand) {
+      return { ok: false, message: "Unknown stand." };
+    }
+    if (stand.staffedBy === STAFF_EMPLOYEE) {
+      return {
+        ok: false,
+        message: stand.name + " already has an employee.",
+      };
+    }
+    stand.staffedBy = STAFF_EMPLOYEE;
+    return {
+      ok: true,
+      stand,
+      message:
+        "Hired an employee for " +
+        stand.name +
+        ". Wage: $" +
+        STAND_EMPLOYEE_WAGE.toFixed(2) +
+        "/day (paid on Sell Day).",
+    };
+  }
+
+  /** Lay off the employee at a stand (clears employee staffing only). */
+  function layoffEmployee(state, standId) {
+    const stand = findStand(state, standId);
+    if (!stand) {
+      return { ok: false, message: "Unknown stand." };
+    }
+    if (stand.staffedBy !== STAFF_EMPLOYEE) {
+      return {
+        ok: false,
+        message: stand.name + " has no employee to lay off.",
+      };
+    }
+    stand.staffedBy = null;
+    return {
+      ok: true,
+      stand,
+      message:
+        "Laid off the employee at " +
+        stand.name +
+        "." +
+        (staffingRequired(state)
+          ? " Staff that stand (hire again or run it yourself) before Sell Day."
+          : ""),
+    };
+  }
+
+  /**
+   * Assign the player to run one stand (at most one). Clears any previous
+   * player assignment and replaces an employee at the target if present.
+   */
+  function assignPlayerToStand(state, standId) {
+    const stand = findStand(state, standId);
+    if (!stand) {
+      return { ok: false, message: "Unknown stand." };
+    }
+    if (stand.staffedBy === STAFF_PLAYER) {
+      return {
+        ok: true,
+        stand,
+        message: "You are already running " + stand.name + ".",
+      };
+    }
+    // Clear player from any other stand (at most one player-run stand).
+    for (const s of state.stands) {
+      if (s.staffedBy === STAFF_PLAYER) s.staffedBy = null;
+    }
+    const replacedEmployee = stand.staffedBy === STAFF_EMPLOYEE;
+    stand.staffedBy = STAFF_PLAYER;
+    return {
+      ok: true,
+      stand,
+      message:
+        "You are now running " +
+        stand.name +
+        "." +
+        (replacedEmployee
+          ? " That stand’s employee was let go (you took the shift)."
+          : "") +
+        " You can run only one stand; hire employees for the others.",
+    };
+  }
+
+  /** Stop the player from running a stand (leaves it unstaffed). */
+  function unassignPlayerFromStand(state, standId) {
+    const stand = findStand(state, standId);
+    if (!stand) {
+      return { ok: false, message: "Unknown stand." };
+    }
+    if (stand.staffedBy !== STAFF_PLAYER) {
+      return {
+        ok: false,
+        message: "You are not running " + stand.name + ".",
+      };
+    }
+    stand.staffedBy = null;
+    return {
+      ok: true,
+      stand,
+      message:
+        "You stepped away from " +
+        stand.name +
+        "." +
+        (staffingRequired(state)
+          ? " Hire an employee (or assign yourself again) before Sell Day."
+          : ""),
+    };
+  }
+
+  function staffLabel(staffedBy) {
+    if (staffedBy === STAFF_PLAYER) return "You (player)";
+    if (staffedBy === STAFF_EMPLOYEE) return "Employee";
+    return "Unstaffed";
   }
 
   function loadInstructionsHidden() {
@@ -537,9 +766,18 @@
             id: typeof s.id === "string" && s.id ? s.id : "stand-" + n,
             name:
               typeof s.name === "string" && s.name ? s.name : "Stand " + n,
+            staffedBy: normalizeStaffedBy(s.staffedBy),
           };
         })
         .slice(0, MAX_STANDS);
+      // At most one player-run stand after migrate/normalize.
+      let sawPlayer = false;
+      for (const s of stands) {
+        if (s.staffedBy === STAFF_PLAYER) {
+          if (sawPlayer) s.staffedBy = null;
+          else sawPlayer = true;
+        }
+      }
     } else {
       stands = [createStand(1)];
     }
@@ -841,6 +1079,9 @@
     STAND_COST,
     MAX_STANDS,
     EXTRA_STAND_UNLOCK_CASH,
+    STAND_EMPLOYEE_WAGE,
+    STAFF_PLAYER,
+    STAFF_EMPLOYEE,
     PRODUCTS,
     JUICE_KEYS,
     COCOA_KEYS,
@@ -862,6 +1103,19 @@
     setActiveStand,
     consumeExtraStandUnlockNotify,
     buyStand,
+    findStand,
+    playerStandId,
+    employeeCount,
+    dailyWageCost,
+    staffingRequired,
+    unstaffedStands,
+    isFullyStaffed,
+    staffingCheck,
+    hireEmployee,
+    layoffEmployee,
+    assignPlayerToStand,
+    unassignPlayerFromStand,
+    staffLabel,
     loadInstructionsHidden,
     saveInstructionsHidden,
     inventoryLabels,

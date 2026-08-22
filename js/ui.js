@@ -7,10 +7,11 @@
  * Phase 12: multi-item Sell Day chips (bought item + reaction) and
  * per-item customer summary aggregates.
  * Phase 13: multi-stand dropdown + Add stand + unlock banner; map render.
+ * Phase 14: staff panel (hire / layoff / assign player) + understaffed hints.
  */
 (function (global) {
   const MORNING_COPY =
-    "Good morning. Buy your stand if needed, check the weather, set today’s menu, edit recipes & prices for offered items, Buy stock, then Sell Day.";
+    "Good morning. Buy your stand if needed, staff multi-stand locations, check the weather, set today’s menu, edit recipes & prices for offered items, Buy stock, then Sell Day.";
 
   const PANEL_IDS = {
     recipe: "panel-recipe",
@@ -530,6 +531,136 @@
     if (global.GameMap && typeof global.GameMap.render === "function") {
       global.GameMap.render(state);
     }
+
+    renderStaff(state);
+  }
+
+  function renderStaff(state) {
+    const panel = document.getElementById("staff-panel");
+    const list = document.getElementById("staff-list");
+    const statusEl = document.getElementById("staff-status");
+    const lead = document.getElementById("staff-lead");
+    const owns = global.GameState.ownsStand(state);
+    const required = global.GameState.staffingRequired(state);
+    const wage = Number(global.GameState.STAND_EMPLOYEE_WAGE) || 5;
+    const employees = global.GameState.employeeCount(state);
+    const wageBill = global.GameState.dailyWageCost(state);
+
+    if (panel) {
+      // Show staff UI whenever the player owns stands (1 stand: optional self-run).
+      panel.hidden = !owns;
+    }
+    if (!owns || !list) return;
+
+    if (lead) {
+      lead.textContent = required
+        ? "With 2 or more stands, every stand needs a worker. You may run one stand yourself; hire employees for the rest ($" +
+          wage.toFixed(0) +
+          "/day each, paid on Sell Day). Or staff every stand with employees."
+        : "One stand: you can run it alone (no hire required). Hire an employee if you like — wage is $" +
+          wage.toFixed(0) +
+          "/day on Sell Day. Adding a second stand will require staffing every location.";
+    }
+
+    const check = global.GameState.staffingCheck(state);
+    if (statusEl) {
+      if (!required) {
+        statusEl.textContent =
+          employees > 0
+            ? "Optional staff: " +
+              employees +
+              " employee" +
+              (employees === 1 ? "" : "s") +
+              " · today’s wage bill " +
+              formatMoney(wageBill) +
+              "."
+            : "Staffing optional with 1 stand — you can Sell Day without hiring.";
+        statusEl.classList.remove("is-warn");
+        statusEl.classList.add("is-ok");
+      } else if (check.ok) {
+        const playerId = global.GameState.playerStandId(state);
+        statusEl.textContent =
+          "Fully staffed" +
+          (playerId ? " (you run one stand)" : " (all employee-run)") +
+          ". " +
+          employees +
+          " employee" +
+          (employees === 1 ? "" : "s") +
+          " · wage bill " +
+          formatMoney(wageBill) +
+          "/day.";
+        statusEl.classList.remove("is-warn");
+        statusEl.classList.add("is-ok");
+      } else {
+        statusEl.textContent = check.message;
+        statusEl.classList.remove("is-ok");
+        statusEl.classList.add("is-warn");
+      }
+    }
+
+    list.innerHTML = "";
+    for (const stand of state.stands) {
+      const li = document.createElement("li");
+      li.className = "staff-row";
+      li.dataset.standId = stand.id;
+
+      const meta = document.createElement("div");
+      meta.className = "staff-row-meta";
+      const name = document.createElement("span");
+      name.className = "staff-row-name";
+      name.textContent = stand.name;
+      const role = document.createElement("span");
+      role.className = "staff-row-role";
+      role.textContent = global.GameState.staffLabel(stand.staffedBy);
+      meta.append(name, role);
+
+      const actions = document.createElement("div");
+      actions.className = "staff-row-actions";
+
+      const isPlayer = stand.staffedBy === global.GameState.STAFF_PLAYER;
+      const isEmployee = stand.staffedBy === global.GameState.STAFF_EMPLOYEE;
+
+      if (isPlayer) {
+        const unassign = document.createElement("button");
+        unassign.type = "button";
+        unassign.className = "btn btn-quiet";
+        unassign.dataset.staffAction = "unassign-player";
+        unassign.dataset.standId = stand.id;
+        unassign.textContent = "Stop running";
+        actions.appendChild(unassign);
+      } else {
+        const assign = document.createElement("button");
+        assign.type = "button";
+        assign.className = "btn";
+        assign.dataset.staffAction = "assign-player";
+        assign.dataset.standId = stand.id;
+        assign.textContent = "I run this";
+        assign.title = "Assign yourself to this stand (only one at a time)";
+        actions.appendChild(assign);
+      }
+
+      if (isEmployee) {
+        const layoff = document.createElement("button");
+        layoff.type = "button";
+        layoff.className = "btn btn-quiet";
+        layoff.dataset.staffAction = "layoff";
+        layoff.dataset.standId = stand.id;
+        layoff.textContent = "Lay off";
+        actions.appendChild(layoff);
+      } else if (!isPlayer) {
+        const hire = document.createElement("button");
+        hire.type = "button";
+        hire.className = "btn btn-primary";
+        hire.dataset.staffAction = "hire";
+        hire.dataset.standId = stand.id;
+        hire.textContent = "Hire ($" + wage.toFixed(0) + "/day)";
+        hire.title = "No upfront cost — wage paid on Sell Day";
+        actions.appendChild(hire);
+      }
+
+      li.append(meta, actions);
+      list.appendChild(li);
+    }
   }
 
   function renderInstructions() {
@@ -554,6 +685,11 @@
       );
     }
 
+    const staffCheck = global.GameState.staffingCheck(state);
+    if (!staffCheck.ok) {
+      return staffCheck.message;
+    }
+
     const offered = global.GameEconomy.offeredProducts
       ? global.GameEconomy.offeredProducts(state)
       : global.GameState.PRODUCTS.filter(function (p) {
@@ -576,9 +712,22 @@
       );
     }
 
+    function withWageTip(text) {
+      const employees = global.GameState.employeeCount(state);
+      if (employees <= 0) return text;
+      return (
+        text +
+        " Employee wages today: " +
+        formatMoney(global.GameState.dailyWageCost(state)) +
+        "."
+      );
+    }
+
     if (offered.length === 0) {
-      return withUnlockTip(
-        "Toggle at least one item on Today’s menu before Sell Day."
+      return withWageTip(
+        withUnlockTip(
+          "Toggle at least one item on Today’s menu before Sell Day."
+        )
       );
     }
 
@@ -600,20 +749,24 @@
     }
 
     if (stocked.length === 0) {
-      return withUnlockTip(
-        "No stock for today’s menu (" +
-          offered
-            .map(function (p) {
-              return global.GameState.productLabel(p);
-            })
-            .join(", ") +
-          ") — buy ingredients first."
+      return withWageTip(
+        withUnlockTip(
+          "No stock for today’s menu (" +
+            offered
+              .map(function (p) {
+                return global.GameState.productLabel(p);
+              })
+              .join(", ") +
+            ") — buy ingredients first."
+        )
       );
     }
 
     if (unpriced.length === offered.length) {
-      return withUnlockTip(
-        "Set a sell price above $0 for at least one offered item."
+      return withWageTip(
+        withUnlockTip(
+          "Set a sell price above $0 for at least one offered item."
+        )
       );
     }
 
@@ -639,13 +792,15 @@
         ".";
     }
 
-    return withUnlockTip(
-      "Menu ready: " +
-        labels.join(", ") +
-        " (~" +
-        totalStock +
-        " servings in stock)." +
-        fit
+    return withWageTip(
+      withUnlockTip(
+        "Menu ready: " +
+          labels.join(", ") +
+          " (~" +
+          totalStock +
+          " servings in stock)." +
+          fit
+      )
     );
   }
 
@@ -963,6 +1118,7 @@
     renderMenuToggles,
     morningHint,
     renderStand,
+    renderStaff,
     renderInstructions,
     setInstructionsHidden,
     setSellDayLocked,
