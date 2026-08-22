@@ -8,6 +8,7 @@
  * per-item customer summary aggregates.
  * Phase 13: multi-stand dropdown + Add stand + unlock banner; map render.
  * Phase 14: staff panel (hire / layoff / assign player) + understaffed hints.
+ * Phase 18: Business ledger panel with metric info blurbs + restaurant rollups.
  */
 (function (global) {
   const MORNING_COPY =
@@ -17,6 +18,7 @@
     recipe: "panel-recipe",
     buy: "panel-buy",
     price: "panel-price",
+    business: "panel-business",
   };
 
   const PRODUCT_TITLES = {
@@ -381,6 +383,128 @@
       fillPriceForm(state);
     }
     return wasOpen;
+  }
+
+  /** Which ledger metric info blurb is expanded (key or null). */
+  let openLedgerInfoKey = null;
+
+  function formatLedgerValue(metric) {
+    if (!metric) return "—";
+    if (metric.kind === "count") return String(metric.value | 0);
+    return formatMoney(metric.value);
+  }
+
+  function renderLedger(state) {
+    const listEl = document.getElementById("ledger-metrics");
+    const restSection = document.getElementById("ledger-restaurants");
+    const restList = document.getElementById("ledger-restaurant-list");
+    if (!listEl || !global.GameLedger) return;
+
+    const display = global.GameLedger.getDisplayMetrics(state);
+    listEl.innerHTML = "";
+
+    for (const metric of display.metrics) {
+      const row = document.createElement("div");
+      row.className = "ledger-row";
+      row.setAttribute("data-ledger-metric", metric.key);
+
+      const head = document.createElement("div");
+      head.className = "ledger-row-head";
+
+      const label = document.createElement("span");
+      label.className = "ledger-label";
+      label.textContent = metric.label;
+
+      const infoBtn = document.createElement("button");
+      infoBtn.type = "button";
+      infoBtn.className = "btn-ledger-info";
+      infoBtn.setAttribute("data-ledger-info", metric.key);
+      infoBtn.setAttribute(
+        "aria-expanded",
+        openLedgerInfoKey === metric.key ? "true" : "false"
+      );
+      infoBtn.setAttribute(
+        "aria-label",
+        "What is " + metric.label + "?"
+      );
+      infoBtn.textContent = "?";
+
+      const value = document.createElement("span");
+      value.className = "ledger-value";
+      value.textContent = formatLedgerValue(metric);
+
+      head.append(label, infoBtn, value);
+
+      const blurb = document.createElement("p");
+      blurb.className = "ledger-info-blurb";
+      blurb.id = "ledger-info-" + metric.key;
+      blurb.hidden = openLedgerInfoKey !== metric.key;
+      blurb.textContent =
+        (display.info && display.info[metric.key]) ||
+        global.GameLedger.infoFor(metric.key) ||
+        "";
+
+      row.append(head, blurb);
+      listEl.appendChild(row);
+    }
+
+    if (restSection && restList) {
+      const show = !!display.showRestaurants;
+      restSection.hidden = !show;
+      restList.innerHTML = "";
+      const restInfoBtn = document.getElementById("btn-ledger-info-restaurants");
+      const restBlurb = document.getElementById("ledger-info-restaurantRollup");
+      if (restInfoBtn) {
+        restInfoBtn.setAttribute(
+          "aria-expanded",
+          openLedgerInfoKey === "restaurantRollup" ? "true" : "false"
+        );
+      }
+      if (restBlurb) {
+        restBlurb.hidden = openLedgerInfoKey !== "restaurantRollup";
+        restBlurb.textContent =
+          (display.info && display.info.restaurantRollup) ||
+          global.GameLedger.infoFor("restaurantRollup") ||
+          "";
+      }
+      if (show) {
+        for (const loc of display.restaurants) {
+          const li = document.createElement("li");
+          li.className = "ledger-restaurant-item";
+
+          const title = document.createElement("div");
+          title.className = "ledger-restaurant-title";
+          title.textContent =
+            loc.restaurantName +
+            (loc.daysOperated
+              ? " · " + loc.daysOperated + " day" + (loc.daysOperated === 1 ? "" : "s")
+              : "");
+
+          const row = document.createElement("div");
+          row.className = "ledger-restaurant-row";
+          row.innerHTML =
+            "Sales <em>" +
+            formatMoney(loc.revenue) +
+            "</em> · COGS <em>" +
+            formatMoney(loc.cogs) +
+            "</em> · wages <em>" +
+            formatMoney(loc.wages) +
+            "</em> · rent <em>" +
+            formatMoney(loc.rent) +
+            "</em> · profit <em>" +
+            formatMoney(loc.profit) +
+            "</em>";
+
+          li.append(title, row);
+          restList.appendChild(li);
+        }
+      }
+    }
+  }
+
+  function toggleLedgerInfo(key) {
+    openLedgerInfoKey = openLedgerInfoKey === key ? null : key;
+    if (cachedState) renderLedger(cachedState);
   }
 
   function formatDayReport(report) {
@@ -1272,6 +1396,9 @@
       sellBtn.disabled = !(global.GameState.ownsBusiness ? global.GameState.ownsBusiness(state) : global.GameState.ownsStand(state));
     }
 
+    const businessOpen = getOpenPanel() === "business";
+    if (businessOpen) renderLedger(state);
+
     if (reportEl) {
       const text = formatDayReport(state.lastDayReport);
       reportEl.textContent = text || MORNING_COPY;
@@ -1511,6 +1638,16 @@
     });
   }
 
+  const ledgerPanel = document.getElementById("panel-business");
+  if (ledgerPanel) {
+    ledgerPanel.addEventListener("click", function (event) {
+      const btn = event.target.closest("[data-ledger-info]");
+      if (!btn) return;
+      const key = btn.getAttribute("data-ledger-info");
+      if (key) toggleLedgerInfo(key);
+    });
+  }
+
   global.GameUI = {
     MORNING_COPY,
     formatMoney,
@@ -1537,6 +1674,7 @@
     renderInstructions,
     setInstructionsHidden,
     setSellDayLocked,
+    renderLedger,
     startCustomerDay,
     showCustomerEvent,
     showCustomerSummary,

@@ -13,6 +13,7 @@
  * Phase 17: multi-restaurant — demand/capacity rolled PER restaurant with that
  *           location's staff (shared inventory allocated in ownership order);
  *           rent × restaurant count; day report includes locations[] rollups.
+ * Phase 18: Sell Day plans feed GameLedger running totals (caller records).
  *
  * Demand formula (Phase 12 multi-item, Phase 16–17 capacity):
  *   offered   = products with menuOffered[p] === true
@@ -656,7 +657,8 @@
 
   /**
    * Commit a planned sell day: consume inventory for each sold product.
-   * Caller updates cash / day / weather from the plan.
+   * Caller updates cash / day / weather from the plan, and should call
+   * GameLedger.recordSellDay so the Business ledger stays in sync.
    */
   function applySellDay(state, plan) {
     if (plan && plan.soldByProduct) {
