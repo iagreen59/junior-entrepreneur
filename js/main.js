@@ -4,6 +4,7 @@
  * Phase 11: four-item product picker + daily menuOffered toggles.
  * Phase 12: Sell Day serves all offered menu items; empty menu blocked.
  * Phase 13: multi-stand buy / selector / unlock notify + map refresh.
+ * Phase 14: staff hire/layoff/assign; understaffed blocks Sell Day; wages.
  */
 (function () {
   let state = GameState.load();
@@ -165,6 +166,11 @@
       };
     }
 
+    const staff = GameState.staffingCheck(current);
+    if (!staff.ok) {
+      return { ok: false, message: staff.message };
+    }
+
     const offered = GameEconomy.offeredProducts(current);
     if (offered.length === 0) {
       return {
@@ -223,6 +229,8 @@
       stockCups: plan.stockCups,
       revenue: plan.revenue,
       cogs: plan.cogs,
+      wages: plan.wages,
+      employeeCount: plan.employeeCount,
       profit: plan.profit,
       soldOut: plan.soldOut,
       message: plan.message,
@@ -339,6 +347,34 @@
     GameUI.setReport(result.message, { flash: true });
   }
 
+  function onStaffAction(event) {
+    if (selling) return;
+    const btn = event.target.closest("[data-staff-action]");
+    if (!btn) return;
+    const action = btn.getAttribute("data-staff-action");
+    const standId = btn.getAttribute("data-stand-id");
+    let result;
+    if (action === "hire") {
+      result = GameState.hireEmployee(state, standId);
+    } else if (action === "layoff") {
+      result = GameState.layoffEmployee(state, standId);
+    } else if (action === "assign-player") {
+      result = GameState.assignPlayerToStand(state, standId);
+    } else if (action === "unassign-player") {
+      result = GameState.unassignPlayerFromStand(state, standId);
+    } else {
+      return;
+    }
+    if (!result.ok) {
+      GameUI.setReport(result.message, { flash: true });
+      refresh();
+      return;
+    }
+    GameState.save(state);
+    refresh();
+    GameUI.setReport(result.message, { flash: true });
+  }
+
   function onHideInstructions() {
     GameUI.setInstructionsHidden(true);
   }
@@ -356,7 +392,7 @@
     }
 
     const confirmed = window.confirm(
-      "Start a new game? This clears your saved day, cash, stands, inventory, recipes, prices, menu, and weather."
+      "Start a new game? This clears your saved day, cash, stands, staff, inventory, recipes, prices, menu, and weather."
     );
     if (!confirmed) return;
 
@@ -405,6 +441,7 @@
   document
     .getElementById("stand-select")
     ?.addEventListener("change", onStandSelectChange);
+  document.getElementById("staff-panel")?.addEventListener("click", onStaffAction);
   document
     .getElementById("btn-hide-instructions")
     ?.addEventListener("click", onHideInstructions);
