@@ -1507,9 +1507,31 @@
   function setSellDayLocked(locked, state) {
     const sell = document.getElementById("btn-sell");
     if (sell) {
-      const noStand = state ? !global.GameState.ownsStand(state) : false;
-      sell.disabled = !!locked || noStand;
+      const owns =
+        state && global.GameState.ownsBusiness
+          ? global.GameState.ownsBusiness(state)
+          : state
+            ? global.GameState.ownsStand(state)
+            : true;
+      sell.disabled = !!locked || (state && !owns);
       sell.textContent = locked ? "Selling…" : "Sell Day";
+    }
+
+    // Recipe / Buy / Price / Business / product pickers leave standby while
+    // the day plays so they can return when the report completes.
+    const standbyIds = [
+      "btn-recipe",
+      "btn-buy",
+      "btn-price",
+      "btn-business",
+      "btn-product-juice",
+      "btn-product-cocoa",
+      "btn-product-burger",
+      "btn-product-soup",
+    ];
+    for (const id of standbyIds) {
+      const btn = document.getElementById(id);
+      if (btn) btn.disabled = !!locked;
     }
   }
 

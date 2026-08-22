@@ -57,7 +57,7 @@
     if (GameState.clearDemandMultiplier) {
       GameState.clearDemandMultiplier(state);
     }
-    if (!global.GameEvents || typeof GameEvents.onNewDay !== "function") {
+    if (!window.GameEvents || typeof GameEvents.onNewDay !== "function") {
       return null;
     }
     const result = GameEvents.onNewDay(state);
@@ -266,48 +266,64 @@
   }
 
   function finishSellDay(summary, plan) {
-    GameEconomy.applySellDay(state, plan);
-    state.cash = plan.cashAfter;
-    state.day += 1;
-    state.weather = GameWeather.roll();
-    if (global.GameLedger && GameLedger.recordSellDay) {
-      GameLedger.recordSellDay(state, plan);
+    let morningEvent = null;
+    try {
+      GameEconomy.applySellDay(state, plan);
+      state.cash = plan.cashAfter;
+      state.day += 1;
+      state.weather = GameWeather.roll();
+      if (window.GameLedger && GameLedger.recordSellDay) {
+        GameLedger.recordSellDay(state, plan);
+      }
+      state.lastDayReport = {
+        product: plan.product,
+        products: plan.products,
+        soldByProduct: plan.soldByProduct,
+        demandByProduct: plan.demandByProduct,
+        weather: plan.weather,
+        preference: plan.preference,
+        preferences: plan.preferences,
+        cupsSold: plan.cupsSold,
+        demand: plan.demand,
+        stockCups: plan.stockCups,
+        revenue: plan.revenue,
+        cogs: plan.cogs,
+        wages: plan.wages,
+        rent: plan.rent || 0,
+        employeeCount: plan.employeeCount,
+        capacityMult: plan.capacityMult,
+        isRestaurant: !!plan.isRestaurant,
+        restaurantId: plan.restaurantId || null,
+        restaurantName: plan.restaurantName || null,
+        locations: Array.isArray(plan.locations) ? plan.locations : [],
+        restaurantCount: plan.restaurantCount || 0,
+        profit: plan.profit,
+        soldOut: plan.soldOut,
+        message: plan.message,
+        customers: summary,
+      };
+
+      morningEvent = runMorningEvents();
+      GameState.save(state);
+    } finally {
+      // Always return to standby even if save/storage throws (common on
+      // iPhone Safari private mode) so the report can complete.
+      selling = false;
+      playback = null;
+      try {
+        refresh();
+      } catch {
+        // Still unlock controls and show the summary.
+      }
+      try {
+        GameUI.showCustomerSummary(summary, plan, state);
+      } catch {
+        GameUI.setSellDayLocked(false, state);
+        if (plan && plan.message) {
+          GameUI.setReport(plan.message, { flash: true });
+        }
+      }
     }
-    state.lastDayReport = {
-      product: plan.product,
-      products: plan.products,
-      soldByProduct: plan.soldByProduct,
-      demandByProduct: plan.demandByProduct,
-      weather: plan.weather,
-      preference: plan.preference,
-      preferences: plan.preferences,
-      cupsSold: plan.cupsSold,
-      demand: plan.demand,
-      stockCups: plan.stockCups,
-      revenue: plan.revenue,
-      cogs: plan.cogs,
-      wages: plan.wages,
-      rent: plan.rent || 0,
-      employeeCount: plan.employeeCount,
-      capacityMult: plan.capacityMult,
-      isRestaurant: !!plan.isRestaurant,
-      restaurantId: plan.restaurantId || null,
-      restaurantName: plan.restaurantName || null,
-      locations: Array.isArray(plan.locations) ? plan.locations : [],
-      restaurantCount: plan.restaurantCount || 0,
-      profit: plan.profit,
-      soldOut: plan.soldOut,
-      message: plan.message,
-      customers: summary,
-    };
-
-    const morningEvent = runMorningEvents();
-
-    GameState.save(state);
-    selling = false;
-    playback = null;
-    refresh();
-    GameUI.showCustomerSummary(summary, plan, state);
 
     let reportExtra = "";
     if (morningEvent && morningEvent.message) {
@@ -341,7 +357,11 @@
         (plan && plan.message ? plan.message + "\n\n" : "") + reportExtra,
         { flash: true }
       );
-      refresh();
+      try {
+        refresh();
+      } catch {
+        // Report text already shown; standby stays unlocked.
+      }
     }
   }
 
@@ -443,7 +463,7 @@
     );
     if (!confirmed) return;
     const result = GameState.sellStand(state, state.activeStandId);
-    if (result.ok && global.GameLedger && GameLedger.recordCashEvent) {
+    if (result.ok && window.GameLedger && GameLedger.recordCashEvent) {
       GameLedger.recordCashEvent(state, {
         kind: "sellStand",
         amount: Number(GameState.STAND_SELL_PRICE) || 10,
@@ -508,7 +528,7 @@
       refresh();
       return;
     }
-    if (global.GameLedger && GameLedger.recordCashEvent) {
+    if (window.GameLedger && GameLedger.recordCashEvent) {
       GameLedger.recordCashEvent(state, {
         kind: "buyRestaurant",
         amount: -(Number(GameState.RESTAURANT_COST) || 400),
@@ -555,7 +575,7 @@
       refresh();
       return;
     }
-    if (global.GameLedger && GameLedger.recordCashEvent) {
+    if (window.GameLedger && GameLedger.recordCashEvent) {
       GameLedger.recordCashEvent(state, {
         kind: "sellRestaurant",
         amount: Number(GameState.RESTAURANT_SELL_PRICE) || 200,
