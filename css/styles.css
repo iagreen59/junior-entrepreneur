@@ -1437,3 +1437,142 @@ body {
 .map-restaurant-sign { fill: #fff8e8; stroke: #8a5a2b; stroke-width: 1; }
 .map-restaurant-sign-text { fill: #5c3b1a; font-size: 9px; font-weight: 700; }
 .map-restaurant-label { fill: #3d2a14; font-size: 11px; font-weight: 700; }
+
+/* Phase 18 — Business ledger */
+.ledger-metrics {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-bottom: 0.85rem;
+}
+
+.ledger-row {
+  padding: 0.45rem 0.55rem;
+  border-radius: 0.65rem;
+  border: 1px solid rgba(26, 46, 31, 0.08);
+  background: rgba(255, 255, 255, 0.45);
+}
+
+.ledger-row-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.ledger-label {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.ledger-value {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  min-width: 4.5rem;
+}
+
+.btn-ledger-info {
+  width: 1.55rem;
+  height: 1.55rem;
+  padding: 0;
+  border-radius: 999px;
+  border: 1px solid rgba(26, 46, 31, 0.18);
+  background: rgba(47, 125, 74, 0.12);
+  color: var(--leaf-deep);
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.btn-ledger-info:hover,
+.btn-ledger-info[aria-expanded="true"] {
+  background: rgba(47, 125, 74, 0.22);
+  color: var(--leaf-deep);
+}
+
+.ledger-info-blurb {
+  margin: 0.45rem 0 0;
+  padding: 0.5rem 0.55rem;
+  border-radius: 0.55rem;
+  background: linear-gradient(180deg, #fff9e8, #f3f8e8);
+  border: 1px solid rgba(240, 154, 26, 0.25);
+  color: var(--ink-soft);
+  font-size: 0.88rem;
+  line-height: 1.4;
+  animation: rise-in 0.25s ease-out both;
+}
+
+.ledger-info-blurb[hidden] {
+  display: none !important;
+}
+
+.ledger-subtitle {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  color: var(--leaf-deep);
+}
+
+.ledger-subtitle-row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-bottom: 0.35rem;
+}
+
+.ledger-restaurants-lead {
+  margin: 0 0 0.55rem;
+  color: var(--ink-soft);
+  font-size: 0.88rem;
+  line-height: 1.35;
+}
+
+.ledger-restaurants[hidden] {
+  display: none !important;
+}
+
+.ledger-restaurant-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.ledger-restaurant-item {
+  padding: 0.55rem 0.65rem;
+  border-radius: 0.65rem;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.ledger-restaurant-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.ledger-restaurant-title {
+  font-weight: 800;
+  font-size: 0.92rem;
+}
+
+.ledger-restaurant-row {
+  font-size: 0.86rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-soft);
+  line-height: 1.4;
+}
+
+.ledger-restaurant-row em {
+  font-style: normal;
+  font-weight: 800;
+  color: var(--ink);
+}

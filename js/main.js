@@ -9,6 +9,7 @@
  *           Sell Day gates on restaurant staff + wages/rent; P&L includes rent.
  * Phase 15: sell stand ($10, keep ≥1); morning random events + banner.
  * Phase 17: multi-restaurant buy/sell; last restaurant → one stand restart.
+ * Phase 18: Business ledger panel; record Sell Day + location cash events.
  */
 (function () {
   let state = GameState.load();
@@ -118,6 +119,16 @@
         " price. Current: " +
         GameUI.formatMoney(GameState.activePrice(state)) +
         ".",
+      { flash: true }
+    );
+  }
+
+  function onBusinessOpen() {
+    if (selling) return;
+    GameUI.setPanel("business");
+    GameUI.renderLedger(state);
+    GameUI.setReport(
+      "Business ledger: running totals for revenue, costs, wages, rent, and profit. Tap (?) for what each metric means.",
       { flash: true }
     );
   }
@@ -259,6 +270,9 @@
     state.cash = plan.cashAfter;
     state.day += 1;
     state.weather = GameWeather.roll();
+    if (global.GameLedger && GameLedger.recordSellDay) {
+      GameLedger.recordSellDay(state, plan);
+    }
     state.lastDayReport = {
       product: plan.product,
       products: plan.products,
@@ -429,6 +443,12 @@
     );
     if (!confirmed) return;
     const result = GameState.sellStand(state, state.activeStandId);
+    if (result.ok && global.GameLedger && GameLedger.recordCashEvent) {
+      GameLedger.recordCashEvent(state, {
+        kind: "sellStand",
+        amount: Number(GameState.STAND_SELL_PRICE) || 10,
+      });
+    }
     if (!result.ok) {
       GameUI.setReport(result.message, { flash: true });
       refresh();
@@ -488,6 +508,12 @@
       refresh();
       return;
     }
+    if (global.GameLedger && GameLedger.recordCashEvent) {
+      GameLedger.recordCashEvent(state, {
+        kind: "buyRestaurant",
+        amount: -(Number(GameState.RESTAURANT_COST) || 400),
+      });
+    }
     GameState.save(state);
     refresh();
     GameUI.setReport(result.message, { flash: true });
@@ -528,6 +554,12 @@
       GameUI.setReport(result.message, { flash: true });
       refresh();
       return;
+    }
+    if (global.GameLedger && GameLedger.recordCashEvent) {
+      GameLedger.recordCashEvent(state, {
+        kind: "sellRestaurant",
+        amount: Number(GameState.RESTAURANT_SELL_PRICE) || 200,
+      });
     }
     GameState.save(state);
     refresh();
@@ -637,7 +669,7 @@
     }
 
     const confirmed = window.confirm(
-      "Start a new game? This clears your saved day, cash, stands, restaurants, staff, inventory, recipes, prices, menu, weather, and events."
+      "Start a new game? This clears your saved day, cash, stands, restaurants, staff, inventory, recipes, prices, menu, weather, events, and business ledger."
     );
     if (!confirmed) return;
 
@@ -679,6 +711,7 @@
   document.getElementById("btn-recipe")?.addEventListener("click", onRecipeOpen);
   document.getElementById("btn-buy")?.addEventListener("click", onBuyOpen);
   document.getElementById("btn-price")?.addEventListener("click", onPriceOpen);
+  document.getElementById("btn-business")?.addEventListener("click", onBusinessOpen);
   document.getElementById("btn-sell")?.addEventListener("click", onSellDay);
   document.getElementById("btn-new-game")?.addEventListener("click", onNewGame);
   document.getElementById("btn-buy-stand")?.addEventListener("click", onBuyStand);
