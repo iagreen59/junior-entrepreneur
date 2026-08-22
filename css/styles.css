@@ -187,6 +187,225 @@ body {
   }
 }
 
+.stand-manage {
+  margin-bottom: 1.25rem;
+  padding: 1rem 1.1rem;
+  border-radius: 1.1rem;
+  border: 1px solid var(--stroke);
+  background: linear-gradient(
+    155deg,
+    rgba(255, 249, 230, 0.95) 0%,
+    rgba(196, 230, 210, 0.45) 100%
+  );
+}
+
+.stand-manage[hidden] {
+  display: none !important;
+}
+
+.stand-manage-lead {
+  margin: 0 0 0.75rem;
+  color: var(--ink-soft);
+  font-size: 0.92rem;
+  line-height: 1.4;
+}
+
+.stand-unlock-banner {
+  margin: 0 0 0.75rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: 0.7rem;
+  background: linear-gradient(135deg, #ffe08a 0%, #f4c430 100%);
+  border: 1px solid rgba(240, 154, 26, 0.4);
+  color: var(--ink);
+  font-weight: 700;
+  font-size: 0.9rem;
+  line-height: 1.35;
+  animation: stand-unlock-pop 0.55s ease-out;
+}
+
+.stand-unlock-banner[hidden] {
+  display: none !important;
+}
+
+@keyframes stand-unlock-pop {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.stand-manage-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem 0.85rem;
+  align-items: flex-end;
+}
+
+.stand-select-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+  flex: 1 1 10rem;
+  min-width: 0;
+}
+
+.stand-select {
+  font: inherit;
+  font-weight: 700;
+  color: var(--ink);
+  padding: 0.55rem 0.7rem;
+  border-radius: 0.7rem;
+  border: 1px solid var(--stroke);
+  background: rgba(255, 255, 255, 0.9);
+  cursor: pointer;
+}
+
+.stand-select:focus {
+  outline: 2px solid var(--leaf);
+  outline-offset: 2px;
+}
+
+.stand-map-section {
+  margin-bottom: 1.25rem;
+}
+
+.stand-map-lead {
+  margin: 0 0 0.65rem;
+  color: var(--ink-soft);
+  font-size: 0.92rem;
+  line-height: 1.4;
+}
+
+.stand-map {
+  border-radius: 1.1rem;
+  border: 1px solid var(--stroke);
+  overflow: hidden;
+  background: linear-gradient(180deg, #9ad7f5 0%, #c8ebc0 55%, #8fbf6a 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+.stand-map-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.map-sky {
+  fill: url(#none);
+  fill: #9ad7f5;
+}
+
+.map-hill {
+  fill: #7cbc5a;
+}
+
+.map-road {
+  stroke: #d4b483;
+  stroke-width: 14;
+  stroke-linecap: round;
+}
+
+.map-sun {
+  fill: #ffd666;
+}
+
+.map-tree-trunk {
+  fill: #8b5a2b;
+}
+
+.map-tree-top {
+  fill: #2f7d4a;
+}
+
+.map-booth-roof {
+  fill: #e85d4c;
+}
+
+.map-booth-body {
+  fill: #fff8e8;
+  stroke: #c4a574;
+  stroke-width: 1.5;
+}
+
+.map-booth-window {
+  fill: #5b9bd5;
+}
+
+.map-booth-leg {
+  fill: #8b6914;
+}
+
+.map-booth-ring {
+  fill: none;
+  stroke: #f0a01a;
+  stroke-width: 2.5;
+  stroke-dasharray: 4 3;
+  animation: map-ring-pulse 1.8s ease-in-out infinite;
+}
+
+.map-booth.is-active .map-booth-roof {
+  fill: #d44535;
+}
+
+.map-booth.is-active .map-booth-body {
+  fill: #fffdf5;
+}
+
+@keyframes map-ring-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.map-booth-label {
+  font-family: "Baloo 2", "Nunito", sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  fill: #2a3a2e;
+}
+
+.map-booth-label.is-active {
+  fill: #b45309;
+}
+
+.map-slot-pad {
+  fill: rgba(255, 255, 255, 0.35);
+  stroke: rgba(42, 58, 46, 0.25);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 3;
+}
+
+.map-slot-mark {
+  font-family: "Baloo 2", "Nunito", sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  fill: rgba(42, 58, 46, 0.35);
+}
+
+.map-caption {
+  font-family: "Nunito", sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  fill: #2a3a2e;
+}
+
+.inventory-lead {
+  margin: 0 0 0.55rem;
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+}
+
 .product-picker {
   margin-bottom: 1.25rem;
 }
