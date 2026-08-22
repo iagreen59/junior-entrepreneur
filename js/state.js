@@ -8,6 +8,8 @@
  * Phase 11: four products (juice, cocoa, burger, soup); unique ingredient recipes;
  * per-item prices; menuOffered daily toggles (drinks on by default, food off);
  * migrate dual-drink saves.
+ * Phase 13: multi-stand unlock when cash > $100; buy 2nd–4th stand for $20;
+ * activeStandId selector; shared inventory; unlock notify flag.
  *
  * Buy unit prices (cash per inventory unit) — not stored in the save blob;
  * constants live here so Buy UI / helpers share one source.
@@ -23,9 +25,13 @@
   const STORAGE_KEY = "junior-entrepreneur-v1";
   const INSTRUCTIONS_HIDDEN_KEY = "junior-entrepreneur-instructions-hidden";
 
-  /** Phase 9 locked constants. */
+  /** Phase 9 / 13 locked constants. */
   const STARTING_CASH = 50;
   const STAND_COST = 20;
+  /** Max owned stands (Phase 13). */
+  const MAX_STANDS = 4;
+  /** Cash must be strictly greater than this to unlock buying stands 2–4. */
+  const EXTRA_STAND_UNLOCK_CASH = 100;
 
   const PRODUCTS = ["juice", "cocoa", "burger", "soup"];
 
@@ -165,6 +171,12 @@
       /** Owned stands; empty until the player buys the first stand ($20). */
       stands: [],
       activeStandId: null,
+      /**
+       * True after we have shown the “you can add another stand” notice for the
+       * current eligibility window (cash > $100 and stands < 4). Resets when
+       * the player is no longer eligible so a later re-unlock notifies again.
+       */
+      extraStandUnlockNotified: false,
       /** Product being edited / sold (Phase 11 Sell Day still single-product). */
       activeProduct: "juice",
       /**
@@ -200,17 +212,107 @@
     return ownsStand(state) ? state.stands.length : 0;
   }
 
+  function getActiveStand(state) {
+    if (!ownsStand(state)) return null;
+    const id = state.activeStandId;
+    const found = state.stands.find(function (s) {
+      return s.id === id;
+    });
+    return found || state.stands[0] || null;
+  }
+
   /**
-   * Buy the first stand (Phase 9) or an extra stand (Phase 13+).
-   * Phase 9 only allows the first purchase when none are owned.
+   * Extra stands (2nd–4th) unlock when the player already owns ≥1 stand,
+   * has fewer than MAX_STANDS, and cash is strictly greater than $100.
+   * First stand has no cash > $100 gate (Phase 9).
+   */
+  function extraStandUnlocked(state) {
+    return (
+      ownsStand(state) &&
+      standCount(state) < MAX_STANDS &&
+      Number(state.cash) > EXTRA_STAND_UNLOCK_CASH
+    );
+  }
+
+  /** Unlocked and can afford the $20 purchase. */
+  function canBuyExtraStand(state) {
+    return (
+      extraStandUnlocked(state) && Number(state.cash) + 1e-9 >= STAND_COST
+    );
+  }
+
+  function setActiveStand(state, standId) {
+    if (!ownsStand(state)) {
+      return { ok: false, message: "You do not own a stand yet." };
+    }
+    const stand = state.stands.find(function (s) {
+      return s.id === standId;
+    });
+    if (!stand) {
+      return { ok: false, message: "Unknown stand." };
+    }
+    state.activeStandId = stand.id;
+    return {
+      ok: true,
+      stand,
+      message: "Managing " + stand.name + ". Inventory is shared across all stands.",
+    };
+  }
+
+  /**
+   * If newly eligible to buy an extra stand, return a one-shot notify message
+   * and mark notified. Returns null when already notified or not eligible.
+   * Resets the flag when not eligible so a later re-unlock notifies again.
+   */
+  function consumeExtraStandUnlockNotify(state) {
+    if (!extraStandUnlocked(state)) {
+      state.extraStandUnlockNotified = false;
+      return null;
+    }
+    if (state.extraStandUnlockNotified) return null;
+    state.extraStandUnlockNotified = true;
+    const left = MAX_STANDS - standCount(state);
+    return (
+      "Cash is over $" +
+      EXTRA_STAND_UNLOCK_CASH +
+      "! You can add another stand for $" +
+      STAND_COST.toFixed(0) +
+      " (up to " +
+      MAX_STANDS +
+      "; " +
+      left +
+      " slot" +
+      (left === 1 ? "" : "s") +
+      " left). Use Add stand when you are ready."
+    );
+  }
+
+  /**
+   * Buy the first stand (Phase 9) or an extra stand (Phase 13).
+   * First stand: no cash > $100 gate. Extra stands: require unlock + room.
    */
   function buyStand(state) {
-    if (ownsStand(state)) {
+    const count = standCount(state);
+
+    if (count >= MAX_STANDS) {
       return {
         ok: false,
-        message: "You already own a stand. Extra stands unlock later.",
+        message: "You already own the maximum of " + MAX_STANDS + " stands.",
       };
     }
+
+    if (count >= 1 && !extraStandUnlocked(state)) {
+      return {
+        ok: false,
+        message:
+          "Extra stands unlock when cash is over $" +
+          EXTRA_STAND_UNLOCK_CASH +
+          " (you have $" +
+          Number(state.cash).toFixed(2) +
+          ").",
+      };
+    }
+
     if (state.cash + 1e-9 < STAND_COST) {
       return {
         ok: false,
@@ -222,20 +324,44 @@
           ").",
       };
     }
+
     state.cash = +(state.cash - STAND_COST).toFixed(2);
-    const stand = createStand(1);
-    state.stands = [stand];
+    const nextIndex = count + 1;
+    const stand = createStand(nextIndex);
+    if (!Array.isArray(state.stands)) state.stands = [];
+    state.stands.push(stand);
     state.activeStandId = stand.id;
+
+    if (count === 0) {
+      return {
+        ok: true,
+        stand,
+        cost: STAND_COST,
+        message:
+          "Bought your first stand for $" +
+          STAND_COST.toFixed(2) +
+          "! Cash left: $" +
+          state.cash.toFixed(2) +
+          ". You can Sell Day when stock and price are ready.",
+      };
+    }
+
     return {
       ok: true,
       stand,
       cost: STAND_COST,
       message:
-        "Bought your first stand for $" +
+        "Bought " +
+        stand.name +
+        " for $" +
         STAND_COST.toFixed(2) +
-        "! Cash left: $" +
+        "! You now own " +
+        state.stands.length +
+        " stand" +
+        (state.stands.length === 1 ? "" : "s") +
+        ". Cash left: $" +
         state.cash.toFixed(2) +
-        ". You can Sell Day when stock and price are ready.",
+        ". Inventory stays shared.",
     };
   }
 
@@ -412,7 +538,8 @@
             name:
               typeof s.name === "string" && s.name ? s.name : "Stand " + n,
           };
-        });
+        })
+        .slice(0, MAX_STANDS);
     } else {
       stands = [createStand(1)];
     }
@@ -430,11 +557,14 @@
       activeStandId = stands[0].id;
     }
 
+    const extraStandUnlockNotified = !!raw.extraStandUnlockNotified;
+
     return {
       day: Number.isFinite(raw.day) && raw.day >= 1 ? Math.floor(raw.day) : 1,
       cash: Number.isFinite(raw.cash) ? raw.cash : base.cash,
       stands,
       activeStandId,
+      extraStandUnlockNotified,
       activeProduct,
       menuOffered,
       weather,
@@ -709,6 +839,8 @@
     INSTRUCTIONS_HIDDEN_KEY,
     STARTING_CASH,
     STAND_COST,
+    MAX_STANDS,
+    EXTRA_STAND_UNLOCK_CASH,
     PRODUCTS,
     JUICE_KEYS,
     COCOA_KEYS,
@@ -724,6 +856,11 @@
     createStand,
     ownsStand,
     standCount,
+    getActiveStand,
+    extraStandUnlocked,
+    canBuyExtraStand,
+    setActiveStand,
+    consumeExtraStandUnlockNotify,
     buyStand,
     loadInstructionsHidden,
     saveInstructionsHidden,

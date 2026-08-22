@@ -3,6 +3,7 @@
  * Phase 8: Sell Day plays ~10s of customer events, then commits P&L.
  * Phase 11: four-item product picker + daily menuOffered toggles.
  * Phase 12: Sell Day serves all offered menu items; empty menu blocked.
+ * Phase 13: multi-stand buy / selector / unlock notify + map refresh.
  */
 (function () {
   let state = GameState.load();
@@ -11,6 +12,16 @@
 
   function refresh() {
     GameUI.render(state);
+  }
+
+  /** Show one-shot unlock message when cash > $100 and stands < 4. */
+  function maybeNotifyExtraStandUnlock() {
+    const msg = GameState.consumeExtraStandUnlockNotify(state);
+    if (!msg) return false;
+    GameState.save(state);
+    GameUI.setReport(msg, { flash: true });
+    refresh();
+    return true;
   }
 
   function onProductSelect(product) {
@@ -222,6 +233,16 @@
     playback = null;
     refresh();
     GameUI.showCustomerSummary(summary, plan, state);
+    // After Sell Day P&L is shown, notify if cash crossed the multi-stand unlock.
+    const unlockMsg = GameState.consumeExtraStandUnlockNotify(state);
+    if (unlockMsg) {
+      GameState.save(state);
+      GameUI.setReport(
+        (plan && plan.message ? plan.message + "\n\n" : "") + unlockMsg,
+        { flash: true }
+      );
+      refresh();
+    }
   }
 
   function onSellDay() {
@@ -291,6 +312,33 @@
     GameUI.setReport(result.message, { flash: true });
   }
 
+  function onAddStand() {
+    if (selling) return;
+    const result = GameState.buyStand(state);
+    if (!result.ok) {
+      GameUI.setReport(result.message, { flash: true });
+      refresh();
+      return;
+    }
+    GameState.save(state);
+    refresh();
+    GameUI.setReport(result.message, { flash: true });
+  }
+
+  function onStandSelectChange(event) {
+    if (selling) return;
+    const select = event.target;
+    const result = GameState.setActiveStand(state, select.value);
+    if (!result.ok) {
+      GameUI.setReport(result.message, { flash: true });
+      refresh();
+      return;
+    }
+    GameState.save(state);
+    refresh();
+    GameUI.setReport(result.message, { flash: true });
+  }
+
   function onHideInstructions() {
     GameUI.setInstructionsHidden(true);
   }
@@ -308,7 +356,7 @@
     }
 
     const confirmed = window.confirm(
-      "Start a new game? This clears your saved day, cash, stand, inventory, recipes, prices, menu, and weather."
+      "Start a new game? This clears your saved day, cash, stands, inventory, recipes, prices, menu, and weather."
     );
     if (!confirmed) return;
 
@@ -353,6 +401,10 @@
   document.getElementById("btn-sell")?.addEventListener("click", onSellDay);
   document.getElementById("btn-new-game")?.addEventListener("click", onNewGame);
   document.getElementById("btn-buy-stand")?.addEventListener("click", onBuyStand);
+  document.getElementById("btn-add-stand")?.addEventListener("click", onAddStand);
+  document
+    .getElementById("stand-select")
+    ?.addEventListener("change", onStandSelectChange);
   document
     .getElementById("btn-hide-instructions")
     ?.addEventListener("click", onHideInstructions);
@@ -397,4 +449,5 @@
   });
 
   refresh();
+  maybeNotifyExtraStandUnlock();
 })();

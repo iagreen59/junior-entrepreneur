@@ -6,6 +6,7 @@
  * Phase 11: four products + daily menuOffered toggles; food recipes/prices.
  * Phase 12: multi-item Sell Day chips (bought item + reaction) and
  * per-item customer summary aggregates.
+ * Phase 13: multi-stand dropdown + Add stand + unlock banner; map render.
  */
 (function (global) {
   const MORNING_COPY =
@@ -410,11 +411,28 @@
     const gate = document.getElementById("stand-gate");
     const gateCopy = document.getElementById("stand-gate-copy");
     const buyBtn = document.getElementById("btn-buy-stand");
+    const manage = document.getElementById("stand-manage");
+    const select = document.getElementById("stand-select");
+    const addBtn = document.getElementById("btn-add-stand");
+    const unlockBanner = document.getElementById("stand-unlock-banner");
+    const manageLead = document.getElementById("stand-manage-lead");
+    const count = global.GameState.standCount(state);
+    const max = global.GameState.MAX_STANDS;
+    const unlocked = global.GameState.extraStandUnlocked(state);
+    const canAdd = global.GameState.canBuyExtraStand(state);
+    const active = global.GameState.getActiveStand(state);
 
     if (standEl) {
       if (owns) {
-        const stand = state.stands[0];
-        standEl.textContent = stand && stand.name ? stand.name : "Owned";
+        if (count === 1) {
+          standEl.textContent = active && active.name ? active.name : "Owned";
+        } else {
+          standEl.textContent =
+            count +
+            "/" +
+            max +
+            (active && active.name ? " · " + active.name : "");
+        }
       } else {
         standEl.textContent = "None yet";
       }
@@ -435,6 +453,82 @@
       buyBtn.disabled = owns;
       buyBtn.textContent =
         "Buy stand ($" + Number(global.GameState.STAND_COST).toFixed(0) + ")";
+    }
+
+    if (manage) {
+      manage.hidden = !owns;
+    }
+
+    if (manageLead && owns) {
+      manageLead.textContent =
+        count === 1
+          ? "You own 1 stand. When cash is over $" +
+            global.GameState.EXTRA_STAND_UNLOCK_CASH +
+            ", you can add more (max " +
+            max +
+            "). Inventory is shared."
+          : "You own " +
+            count +
+            " of " +
+            max +
+            " stands. Pick which stand you are managing. Inventory is shared across all stands.";
+    }
+
+    if (select && owns) {
+      const prev = select.value;
+      select.innerHTML = "";
+      for (const stand of state.stands) {
+        const opt = document.createElement("option");
+        opt.value = stand.id;
+        opt.textContent = stand.name;
+        if (stand.id === state.activeStandId) opt.selected = true;
+        select.appendChild(opt);
+      }
+      if (
+        prev &&
+        state.stands.some(function (s) {
+          return s.id === prev;
+        }) &&
+        !state.activeStandId
+      ) {
+        select.value = prev;
+      }
+    }
+
+    if (addBtn) {
+      const showAdd = owns && count < max && unlocked;
+      addBtn.hidden = !showAdd;
+      addBtn.disabled = !canAdd;
+      addBtn.textContent =
+        "Add stand ($" + Number(global.GameState.STAND_COST).toFixed(0) + ")";
+      addBtn.title = !unlocked
+        ? "Unlocks when cash is over $" +
+          global.GameState.EXTRA_STAND_UNLOCK_CASH
+        : canAdd
+          ? "Buy another stand for $" +
+            Number(global.GameState.STAND_COST).toFixed(0)
+          : "Need $" +
+            Number(global.GameState.STAND_COST).toFixed(0) +
+            " to buy another stand";
+    }
+
+    if (unlockBanner) {
+      const showBanner = owns && count < max && unlocked;
+      unlockBanner.hidden = !showBanner;
+      if (showBanner) {
+        unlockBanner.textContent =
+          "Cash over $" +
+          global.GameState.EXTRA_STAND_UNLOCK_CASH +
+          " — you can add another stand for $" +
+          Number(global.GameState.STAND_COST).toFixed(0) +
+          " (max " +
+          max +
+          ").";
+      }
+    }
+
+    if (global.GameMap && typeof global.GameMap.render === "function") {
+      global.GameMap.render(state);
     }
   }
 
@@ -466,8 +560,26 @@
           return global.GameState.isMenuOffered(state, p);
         });
 
+    function withUnlockTip(text) {
+      if (!global.GameState.extraStandUnlocked(state)) return text;
+      const left =
+        global.GameState.MAX_STANDS - global.GameState.standCount(state);
+      return (
+        text +
+        " You can also Add stand ($" +
+        Number(global.GameState.STAND_COST).toFixed(0) +
+        ") — " +
+        left +
+        " slot" +
+        (left === 1 ? "" : "s") +
+        " left."
+      );
+    }
+
     if (offered.length === 0) {
-      return "Toggle at least one item on Today’s menu before Sell Day.";
+      return withUnlockTip(
+        "Toggle at least one item on Today’s menu before Sell Day."
+      );
     }
 
     const weather = state.weather || "mild";
@@ -488,19 +600,21 @@
     }
 
     if (stocked.length === 0) {
-      return (
+      return withUnlockTip(
         "No stock for today’s menu (" +
-        offered
-          .map(function (p) {
-            return global.GameState.productLabel(p);
-          })
-          .join(", ") +
-        ") — buy ingredients first."
+          offered
+            .map(function (p) {
+              return global.GameState.productLabel(p);
+            })
+            .join(", ") +
+          ") — buy ingredients first."
       );
     }
 
     if (unpriced.length === offered.length) {
-      return "Set a sell price above $0 for at least one offered item.";
+      return withUnlockTip(
+        "Set a sell price above $0 for at least one offered item."
+      );
     }
 
     const labels = stocked.map(function (p) {
@@ -525,13 +639,13 @@
         ".";
     }
 
-    return (
+    return withUnlockTip(
       "Menu ready: " +
-      labels.join(", ") +
-      " (~" +
-      totalStock +
-      " servings in stock)." +
-      fit
+        labels.join(", ") +
+        " (~" +
+        totalStock +
+        " servings in stock)." +
+        fit
     );
   }
 
