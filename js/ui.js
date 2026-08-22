@@ -1,10 +1,11 @@
 /**
  * DOM updates / panel rendering.
  * Phase 7: weather status + preference tips for juice vs cocoa.
+ * Phase 9: stand ownership gate + hideable instructions panel.
  */
 (function (global) {
   const MORNING_COPY =
-    "Good morning. Check the weather, pick a drink → Recipe → Buy → Price → Sell Day.";
+    "Good morning. Buy your stand if needed, check the weather, pick a drink → Recipe → Buy → Price → Sell Day.";
 
   const PANEL_IDS = {
     recipe: "panel-recipe",
@@ -307,7 +308,62 @@
     );
   }
 
+  function renderStand(state) {
+    const owns = global.GameState.ownsStand(state);
+    const standEl = document.getElementById("stat-stand");
+    const gate = document.getElementById("stand-gate");
+    const gateCopy = document.getElementById("stand-gate-copy");
+    const buyBtn = document.getElementById("btn-buy-stand");
+
+    if (standEl) {
+      if (owns) {
+        const stand = state.stands[0];
+        standEl.textContent = stand && stand.name ? stand.name : "Owned";
+      } else {
+        standEl.textContent = "None yet";
+      }
+    }
+
+    if (gate) {
+      gate.hidden = owns;
+    }
+
+    if (gateCopy && !owns) {
+      gateCopy.innerHTML =
+        "You need a corner stand before customers can buy. Cost: <strong>$" +
+        Number(global.GameState.STAND_COST).toFixed(2) +
+        "</strong>.";
+    }
+
+    if (buyBtn) {
+      buyBtn.disabled = owns;
+      buyBtn.textContent =
+        "Buy stand ($" + Number(global.GameState.STAND_COST).toFixed(0) + ")";
+    }
+  }
+
+  function renderInstructions() {
+    const hidden = global.GameState.loadInstructionsHidden();
+    const panel = document.getElementById("instructions");
+    const reveal = document.getElementById("instructions-reveal");
+    if (panel) panel.hidden = hidden;
+    if (reveal) reveal.hidden = !hidden;
+  }
+
+  function setInstructionsHidden(hidden) {
+    global.GameState.saveInstructionsHidden(!!hidden);
+    renderInstructions();
+  }
+
   function morningHint(state) {
+    if (!global.GameState.ownsStand(state)) {
+      return (
+        "Buy your first stand for $" +
+        Number(global.GameState.STAND_COST).toFixed(2) +
+        " before Sell Day unlocks."
+      );
+    }
+
     const product = activeProduct(state);
     const drink = global.GameState.productLabel(product);
     const weather = state.weather || "mild";
@@ -384,12 +440,19 @@
     }
 
     renderWeather(state);
+    renderStand(state);
+    renderInstructions();
     renderProductPicker(state);
     fillRecipeForm(state);
     fillPriceForm(state);
     renderBuyPrices();
     renderCart(state);
     renderMorningHint(state);
+
+    const sellBtn = document.getElementById("btn-sell");
+    if (sellBtn && !sellBtn.textContent.includes("Selling")) {
+      sellBtn.disabled = !global.GameState.ownsStand(state);
+    }
 
     if (reportEl) {
       const text = formatDayReport(state.lastDayReport);
@@ -463,10 +526,11 @@
     return svg;
   }
 
-  function setSellDayLocked(locked) {
+  function setSellDayLocked(locked, state) {
     const sell = document.getElementById("btn-sell");
     if (sell) {
-      sell.disabled = !!locked;
+      const noStand = state ? !global.GameState.ownsStand(state) : false;
+      sell.disabled = !!locked || noStand;
       sell.textContent = locked ? "Selling…" : "Sell Day";
     }
   }
@@ -520,7 +584,7 @@
     }
   }
 
-  function showCustomerSummary(summary, plan) {
+  function showCustomerSummary(summary, plan, state) {
     const day = document.getElementById("customer-day");
     const summaryEl = document.getElementById("customer-summary");
     const list = document.getElementById("customer-summary-list");
@@ -551,20 +615,20 @@
       }
     }
     if (day) day.hidden = false;
-    setSellDayLocked(false);
+    setSellDayLocked(false, state);
     if (plan && plan.message) {
       setReport(plan.message, { flash: true });
     }
   }
 
-  function hideCustomerDay() {
+  function hideCustomerDay(state) {
     const day = document.getElementById("customer-day");
     const summary = document.getElementById("customer-summary");
     const stage = document.getElementById("customer-stage");
     if (day) day.hidden = true;
     if (summary) summary.hidden = true;
     if (stage) stage.innerHTML = "";
-    setSellDayLocked(false);
+    setSellDayLocked(false, state);
   }
 
   global.GameUI = {
@@ -585,6 +649,9 @@
     clearCart,
     renderCart,
     morningHint,
+    renderStand,
+    renderInstructions,
+    setInstructionsHidden,
     setSellDayLocked,
     startCustomerDay,
     showCustomerEvent,
