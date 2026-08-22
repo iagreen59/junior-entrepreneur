@@ -491,12 +491,12 @@
         ? "Buy another restaurant for $" +
             cost.toFixed(0) +
             "? It needs its own 2–4 employees and pays $" +
-            (GameState.RESTAURANT_RENT || 15) +
+            (GameState.RESTAURANT_RENT || 18) +
             "/day rent."
         : "Buy a restaurant for $" +
             cost.toFixed(0) +
             "? All stands will be forfeited. You will need 2–4 employees (you cannot staff it yourself). Daily rent $" +
-            (GameState.RESTAURANT_RENT || 15) +
+            (GameState.RESTAURANT_RENT || 18) +
             " + wages $" +
             (GameState.RESTAURANT_WAGE || 8) +
             "/employee."
