@@ -95,8 +95,10 @@
             Own <strong>4 stands</strong> with cash over <strong>$1000</strong> to buy a
             <strong>restaurant for $400</strong> (all stands are forfeited). Hire
             <strong>2–4 employees</strong> — you cannot work the restaurant yourself.
-            Sell Day charges <strong>rent $15/day</strong> plus <strong>$8/day</strong> per
-            employee. More staff raises sales capacity but also wages against fixed rent.
+            Sell Day charges <strong>rent $15/day</strong> per restaurant plus
+            <strong>$8/day</strong> per employee. Cash over <strong>$1000</strong> unlocks
+            more restaurants (max <strong>4</strong>). Sell one for <strong>$200</strong>
+            (keep at least one); selling the last returns you to stand mode with one stand.
           </li>
           <li>
             Check today’s <strong>Weather</strong>, toggle today’s <strong>Menu</strong>,
@@ -155,12 +157,27 @@
         </div>
       </section>
 
-      <section class="restaurant-manage" id="restaurant-manage" hidden aria-label="Manage restaurant">
-        <h2 class="section-title">Your restaurant</h2>
+      <section class="restaurant-manage" id="restaurant-manage" hidden aria-label="Manage restaurants">
+        <h2 class="section-title">Your restaurants</h2>
         <p class="restaurant-manage-lead" id="restaurant-manage-lead">
-          You run a restaurant now. Hire 2–4 employees (you cannot staff it yourself).
-          Shared menu and inventory continue. Daily rent $15 + $8 per employee on Sell Day.
+          You run restaurants now. Hire 2–4 employees at each (you cannot staff them yourself).
+          Shared menu and inventory continue. Daily rent $15 each + $8 per employee on Sell Day.
         </p>
+        <p class="restaurant-unlock-banner" id="extra-restaurant-unlock-banner" hidden role="status">
+          Cash over $1000 — you can buy another restaurant for $400 (max 4).
+        </p>
+        <div class="restaurant-manage-row" id="restaurant-select-row">
+          <label class="stand-select-label" for="restaurant-select">
+            Active restaurant
+            <select id="restaurant-select" class="stand-select" aria-label="Switch active restaurant"></select>
+          </label>
+          <button type="button" class="btn btn-primary" id="btn-add-restaurant" hidden>
+            Add restaurant ($400)
+          </button>
+          <button type="button" class="btn btn-quiet" id="btn-sell-restaurant" disabled>
+            Sell restaurant ($200)
+          </button>
+        </div>
         <div class="restaurant-manage-row" id="restaurant-staff-controls">
           <p class="restaurant-staff-count" id="restaurant-staff-count">Employees: 0 / 4</p>
           <button type="button" class="btn btn-primary" id="btn-hire-restaurant" data-restaurant-action="hire">
@@ -176,14 +193,17 @@
       <section class="location-pnl" id="location-pnl" hidden aria-label="Location profit and loss">
         <h2 class="section-title">Location P&amp;L</h2>
         <p class="location-pnl-lead" id="location-pnl-lead">
-          Sales, wages, rent, and profit for your restaurant.
+          Sales, wages, rent, and profit per restaurant (compare staffing).
         </p>
-        <dl class="location-pnl-grid" id="location-pnl-grid">
-          <div><dt>Sales</dt><dd id="pnl-sales">—</dd></div>
-          <div><dt>Wages</dt><dd id="pnl-wages">—</dd></div>
-          <div><dt>Rent</dt><dd id="pnl-rent">—</dd></div>
-          <div><dt>Profit</dt><dd id="pnl-profit">—</dd></div>
-        </dl>
+        <div class="location-pnl-totals" id="location-pnl-totals">
+          <dl class="location-pnl-grid" id="location-pnl-grid">
+            <div><dt>Sales</dt><dd id="pnl-sales">—</dd></div>
+            <div><dt>Wages</dt><dd id="pnl-wages">—</dd></div>
+            <div><dt>Rent</dt><dd id="pnl-rent">—</dd></div>
+            <div><dt>Profit</dt><dd id="pnl-profit">—</dd></div>
+          </dl>
+        </div>
+        <ul class="location-pnl-list" id="location-pnl-list" hidden></ul>
         <p class="location-pnl-note" id="location-pnl-note"></p>
       </section>
 

@@ -78,7 +78,7 @@ Future agents: skip anything already checked.
 - [x] Phase 14 — Employees for multi-stand
 - [x] Phase 15 — Sell stands + random events
 - [x] Phase 16 — First restaurant (rent + per-location P&L)
-- [ ] Phase 17 — Multi-restaurant, sell, restart stand
+- [x] Phase 17 — Multi-restaurant, sell, restart stand
 - [ ] Phase 18 — Business ledger and educational metrics
 - [ ] Phase 19 — Instructions refresh + balance + event polish
 
@@ -723,7 +723,7 @@ With **4 stands** and **cash > $1000**, offer buy restaurant for **$400**. On bu
 
 ## Phase 17 — Multi-restaurant, sell restaurants, restart stand
 
-**Status:** not started — start only after Phase 16 is checked done
+**Status:** done
 
 ### Goal
 
@@ -742,13 +742,13 @@ In restaurant mode, **cash > $1000** unlocks another restaurant for **$400** (ma
 
 ### Play-test checklist
 
-- [ ] Buy 2nd–4th restaurant when cash > $1000; cost $400 each
-- [ ] Each restaurant shows separate sales/profit and employee-count effect
-- [ ] Rent × number of restaurants charged daily
-- [ ] Sell one restaurant for $200; cannot sell last except via last-restaurant rule
-- [ ] Sell last restaurant → one stand; stand UI returns
-- [ ] Never own stands + restaurants together
-- [ ] **Preview:** multi-restaurant map/P&L + sell-last → stand restart — attach to the PR
+- [x] Buy 2nd–4th restaurant when cash > $1000; cost $400 each
+- [x] Each restaurant shows separate sales/profit and employee-count effect
+- [x] Rent × number of restaurants charged daily
+- [x] Sell one restaurant for $200; cannot sell last except via last-restaurant rule
+- [x] Sell last restaurant → one stand; stand UI returns
+- [x] Never own stands + restaurants together
+- [x] **Preview:** multi-restaurant map/P&L + sell-last → stand restart — attach to the PR
 
 ### Out of scope
 

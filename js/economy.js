@@ -10,27 +10,29 @@
  * Phase 16: restaurant mode — capacityMult = 0.7 + 0.2 * employeeCount
  *           scales demand; wages $8/employee + rent $15/day; P&L breaks out
  *           sales vs wages vs rent vs profit.
+ * Phase 17: multi-restaurant — demand/capacity rolled PER restaurant with that
+ *           location's staff (shared inventory allocated in ownership order);
+ *           rent × restaurant count; day report includes locations[] rollups.
  *
- * Demand formula (Phase 12 multi-item, Phase 16 capacity):
+ * Demand formula (Phase 12 multi-item, Phase 16–17 capacity):
  *   offered   = products with menuOffered[p] === true
  *   weight[p] = GameWeather.preferenceFactor(weather, p)
  *               * (REF_PRICE / price[p]) ^ ELASTICITY
  *               (preference: match 1.35, mismatch 0.65, mild 1.00 —
  *                hot favors juice+burger; cold favors cocoa+soup)
  *   capacityMult = 1 in stand mode;
- *                = 0.7 + 0.2 * restaurantEmployeeCount in restaurant mode
+ *                = 0.7 + 0.2 * restaurant.employeeCount PER restaurant
  *                  (2 staff → 1.1, 3 → 1.3, 4 → 1.5)
  *   demand[p] = floor(max(0, BASE_INTEREST * weight[p] * demandMult * capacityMult))
  *               (invalid / ≤0 price → treat as very cheap: BASE * 4 * pref)
  *               demandMult defaults to 1; foot-traffic surge uses ~1.4
- *   stock[p]  = maxCupsFromStock for that product's recipe
- *   sold[p]   = min(demand[p], stock[p])
- *   cupsSold  = sum_p sold[p]
- *   demand    = sum_p demand[p]
- *   revenue   = sum_p sold[p] * price[p]
- *   cogs      = sum_p costOfGoodsPerServing(p) * sold[p]
- *   wages     = stand: employeeCount * $5; restaurant: employeeCount * $8
- *   rent      = restaurant: $15/day (0 in stand mode)
+ *   stock[p]  = max sellable from remaining shared bag for that product
+ *   sold[p]   = min(demand[p], stock[p])  (bag depletes across restaurants)
+ *   cupsSold  = sum over restaurants and products
+ *   revenue   = sum sold * price
+ *   cogs      = sum costOfGoodsPerServing * sold
+ *   wages     = stand: employeeCount * $5; restaurant: sum staff * $8
+ *   rent      = restaurant: $15/day × restaurant count (0 in stand mode)
  *   profit    = revenue − cogs − wages − rent
  *
  * Single offered item reduces to the Phase 7 single-product formula.
@@ -211,10 +213,130 @@
     return parts;
   }
 
+  function cloneInventory(inventory) {
+    const bag = {};
+    const keys = global.GameState.INVENTORY_KEYS || Object.keys(inventory || {});
+    for (const key of keys) {
+      bag[key] = Number(inventory && inventory[key]) || 0;
+    }
+    // Preserve any extra keys on the bag.
+    if (inventory && typeof inventory === "object") {
+      for (const key of Object.keys(inventory)) {
+        if (!Object.prototype.hasOwnProperty.call(bag, key)) {
+          bag[key] = Number(inventory[key]) || 0;
+        }
+      }
+    }
+    return bag;
+  }
+
+  /** Max servings for a product from an inventory bag (does not mutate). */
+  function maxCupsFromBag(state, product, bag) {
+    const recipe =
+      (state.recipes && state.recipes[product]) ||
+      global.GameState.activeRecipe(
+        Object.assign({}, state, { activeProduct: product })
+      ) ||
+      {};
+    const keys = global.GameState.recipeKeysFor(product);
+    let maxCups = Infinity;
+    let anyRequirement = false;
+    for (const key of keys) {
+      const perCup = Number(recipe[key]) || 0;
+      if (perCup <= 0) continue;
+      anyRequirement = true;
+      const onHand = Number(bag[key]) || 0;
+      maxCups = Math.min(maxCups, Math.floor(onHand / perCup));
+    }
+    if (!anyRequirement) return 0;
+    return Math.max(0, maxCups === Infinity ? 0 : maxCups);
+  }
+
+  /** Deduct recipe ingredients for cupsSold from a bag copy. */
+  function consumeBagForProduct(state, bag, product, cupsSold) {
+    if (cupsSold <= 0) return;
+    const recipe =
+      (state.recipes && state.recipes[product]) ||
+      global.GameState.activeRecipe(
+        Object.assign({}, state, { activeProduct: product })
+      ) ||
+      {};
+    const keys = global.GameState.recipeKeysFor(product);
+    for (const key of keys) {
+      const perCup = Number(recipe[key]) || 0;
+      if (perCup <= 0) continue;
+      bag[key] = Math.max(0, (Number(bag[key]) || 0) - perCup * cupsSold);
+    }
+  }
+
+  /**
+   * Plan sales for one restaurant against a shared inventory bag.
+   * Mutates bag as stock is reserved. Returns a location P&L rollup.
+   */
+  function planRestaurantLocation(state, restaurant, offered, prices, weather, demandMult, bag) {
+    const staff = Math.max(0, Number(restaurant.employeeCount) || 0);
+    const capacityMult = global.GameState.restaurantCapacityMultFor
+      ? global.GameState.restaurantCapacityMultFor(restaurant)
+      : +(0.7 + 0.2 * staff).toFixed(2);
+    const wageRate = Number(global.GameState.RESTAURANT_WAGE) || 8;
+    const rentEach = Number(global.GameState.RESTAURANT_RENT) || 15;
+    const soldByProduct = emptySoldMap();
+    const demandByProduct = emptySoldMap();
+    let cupsSold = 0;
+    let demand = 0;
+    let revenue = 0;
+    let cogs = 0;
+    let soldOut = false;
+
+    for (const product of offered) {
+      const price = prices[product];
+      const stock = maxCupsFromBag(state, product, bag);
+      const want = Math.max(
+        0,
+        Math.floor(
+          demandForPrice(price, weather, product) * demandMult * capacityMult
+        )
+      );
+      const sold = Math.min(want, stock);
+      demandByProduct[product] = want;
+      soldByProduct[product] = sold;
+      demand += want;
+      cupsSold += sold;
+      revenue += sold * (Number.isFinite(price) ? price : 0);
+      cogs += costOfGoodsForProduct(state, product, sold);
+      consumeBagForProduct(state, bag, product, sold);
+      if (stock > 0 && sold === stock && want > stock) soldOut = true;
+    }
+
+    revenue = +revenue.toFixed(2);
+    cogs = +cogs.toFixed(2);
+    const wages = +(staff * wageRate).toFixed(2);
+    const rent = +rentEach.toFixed(2);
+    const profit = +(revenue - cogs - wages - rent).toFixed(2);
+
+    return {
+      restaurantId: restaurant.id,
+      restaurantName: restaurant.name,
+      employeeCount: staff,
+      capacityMult: capacityMult,
+      soldByProduct: soldByProduct,
+      demandByProduct: demandByProduct,
+      cupsSold: cupsSold,
+      demand: demand,
+      revenue: revenue,
+      cogs: cogs,
+      wages: wages,
+      rent: rent,
+      profit: profit,
+      soldOut: soldOut,
+    };
+  }
+
   /**
    * Plan one sell day without mutating inventory.
    * Phase 12: every offered menu item is sold in one day.
    * Phase 8 plays this plan as timed customers, then applySellDay commits it.
+   * Phase 17: restaurant mode rolls demand per restaurant (shared bag).
    */
   function planSellDay(state) {
     const weather = state.weather || "mild";
@@ -237,17 +359,6 @@
       : Number(state.demandMult) > 0
         ? Number(state.demandMult)
         : 1;
-    /**
-     * Phase 16 restaurant capacity:
-     *   capacityMult = 0.7 + 0.2 * employeeCount  (stand mode → 1)
-     * More staff raises demand/sales capacity but also wage cost vs fixed rent.
-     */
-    const capacityMult =
-      global.GameState.isRestaurantMode &&
-      global.GameState.isRestaurantMode(state) &&
-      global.GameState.restaurantCapacityMult
-        ? global.GameState.restaurantCapacityMult(state)
-        : 1;
 
     for (const product of offered) {
       const price = priceOf(state, product);
@@ -257,36 +368,80 @@
         : 1;
       preferences[product] = preference;
       preferenceSum += preference;
+      stockByProduct[product] = maxCupsFromStock(state, product);
+      stockCups += stockByProduct[product];
+    }
 
-      const stock = maxCupsFromStock(state, product);
-      const want = Math.max(
-        0,
-        Math.floor(
-          demandForPrice(price, weather, product) * demandMult * capacityMult
-        )
-      );
-      const sold = Math.min(want, stock);
+    const isRestaurant =
+      global.GameState.isRestaurantMode &&
+      global.GameState.isRestaurantMode(state);
+    const locations = [];
+    let capacityMult = 1;
 
-      stockByProduct[product] = stock;
-      demandByProduct[product] = want;
-      soldByProduct[product] = sold;
-
-      stockCups += stock;
-      demand += want;
-      cupsSold += sold;
-      revenue += sold * (Number.isFinite(price) ? price : 0);
-      cogs += costOfGoodsForProduct(state, product, sold);
-
-      if (stock > 0 && sold === stock && want > stock) {
-        soldOut = true;
+    if (isRestaurant && Array.isArray(state.restaurants) && state.restaurants.length) {
+      // Per-restaurant demand with shared inventory allocation (ownership order).
+      const bag = cloneInventory(state.inventory);
+      for (const restaurant of state.restaurants) {
+        const loc = planRestaurantLocation(
+          state,
+          restaurant,
+          offered,
+          prices,
+          weather,
+          demandMult,
+          bag
+        );
+        locations.push(loc);
+        for (const product of offered) {
+          soldByProduct[product] =
+            (soldByProduct[product] | 0) + (loc.soldByProduct[product] | 0);
+          demandByProduct[product] =
+            (demandByProduct[product] | 0) +
+            (loc.demandByProduct[product] | 0);
+        }
+        cupsSold += loc.cupsSold;
+        demand += loc.demand;
+        revenue += loc.revenue;
+        cogs += loc.cogs;
+        if (loc.soldOut) soldOut = true;
+      }
+      // Report weighted-average capacity for headline; UI shows per-location.
+      let staffSum = 0;
+      for (const loc of locations) staffSum += loc.employeeCount;
+      capacityMult =
+        locations.length === 1
+          ? locations[0].capacityMult
+          : global.GameState.restaurantCapacityMultFor
+            ? +(
+                0.7 +
+                0.2 * (staffSum / Math.max(1, locations.length))
+              ).toFixed(2)
+            : 1;
+    } else {
+      // Stand mode: single pooled demand (capacityMult = 1).
+      capacityMult = 1;
+      for (const product of offered) {
+        const price = prices[product];
+        const stock = stockByProduct[product];
+        const want = Math.max(
+          0,
+          Math.floor(
+            demandForPrice(price, weather, product) * demandMult * capacityMult
+          )
+        );
+        const sold = Math.min(want, stock);
+        demandByProduct[product] = want;
+        soldByProduct[product] = sold;
+        demand += want;
+        cupsSold += sold;
+        revenue += sold * (Number.isFinite(price) ? price : 0);
+        cogs += costOfGoodsForProduct(state, product, sold);
+        if (stock > 0 && sold === stock && want > stock) soldOut = true;
       }
     }
 
     revenue = +revenue.toFixed(2);
     cogs = +cogs.toFixed(2);
-    const isRestaurant =
-      global.GameState.isRestaurantMode &&
-      global.GameState.isRestaurantMode(state);
     const employeeCount = global.GameState.employeeCount
       ? global.GameState.employeeCount(state)
       : 0;
@@ -357,20 +512,43 @@
           ")"
         : "";
     const rentNote =
-      rent > 0 ? ", rent " + formatMoney(rent) : "";
-    const locationNote =
-      isRestaurant && restaurant
-        ? (restaurant.name || "Restaurant") +
-          " P&L — sales " +
-          formatMoney(revenue) +
-          wageNote +
-          rentNote +
+      rent > 0
+        ? ", rent " +
+          formatMoney(rent) +
+          (isRestaurant && locations.length > 1
+            ? " (" +
+              locations.length +
+              " × " +
+              formatMoney(Number(global.GameState.RESTAURANT_RENT) || 15) +
+              ")"
+            : "")
+        : "";
+
+    let locationNote = null;
+    if (isRestaurant && locations.length > 0) {
+      const parts = locations.map(function (loc) {
+        return (
+          loc.restaurantName +
+          ": sales " +
+          formatMoney(loc.revenue) +
+          ", wages " +
+          formatMoney(loc.wages) +
+          ", rent " +
+          formatMoney(loc.rent) +
           ", profit " +
-          formatMoney(profit) +
-          " (capacity ×" +
-          capacityMult.toFixed(2) +
-          ")."
-        : null;
+          formatMoney(loc.profit) +
+          " (×" +
+          Number(loc.capacityMult).toFixed(2) +
+          ", " +
+          loc.employeeCount +
+          " staff)"
+        );
+      });
+      locationNote =
+        (locations.length === 1 ? "Restaurant P&L — " : "Per-restaurant P&L — ") +
+        parts.join("; ") +
+        ".";
+    }
 
     let message;
     if (locationNote) {
@@ -466,6 +644,8 @@
       isRestaurant: !!isRestaurant,
       restaurantId: restaurant ? restaurant.id : null,
       restaurantName: restaurant ? restaurant.name : null,
+      locations: locations,
+      restaurantCount: locations.length,
       profit: profit,
       demandMult: demandMult,
       cashAfter: +(state.cash + revenue - wages - rent).toFixed(2),

@@ -1397,6 +1397,39 @@ body {
   line-height: 1.35;
 }
 
+.location-pnl-list {
+  list-style: none;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+.location-pnl-list[hidden] { display: none !important; }
+.location-pnl-item {
+  padding: 0.55rem 0.65rem;
+  border-radius: 0.65rem;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: rgba(255, 255, 255, 0.55);
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+.location-pnl-item-meta {
+  font-size: 0.82rem;
+  color: var(--ink-soft);
+}
+.location-pnl-item-row {
+  font-size: 0.88rem;
+  font-variant-numeric: tabular-nums;
+}
+.location-pnl-item-row em {
+  font-style: normal;
+  font-weight: 700;
+}
+
+.map-restaurant-label.is-active { fill: #8a3b12; }
+
 .map-restaurant-body { fill: #f4e4c8; stroke: #b0894b; stroke-width: 1.5; }
 .map-restaurant-roof { fill: #c45c3e; }
 .map-restaurant-door { fill: #6b4a2e; }

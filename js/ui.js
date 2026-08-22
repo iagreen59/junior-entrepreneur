@@ -598,6 +598,10 @@
     const lead = document.getElementById("restaurant-manage-lead");
     const hireBtn = document.getElementById("btn-hire-restaurant");
     const layoffBtn = document.getElementById("btn-layoff-restaurant");
+    const select = document.getElementById("restaurant-select");
+    const addBtn = document.getElementById("btn-add-restaurant");
+    const sellBtn = document.getElementById("btn-sell-restaurant");
+    const extraBanner = document.getElementById("extra-restaurant-unlock-banner");
     const mapLead = document.getElementById("stand-map-lead");
     const isRestaurant =
       global.GameState.isRestaurantMode &&
@@ -605,49 +609,133 @@
     if (panel) panel.hidden = !isRestaurant;
     if (mapLead) {
       mapLead.textContent = isRestaurant
-        ? "Your restaurant on the corner map. Shared supply bag continues."
+        ? "Your restaurants on the corner map. Shared supply bag continues."
         : "Cartoon map of your corner. Owned stands light up; empty pads wait for Add stand.";
     }
     if (!isRestaurant) return;
 
+    const restaurants = Array.isArray(state.restaurants) ? state.restaurants : [];
+    const count = restaurants.length;
+    const maxRest = Number(global.GameState.MAX_RESTAURANTS) || 4;
     const restaurant =
       global.GameState.getActiveRestaurant &&
       global.GameState.getActiveRestaurant(state);
     const minStaff = Number(global.GameState.RESTAURANT_MIN_STAFF) || 2;
     const maxStaff = Number(global.GameState.RESTAURANT_MAX_STAFF) || 4;
     const wage = Number(global.GameState.RESTAURANT_WAGE) || 8;
-    const rent = Number(global.GameState.RESTAURANT_RENT) || 15;
+    const rentEach = Number(global.GameState.RESTAURANT_RENT) || 15;
+    const sellPrice = Number(global.GameState.RESTAURANT_SELL_PRICE) || 200;
+    const cost = Number(global.GameState.RESTAURANT_COST) || 400;
+    const unlockCash = Number(global.GameState.RESTAURANT_UNLOCK_CASH) || 1000;
     const n = restaurant ? Number(restaurant.employeeCount) || 0 : 0;
     const cap =
-      global.GameState.restaurantCapacityMult
-        ? global.GameState.restaurantCapacityMult(state)
-        : 0.7 + 0.2 * n;
+      global.GameState.restaurantCapacityMultFor && restaurant
+        ? global.GameState.restaurantCapacityMultFor(restaurant)
+        : global.GameState.restaurantCapacityMult
+          ? global.GameState.restaurantCapacityMult(state)
+          : 0.7 + 0.2 * n;
     const wages =
       global.GameState.dailyRestaurantWageCost
         ? global.GameState.dailyRestaurantWageCost(state)
         : n * wage;
+    const rentTotal =
+      global.GameState.dailyRestaurantRent
+        ? global.GameState.dailyRestaurantRent(state)
+        : count * rentEach;
     const check =
       global.GameState.restaurantOverheadCheck
         ? global.GameState.restaurantOverheadCheck(state)
         : { ok: n >= minStaff, message: "" };
+    const extraUnlocked =
+      global.GameState.extraRestaurantUnlocked &&
+      global.GameState.extraRestaurantUnlocked(state);
+    const canAdd =
+      global.GameState.canBuyExtraRestaurant &&
+      global.GameState.canBuyExtraRestaurant(state);
+    const canSell =
+      global.GameState.canSellRestaurant &&
+      global.GameState.canSellRestaurant(state);
 
     if (lead) {
       lead.textContent =
-        (restaurant && restaurant.name ? restaurant.name : "Your restaurant") +
-        ": hire " +
+        "You own " +
+        count +
+        " of " +
+        maxRest +
+        " restaurants. Hire " +
         minStaff +
         "–" +
         maxStaff +
-        " employees (you cannot staff it). Wage $" +
+        " at each (you cannot staff them). Wage $" +
         wage.toFixed(0) +
         "/day each + rent $" +
-        rent.toFixed(0) +
-        "/day on Sell Day. Capacity ×" +
+        rentEach.toFixed(0) +
+        "/day per restaurant. Active capacity ×" +
         Number(cap).toFixed(2) +
-        " (formula: 0.7 + 0.2 × staff).";
+        " (0.7 + 0.2 × staff).";
     }
+
+    if (select) {
+      select.innerHTML = "";
+      for (const r of restaurants) {
+        const opt = document.createElement("option");
+        opt.value = r.id;
+        opt.textContent =
+          r.name + " (" + (Number(r.employeeCount) || 0) + " staff)";
+        if (r.id === state.activeRestaurantId) opt.selected = true;
+        select.appendChild(opt);
+      }
+    }
+
+    if (extraBanner) {
+      extraBanner.hidden = !(count < maxRest && extraUnlocked);
+      if (!extraBanner.hidden) {
+        extraBanner.textContent =
+          "Cash over $" +
+          unlockCash +
+          " — you can buy another restaurant for $" +
+          cost.toFixed(0) +
+          " (max " +
+          maxRest +
+          ").";
+      }
+    }
+
+    if (addBtn) {
+      addBtn.hidden = !(count < maxRest && extraUnlocked);
+      addBtn.disabled = !canAdd;
+      addBtn.textContent = "Add restaurant ($" + cost.toFixed(0) + ")";
+      addBtn.title = !extraUnlocked
+        ? "Unlocks when cash is over $" + unlockCash
+        : canAdd
+          ? "Buy another restaurant for $" + cost.toFixed(0)
+          : "Need $" + cost.toFixed(0) + " to buy another restaurant";
+    }
+
+    if (sellBtn) {
+      sellBtn.hidden = false;
+      sellBtn.disabled = !canSell;
+      sellBtn.textContent =
+        count <= 1
+          ? "Sell last → stand ($" + sellPrice.toFixed(0) + ")"
+          : "Sell restaurant ($" + sellPrice.toFixed(0) + ")";
+      sellBtn.title =
+        count <= 1
+          ? "Sell your last restaurant for $" +
+            sellPrice.toFixed(0) +
+            " and restart with one stand"
+          : "Sell the active restaurant for $" +
+            sellPrice.toFixed(0) +
+            " (keep at least one, or sell last to restart stands)";
+    }
+
     if (countEl) {
-      countEl.textContent = "Employees: " + n + " / " + maxStaff;
+      countEl.textContent =
+        (restaurant && restaurant.name ? restaurant.name + " · " : "") +
+        "Employees: " +
+        n +
+        " / " +
+        maxStaff;
     }
     if (hireBtn) {
       hireBtn.disabled = n >= maxStaff;
@@ -659,19 +747,24 @@
     if (statusEl) {
       if (check.ok) {
         statusEl.textContent =
-          "Open-ready · wage bill " +
+          "Open-ready · wages " +
           formatMoney(wages) +
           " + rent " +
-          formatMoney(rent) +
-          " = " +
-          formatMoney(Number(wages) + Number(rent)) +
-          "/day. Capacity ×" +
+          formatMoney(rentTotal) +
+          " (" +
+          count +
+          " × " +
+          formatMoney(rentEach) +
+          ") = " +
+          formatMoney(Number(wages) + Number(rentTotal)) +
+          "/day. Active capacity ×" +
           Number(cap).toFixed(2) +
           ".";
         statusEl.classList.remove("is-warn");
         statusEl.classList.add("is-ok");
       } else {
-        statusEl.textContent = check.message || "Staff and fund the restaurant before Sell Day.";
+        statusEl.textContent =
+          check.message || "Staff and fund every restaurant before Sell Day.";
         statusEl.classList.remove("is-ok");
         statusEl.classList.add("is-warn");
       }
@@ -694,13 +787,17 @@
     const profitEl = document.getElementById("pnl-profit");
     const noteEl = document.getElementById("location-pnl-note");
     const lead = document.getElementById("location-pnl-lead");
-    const restaurant =
-      global.GameState.getActiveRestaurant &&
-      global.GameState.getActiveRestaurant(state);
+    const listEl = document.getElementById("location-pnl-list");
+    const restaurants = Array.isArray(state.restaurants) ? state.restaurants : [];
+    const count = restaurants.length;
+
     if (lead) {
       lead.textContent =
-        (restaurant && restaurant.name ? restaurant.name : "Restaurant") +
-        " — sales, wages, rent, and profit (updates after each Sell Day).";
+        count > 1
+          ? "Compare sales and profitability across " +
+            count +
+            " restaurants (staffing and rent effects)."
+          : "Sales, wages, rent, and profit for your restaurant (updates after each Sell Day).";
     }
 
     if (!report || !report.isRestaurant) {
@@ -708,18 +805,30 @@
       if (wagesEl) wagesEl.textContent = "—";
       if (rentEl) rentEl.textContent = "—";
       if (profitEl) profitEl.textContent = "—";
+      if (listEl) {
+        listEl.hidden = true;
+        listEl.innerHTML = "";
+      }
       if (noteEl) {
-        const n = restaurant ? Number(restaurant.employeeCount) || 0 : 0;
-        const cap =
-          global.GameState.restaurantCapacityMult
-            ? global.GameState.restaurantCapacityMult(state)
+        const lines = restaurants.map(function (r) {
+          const n = Number(r.employeeCount) || 0;
+          const cap = global.GameState.restaurantCapacityMultFor
+            ? global.GameState.restaurantCapacityMultFor(r)
             : 0.7 + 0.2 * n;
+          return (
+            r.name +
+            ": " +
+            n +
+            " staff → capacity ×" +
+            Number(cap).toFixed(2)
+          );
+        });
         noteEl.textContent =
-          "No Sell Day yet in restaurant mode. Try different staff counts — capacity ×" +
-          Number(cap).toFixed(2) +
-          " now (" +
-          n +
-          " employees). More staff can raise sales but also wages against fixed rent.";
+          "No Sell Day yet in restaurant mode. " +
+          (lines.length
+            ? lines.join(" · ") + ". "
+            : "") +
+          "More staff can raise sales but also wages against fixed rent per location.";
       }
       return;
     }
@@ -728,14 +837,56 @@
     if (wagesEl) wagesEl.textContent = formatMoney(report.wages);
     if (rentEl) rentEl.textContent = formatMoney(report.rent || 0);
     if (profitEl) profitEl.textContent = formatMoney(report.profit);
+
+    const locations = Array.isArray(report.locations) ? report.locations : [];
+    if (listEl) {
+      if (locations.length > 1) {
+        listEl.hidden = false;
+        listEl.innerHTML = "";
+        for (const loc of locations) {
+          const li = document.createElement("li");
+          li.className = "location-pnl-item";
+          li.innerHTML =
+            "<strong>" +
+            (loc.restaurantName || "Restaurant") +
+            "</strong>" +
+            "<span class=\"location-pnl-item-meta\">" +
+            (loc.employeeCount || 0) +
+            " staff · ×" +
+            Number(loc.capacityMult || 1).toFixed(2) +
+            "</span>" +
+            "<span class=\"location-pnl-item-row\">Sales " +
+            formatMoney(loc.revenue) +
+            " · Wages " +
+            formatMoney(loc.wages) +
+            " · Rent " +
+            formatMoney(loc.rent) +
+            " · <em>Profit " +
+            formatMoney(loc.profit) +
+            "</em></span>";
+          listEl.appendChild(li);
+        }
+      } else {
+        listEl.hidden = true;
+        listEl.innerHTML = "";
+      }
+    }
+
     if (noteEl) {
-      noteEl.textContent =
-        (report.restaurantName || "Restaurant") +
-        " · " +
-        (report.employeeCount || 0) +
-        " employees · capacity ×" +
-        Number(report.capacityMult || 1).toFixed(2) +
-        ". Changing staff changes sales capacity and wage cost vs fixed rent.";
+      if (locations.length > 1) {
+        noteEl.textContent =
+          "Totals above · per-restaurant lines show how employee count changes sales vs wages against $" +
+          (Number(global.GameState.RESTAURANT_RENT) || 15).toFixed(0) +
+          " rent each.";
+      } else {
+        noteEl.textContent =
+          (report.restaurantName || "Restaurant") +
+          " · " +
+          (report.employeeCount || 0) +
+          " employees · capacity ×" +
+          Number(report.capacityMult || 1).toFixed(2) +
+          ". Changing staff changes sales capacity and wage cost vs fixed rent.";
+      }
     }
   }
 
