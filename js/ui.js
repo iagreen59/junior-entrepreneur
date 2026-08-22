@@ -407,8 +407,15 @@
   }
 
   function renderStand(state) {
+    const isRestaurant =
+      global.GameState.isRestaurantMode &&
+      global.GameState.isRestaurantMode(state);
     const owns = global.GameState.ownsStand(state);
     const standEl = document.getElementById("stat-stand");
+    const locationLabel = document.getElementById("stat-location-label");
+    if (locationLabel) {
+      locationLabel.textContent = isRestaurant ? "Restaurant" : "Stand";
+    }
     const gate = document.getElementById("stand-gate");
     const gateCopy = document.getElementById("stand-gate-copy");
     const buyBtn = document.getElementById("btn-buy-stand");
@@ -427,7 +434,12 @@
     const sellPrice = Number(global.GameState.STAND_SELL_PRICE) || 10;
 
     if (standEl) {
-      if (owns) {
+      if (isRestaurant) {
+        const r =
+          global.GameState.getActiveRestaurant &&
+          global.GameState.getActiveRestaurant(state);
+        standEl.textContent = r && r.name ? r.name : "Restaurant";
+      } else if (owns) {
         if (count === 1) {
           standEl.textContent = active && active.name ? active.name : "Owned";
         } else {
@@ -443,7 +455,7 @@
     }
 
     if (gate) {
-      gate.hidden = owns;
+      gate.hidden = owns || isRestaurant;
     }
 
     if (gateCopy && !owns) {
@@ -460,7 +472,35 @@
     }
 
     if (manage) {
-      manage.hidden = !owns;
+      manage.hidden = !owns || isRestaurant;
+    }
+
+    const restUnlock = document.getElementById("restaurant-unlock-banner");
+    const buyRestBtn = document.getElementById("btn-buy-restaurant");
+    const canBuyRest =
+      global.GameState.canBuyRestaurant &&
+      global.GameState.canBuyRestaurant(state);
+    const restUnlocked =
+      global.GameState.restaurantUnlocked &&
+      global.GameState.restaurantUnlocked(state);
+    if (restUnlock) {
+      restUnlock.hidden = !(owns && !isRestaurant && restUnlocked);
+      if (!restUnlock.hidden) {
+        restUnlock.textContent =
+          "4 stands and cash over $" +
+          (global.GameState.RESTAURANT_UNLOCK_CASH || 1000) +
+          " — you can buy a restaurant for $" +
+          (global.GameState.RESTAURANT_COST || 400) +
+          " (all stands will be forfeited).";
+      }
+    }
+    if (buyRestBtn) {
+      buyRestBtn.hidden = !(owns && !isRestaurant && restUnlocked);
+      buyRestBtn.disabled = !canBuyRest;
+      buyRestBtn.textContent =
+        "Buy restaurant ($" +
+        Number(global.GameState.RESTAURANT_COST || 400).toFixed(0) +
+        ")";
     }
 
     if (manageLead && owns) {
@@ -546,7 +586,157 @@
       global.GameMap.render(state);
     }
 
+    renderRestaurant(state);
+    renderLocationPnl(state);
     renderStaff(state);
+  }
+
+  function renderRestaurant(state) {
+    const panel = document.getElementById("restaurant-manage");
+    const countEl = document.getElementById("restaurant-staff-count");
+    const statusEl = document.getElementById("restaurant-status");
+    const lead = document.getElementById("restaurant-manage-lead");
+    const hireBtn = document.getElementById("btn-hire-restaurant");
+    const layoffBtn = document.getElementById("btn-layoff-restaurant");
+    const mapLead = document.getElementById("stand-map-lead");
+    const isRestaurant =
+      global.GameState.isRestaurantMode &&
+      global.GameState.isRestaurantMode(state);
+    if (panel) panel.hidden = !isRestaurant;
+    if (mapLead) {
+      mapLead.textContent = isRestaurant
+        ? "Your restaurant on the corner map. Shared supply bag continues."
+        : "Cartoon map of your corner. Owned stands light up; empty pads wait for Add stand.";
+    }
+    if (!isRestaurant) return;
+
+    const restaurant =
+      global.GameState.getActiveRestaurant &&
+      global.GameState.getActiveRestaurant(state);
+    const minStaff = Number(global.GameState.RESTAURANT_MIN_STAFF) || 2;
+    const maxStaff = Number(global.GameState.RESTAURANT_MAX_STAFF) || 4;
+    const wage = Number(global.GameState.RESTAURANT_WAGE) || 8;
+    const rent = Number(global.GameState.RESTAURANT_RENT) || 15;
+    const n = restaurant ? Number(restaurant.employeeCount) || 0 : 0;
+    const cap =
+      global.GameState.restaurantCapacityMult
+        ? global.GameState.restaurantCapacityMult(state)
+        : 0.7 + 0.2 * n;
+    const wages =
+      global.GameState.dailyRestaurantWageCost
+        ? global.GameState.dailyRestaurantWageCost(state)
+        : n * wage;
+    const check =
+      global.GameState.restaurantOverheadCheck
+        ? global.GameState.restaurantOverheadCheck(state)
+        : { ok: n >= minStaff, message: "" };
+
+    if (lead) {
+      lead.textContent =
+        (restaurant && restaurant.name ? restaurant.name : "Your restaurant") +
+        ": hire " +
+        minStaff +
+        "–" +
+        maxStaff +
+        " employees (you cannot staff it). Wage $" +
+        wage.toFixed(0) +
+        "/day each + rent $" +
+        rent.toFixed(0) +
+        "/day on Sell Day. Capacity ×" +
+        Number(cap).toFixed(2) +
+        " (formula: 0.7 + 0.2 × staff).";
+    }
+    if (countEl) {
+      countEl.textContent = "Employees: " + n + " / " + maxStaff;
+    }
+    if (hireBtn) {
+      hireBtn.disabled = n >= maxStaff;
+      hireBtn.textContent = "Hire ($" + wage.toFixed(0) + "/day)";
+    }
+    if (layoffBtn) {
+      layoffBtn.disabled = n <= 0;
+    }
+    if (statusEl) {
+      if (check.ok) {
+        statusEl.textContent =
+          "Open-ready · wage bill " +
+          formatMoney(wages) +
+          " + rent " +
+          formatMoney(rent) +
+          " = " +
+          formatMoney(Number(wages) + Number(rent)) +
+          "/day. Capacity ×" +
+          Number(cap).toFixed(2) +
+          ".";
+        statusEl.classList.remove("is-warn");
+        statusEl.classList.add("is-ok");
+      } else {
+        statusEl.textContent = check.message || "Staff and fund the restaurant before Sell Day.";
+        statusEl.classList.remove("is-ok");
+        statusEl.classList.add("is-warn");
+      }
+    }
+  }
+
+  function renderLocationPnl(state) {
+    const panel = document.getElementById("location-pnl");
+    if (!panel) return;
+    const isRestaurant =
+      global.GameState.isRestaurantMode &&
+      global.GameState.isRestaurantMode(state);
+    panel.hidden = !isRestaurant;
+    if (!isRestaurant) return;
+
+    const report = state.lastDayReport;
+    const salesEl = document.getElementById("pnl-sales");
+    const wagesEl = document.getElementById("pnl-wages");
+    const rentEl = document.getElementById("pnl-rent");
+    const profitEl = document.getElementById("pnl-profit");
+    const noteEl = document.getElementById("location-pnl-note");
+    const lead = document.getElementById("location-pnl-lead");
+    const restaurant =
+      global.GameState.getActiveRestaurant &&
+      global.GameState.getActiveRestaurant(state);
+    if (lead) {
+      lead.textContent =
+        (restaurant && restaurant.name ? restaurant.name : "Restaurant") +
+        " — sales, wages, rent, and profit (updates after each Sell Day).";
+    }
+
+    if (!report || !report.isRestaurant) {
+      if (salesEl) salesEl.textContent = "—";
+      if (wagesEl) wagesEl.textContent = "—";
+      if (rentEl) rentEl.textContent = "—";
+      if (profitEl) profitEl.textContent = "—";
+      if (noteEl) {
+        const n = restaurant ? Number(restaurant.employeeCount) || 0 : 0;
+        const cap =
+          global.GameState.restaurantCapacityMult
+            ? global.GameState.restaurantCapacityMult(state)
+            : 0.7 + 0.2 * n;
+        noteEl.textContent =
+          "No Sell Day yet in restaurant mode. Try different staff counts — capacity ×" +
+          Number(cap).toFixed(2) +
+          " now (" +
+          n +
+          " employees). More staff can raise sales but also wages against fixed rent.";
+      }
+      return;
+    }
+
+    if (salesEl) salesEl.textContent = formatMoney(report.revenue);
+    if (wagesEl) wagesEl.textContent = formatMoney(report.wages);
+    if (rentEl) rentEl.textContent = formatMoney(report.rent || 0);
+    if (profitEl) profitEl.textContent = formatMoney(report.profit);
+    if (noteEl) {
+      noteEl.textContent =
+        (report.restaurantName || "Restaurant") +
+        " · " +
+        (report.employeeCount || 0) +
+        " employees · capacity ×" +
+        Number(report.capacityMult || 1).toFixed(2) +
+        ". Changing staff changes sales capacity and wage cost vs fixed rent.";
+    }
   }
 
   function renderEventBanner(state) {
@@ -575,6 +765,9 @@
     const list = document.getElementById("staff-list");
     const statusEl = document.getElementById("staff-status");
     const lead = document.getElementById("staff-lead");
+    const isRestaurant =
+      global.GameState.isRestaurantMode &&
+      global.GameState.isRestaurantMode(state);
     const owns = global.GameState.ownsStand(state);
     const required = global.GameState.staffingRequired(state);
     const wage = Number(global.GameState.STAND_EMPLOYEE_WAGE) || 5;
@@ -582,10 +775,10 @@
     const wageBill = global.GameState.dailyWageCost(state);
 
     if (panel) {
-      // Show staff UI whenever the player owns stands (1 stand: optional self-run).
-      panel.hidden = !owns;
+      // Stand staff UI only in stand mode (restaurant has its own panel).
+      panel.hidden = !owns || isRestaurant;
     }
-    if (!owns || !list) return;
+    if (!owns || isRestaurant || !list) return;
 
     if (lead) {
       lead.textContent = required
@@ -712,7 +905,13 @@
   }
 
   function morningHint(state) {
-    if (!global.GameState.ownsStand(state)) {
+    const isRestaurant =
+      global.GameState.isRestaurantMode &&
+      global.GameState.isRestaurantMode(state);
+    if (
+      !isRestaurant &&
+      !global.GameState.ownsStand(state)
+    ) {
       return (
         "Buy your first stand for $" +
         Number(global.GameState.STAND_COST).toFixed(2) +
@@ -723,6 +922,34 @@
     const staffCheck = global.GameState.staffingCheck(state);
     if (!staffCheck.ok) {
       return staffCheck.message;
+    }
+
+    if (isRestaurant) {
+      const n = global.GameState.restaurantEmployeeCount
+        ? global.GameState.restaurantEmployeeCount(state)
+        : 0;
+      const cap = global.GameState.restaurantCapacityMult
+        ? global.GameState.restaurantCapacityMult(state)
+        : 1;
+      const rent = global.GameState.dailyRestaurantRent
+        ? global.GameState.dailyRestaurantRent(state)
+        : Number(global.GameState.RESTAURANT_RENT) || 15;
+      const wages = global.GameState.dailyRestaurantWageCost
+        ? global.GameState.dailyRestaurantWageCost(state)
+        : 0;
+      return (
+        "Restaurant open with " +
+        n +
+        " employee" +
+        (n === 1 ? "" : "s") +
+        " (capacity ×" +
+        Number(cap).toFixed(2) +
+        "). Overhead today: wages " +
+        formatMoney(wages) +
+        " + rent " +
+        formatMoney(rent) +
+        ". Set menu, stock up, then Sell Day."
+      );
     }
 
     const offered = global.GameEconomy.offeredProducts
@@ -891,7 +1118,7 @@
 
     const sellBtn = document.getElementById("btn-sell");
     if (sellBtn && !sellBtn.textContent.includes("Selling")) {
-      sellBtn.disabled = !global.GameState.ownsStand(state);
+      sellBtn.disabled = !(global.GameState.ownsBusiness ? global.GameState.ownsBusiness(state) : global.GameState.ownsStand(state));
     }
 
     if (reportEl) {

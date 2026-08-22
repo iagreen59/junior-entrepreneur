@@ -14,6 +14,9 @@
  * one) or have an employee; hire/layoff; $5/day wage per employee on Sell Day.
  * Phase 15: sell a stand for $10 (keep ≥1); temporary event modifiers
  * (supplyPriceMult / demandMult) + eventBanner for morning messages.
+ * Phase 16: first restaurant — own 4 stands + cash > $1000 → buy for $400;
+ * forfeit all stands; mode "restaurant"; 2–4 employees (player cannot staff);
+ * daily rent $15 + wage $8/employee on Sell Day; shared menu/inventory.
  *
  * Buy unit prices (cash per inventory unit) — not stored in the save blob;
  * constants live here so Buy UI / helpers share one source. Event modifiers
@@ -44,6 +47,20 @@
   /** Staffing modes on a stand: player | employee | null (unstaffed). */
   const STAFF_PLAYER = "player";
   const STAFF_EMPLOYEE = "employee";
+  /** Phase 16: first restaurant conversion. */
+  const RESTAURANT_COST = 400;
+  /** Cash must be strictly greater than this (with 4 stands) to buy a restaurant. */
+  const RESTAURANT_UNLOCK_CASH = 1000;
+  /** Daily rent charged on Sell Day per restaurant. */
+  const RESTAURANT_RENT = 15;
+  /** Daily wage per restaurant employee (higher than stand wage). */
+  const RESTAURANT_WAGE = 8;
+  /** Min / max employees per restaurant; player cannot work a restaurant shift. */
+  const RESTAURANT_MIN_STAFF = 2;
+  const RESTAURANT_MAX_STAFF = 4;
+  /** Business mode: stand booths vs restaurant. Cannot own both. */
+  const MODE_STAND = "stand";
+  const MODE_RESTAURANT = "restaurant";
   /** Floor/ceiling for temporary supply price event multipliers. */
   const SUPPLY_MULT_MIN = 0.5;
   const SUPPLY_MULT_MAX = 1.5;
@@ -181,24 +198,53 @@
     };
   }
 
+  function createRestaurant(index) {
+    const n = Number.isFinite(index) && index >= 1 ? Math.floor(index) : 1;
+    return {
+      id: "restaurant-" + n,
+      name: "Restaurant " + n,
+      /** Hired staff count; player cannot work a restaurant shift. */
+      employeeCount: 0,
+    };
+  }
+
   function normalizeStaffedBy(value) {
     if (value === STAFF_PLAYER || value === STAFF_EMPLOYEE) return value;
     return null;
+  }
+
+  function clampRestaurantStaff(n) {
+    const v = Number(n);
+    if (!Number.isFinite(v) || v < 0) return 0;
+    return Math.min(RESTAURANT_MAX_STAFF, Math.floor(v));
   }
 
   function defaultState(randomFn) {
     return {
       day: 1,
       cash: STARTING_CASH,
+      /** "stand" | "restaurant" — never own stands and restaurants together. */
+      mode: MODE_STAND,
       /** Owned stands; empty until the player buys the first stand ($20). */
       stands: [],
       activeStandId: null,
+      /**
+       * Owned restaurants (Phase 16: at most one). Cleared stands on conversion.
+       * Shape: { id, name, employeeCount }.
+       */
+      restaurants: [],
+      activeRestaurantId: null,
       /**
        * True after we have shown the “you can add another stand” notice for the
        * current eligibility window (cash > $100 and stands < 4). Resets when
        * the player is no longer eligible so a later re-unlock notifies again.
        */
       extraStandUnlockNotified: false,
+      /**
+       * True after we have shown the “buy a restaurant” notice for the current
+       * eligibility window (4 stands + cash > $1000).
+       */
+      restaurantUnlockNotified: false,
       /** Product being edited / sold (Phase 11 Sell Day still single-product). */
       activeProduct: "juice",
       /**
@@ -242,6 +288,368 @@
 
   function standCount(state) {
     return ownsStand(state) ? state.stands.length : 0;
+  }
+
+  function isRestaurantMode(state) {
+    return state && state.mode === MODE_RESTAURANT;
+  }
+
+  function ownsRestaurant(state) {
+    return (
+      isRestaurantMode(state) &&
+      Array.isArray(state.restaurants) &&
+      state.restaurants.length > 0
+    );
+  }
+
+  function restaurantCount(state) {
+    return ownsRestaurant(state) ? state.restaurants.length : 0;
+  }
+
+  /** True when the player owns a stand or a restaurant (can run Sell Day). */
+  function ownsBusiness(state) {
+    return ownsRestaurant(state) || ownsStand(state);
+  }
+
+  function getActiveRestaurant(state) {
+    if (!ownsRestaurant(state)) return null;
+    const id = state.activeRestaurantId;
+    const found = state.restaurants.find(function (r) {
+      return r.id === id;
+    });
+    return found || state.restaurants[0] || null;
+  }
+
+  function findRestaurant(state, restaurantId) {
+    if (!ownsRestaurant(state) || typeof restaurantId !== "string") return null;
+    return (
+      state.restaurants.find(function (r) {
+        return r.id === restaurantId;
+      }) || null
+    );
+  }
+
+  /**
+   * Restaurant unlock: own exactly MAX_STANDS stands and cash > $1000.
+   * Phase 16 only offers the first restaurant (no multi-restaurant yet).
+   */
+  function restaurantUnlocked(state) {
+    if (isRestaurantMode(state)) return false;
+    return (
+      standCount(state) >= MAX_STANDS &&
+      Number(state.cash) > RESTAURANT_UNLOCK_CASH
+    );
+  }
+
+  function canBuyRestaurant(state) {
+    return (
+      restaurantUnlocked(state) &&
+      Number(state.cash) + 1e-9 >= RESTAURANT_COST
+    );
+  }
+
+  /**
+   * One-shot notify when first eligible to convert to a restaurant.
+   * Resets when no longer eligible so a later re-unlock can notify again.
+   */
+  function consumeRestaurantUnlockNotify(state) {
+    if (!restaurantUnlocked(state)) {
+      state.restaurantUnlockNotified = false;
+      return null;
+    }
+    if (state.restaurantUnlockNotified) return null;
+    state.restaurantUnlockNotified = true;
+    return (
+      "Cash is over $" +
+      RESTAURANT_UNLOCK_CASH +
+      " and you own " +
+      MAX_STANDS +
+      " stands! You can buy a restaurant for $" +
+      RESTAURANT_COST.toFixed(0) +
+      " — all stands will be forfeited. Hire 2–4 employees (you cannot work the restaurant yourself)."
+    );
+  }
+
+  /**
+   * Buy the first restaurant for $400. Forfeits all stands; enters restaurant
+   * mode. Shared inventory and menu continue. Starts with 0 staff (must hire).
+   */
+  function buyRestaurant(state) {
+    if (isRestaurantMode(state) && ownsRestaurant(state)) {
+      return {
+        ok: false,
+        message:
+          "You already own a restaurant. (Buying more restaurants comes later.)",
+      };
+    }
+    if (standCount(state) < MAX_STANDS) {
+      return {
+        ok: false,
+        message:
+          "You need " +
+          MAX_STANDS +
+          " stands before you can buy a restaurant (you have " +
+          standCount(state) +
+          ").",
+      };
+    }
+    if (Number(state.cash) <= RESTAURANT_UNLOCK_CASH) {
+      return {
+        ok: false,
+        message:
+          "Restaurants unlock when cash is over $" +
+          RESTAURANT_UNLOCK_CASH +
+          " (you have $" +
+          Number(state.cash).toFixed(2) +
+          ").",
+      };
+    }
+    if (state.cash + 1e-9 < RESTAURANT_COST) {
+      return {
+        ok: false,
+        message:
+          "Not enough cash to buy a restaurant (need $" +
+          RESTAURANT_COST.toFixed(2) +
+          ", have $" +
+          Number(state.cash).toFixed(2) +
+          ").",
+      };
+    }
+
+    const forfeited = standCount(state);
+    state.cash = +(state.cash - RESTAURANT_COST).toFixed(2);
+    state.mode = MODE_RESTAURANT;
+    state.stands = [];
+    state.activeStandId = null;
+    state.extraStandUnlockNotified = false;
+    state.restaurantUnlockNotified = false;
+
+    const restaurant = createRestaurant(1);
+    state.restaurants = [restaurant];
+    state.activeRestaurantId = restaurant.id;
+
+    return {
+      ok: true,
+      restaurant: restaurant,
+      cost: RESTAURANT_COST,
+      message:
+        "Bought " +
+        restaurant.name +
+        " for $" +
+        RESTAURANT_COST.toFixed(2) +
+        "! Forfeited " +
+        forfeited +
+        " stands. Cash left: $" +
+        state.cash.toFixed(2) +
+        ". Hire " +
+        RESTAURANT_MIN_STAFF +
+        "–" +
+        RESTAURANT_MAX_STAFF +
+        " employees before Sell Day (you cannot staff the restaurant yourself). Daily rent $" +
+        RESTAURANT_RENT.toFixed(0) +
+        " + wages $" +
+        RESTAURANT_WAGE.toFixed(0) +
+        "/employee. Menu and inventory stay the same.",
+    };
+  }
+
+  /** Total restaurant employees across all restaurants. */
+  function restaurantEmployeeCount(state) {
+    if (!ownsRestaurant(state)) return 0;
+    let n = 0;
+    for (const r of state.restaurants) {
+      n += clampRestaurantStaff(r.employeeCount);
+    }
+    return n;
+  }
+
+  function dailyRestaurantWageCost(state) {
+    return +(restaurantEmployeeCount(state) * RESTAURANT_WAGE).toFixed(2);
+  }
+
+  function dailyRestaurantRent(state) {
+    if (!ownsRestaurant(state)) return 0;
+    return +(restaurantCount(state) * RESTAURANT_RENT).toFixed(2);
+  }
+
+  /** Wages + rent for restaurant mode (0 in stand mode). */
+  function dailyRestaurantOverhead(state) {
+    if (!ownsRestaurant(state)) return 0;
+    return +(dailyRestaurantWageCost(state) + dailyRestaurantRent(state)).toFixed(
+      2
+    );
+  }
+
+  /**
+   * Demand/capacity multiplier from restaurant staff.
+   * Formula: capacityMult = 0.7 + 0.2 * employeeCount
+   *   2 staff → 1.1, 3 → 1.3, 4 → 1.5
+   * More staff raises sales capacity but also wage cost against fixed rent.
+   */
+  function restaurantCapacityMult(state) {
+    if (!ownsRestaurant(state)) return 1;
+    const r = getActiveRestaurant(state);
+    const n = r ? clampRestaurantStaff(r.employeeCount) : 0;
+    return +(0.7 + 0.2 * n).toFixed(2);
+  }
+
+  function restaurantStaffingCheck(state) {
+    if (!ownsRestaurant(state)) {
+      return {
+        ok: false,
+        message: "You do not own a restaurant.",
+        employeeCount: 0,
+      };
+    }
+    const r = getActiveRestaurant(state);
+    const n = r ? clampRestaurantStaff(r.employeeCount) : 0;
+    if (n < RESTAURANT_MIN_STAFF) {
+      return {
+        ok: false,
+        employeeCount: n,
+        message:
+          "Understaffed — the restaurant needs at least " +
+          RESTAURANT_MIN_STAFF +
+          " employees (you have " +
+          n +
+          "). You cannot work a restaurant shift; hire staff before Sell Day.",
+      };
+    }
+    if (n > RESTAURANT_MAX_STAFF) {
+      return {
+        ok: false,
+        employeeCount: n,
+        message:
+          "Too many employees — max " +
+          RESTAURANT_MAX_STAFF +
+          " per restaurant.",
+      };
+    }
+    return { ok: true, message: "", employeeCount: n };
+  }
+
+  /**
+   * Must afford today's wages + rent from current cash to stay open.
+   * Returns { ok, message, overhead, wages, rent }.
+   */
+  function restaurantOverheadCheck(state) {
+    const staff = restaurantStaffingCheck(state);
+    if (!staff.ok) {
+      return {
+        ok: false,
+        message: staff.message,
+        overhead: dailyRestaurantOverhead(state),
+        wages: dailyRestaurantWageCost(state),
+        rent: dailyRestaurantRent(state),
+      };
+    }
+    const wages = dailyRestaurantWageCost(state);
+    const rent = dailyRestaurantRent(state);
+    const overhead = +(wages + rent).toFixed(2);
+    if (Number(state.cash) + 1e-9 < overhead) {
+      return {
+        ok: false,
+        overhead: overhead,
+        wages: wages,
+        rent: rent,
+        message:
+          "Can't cover today's overhead — need $" +
+          overhead.toFixed(2) +
+          " for wages ($" +
+          wages.toFixed(2) +
+          ") + rent ($" +
+          rent.toFixed(2) +
+          "), but you only have $" +
+          Number(state.cash).toFixed(2) +
+          ". Earn or save more before Sell Day, or lay off staff to lower wages.",
+      };
+    }
+    return {
+      ok: true,
+      message: "",
+      overhead: overhead,
+      wages: wages,
+      rent: rent,
+    };
+  }
+
+  /**
+   * Hire one more restaurant employee (up to MAX). No upfront cost; wage on Sell Day.
+   */
+  function hireRestaurantEmployee(state, restaurantId) {
+    const id =
+      typeof restaurantId === "string" && restaurantId
+        ? restaurantId
+        : state.activeRestaurantId;
+    const restaurant = findRestaurant(state, id) || getActiveRestaurant(state);
+    if (!restaurant) {
+      return { ok: false, message: "Unknown restaurant." };
+    }
+    const n = clampRestaurantStaff(restaurant.employeeCount);
+    if (n >= RESTAURANT_MAX_STAFF) {
+      return {
+        ok: false,
+        message:
+          restaurant.name +
+          " already has the maximum of " +
+          RESTAURANT_MAX_STAFF +
+          " employees.",
+      };
+    }
+    restaurant.employeeCount = n + 1;
+    return {
+      ok: true,
+      restaurant: restaurant,
+      message:
+        "Hired an employee for " +
+        restaurant.name +
+        " (" +
+        restaurant.employeeCount +
+        "/" +
+        RESTAURANT_MAX_STAFF +
+        "). Wage: $" +
+        RESTAURANT_WAGE.toFixed(2) +
+        "/day each + rent $" +
+        RESTAURANT_RENT.toFixed(2) +
+        "/day (paid on Sell Day).",
+    };
+  }
+
+  /** Lay off one restaurant employee. */
+  function layoffRestaurantEmployee(state, restaurantId) {
+    const id =
+      typeof restaurantId === "string" && restaurantId
+        ? restaurantId
+        : state.activeRestaurantId;
+    const restaurant = findRestaurant(state, id) || getActiveRestaurant(state);
+    if (!restaurant) {
+      return { ok: false, message: "Unknown restaurant." };
+    }
+    const n = clampRestaurantStaff(restaurant.employeeCount);
+    if (n <= 0) {
+      return {
+        ok: false,
+        message: restaurant.name + " has no employees to lay off.",
+      };
+    }
+    restaurant.employeeCount = n - 1;
+    return {
+      ok: true,
+      restaurant: restaurant,
+      message:
+        "Laid off an employee at " +
+        restaurant.name +
+        " (" +
+        restaurant.employeeCount +
+        "/" +
+        RESTAURANT_MAX_STAFF +
+        " left)." +
+        (restaurant.employeeCount < RESTAURANT_MIN_STAFF
+          ? " Hire back to at least " +
+            RESTAURANT_MIN_STAFF +
+            " before Sell Day."
+          : ""),
+    };
   }
 
   function getActiveStand(state) {
@@ -324,6 +732,14 @@
    * First stand: no cash > $100 gate. Extra stands: require unlock + room.
    */
   function buyStand(state) {
+    if (isRestaurantMode(state)) {
+      return {
+        ok: false,
+        message:
+          "You own a restaurant now — stands and restaurants cannot be owned together.",
+      };
+    }
+
     const count = standCount(state);
 
     if (count >= MAX_STANDS) {
@@ -406,6 +822,12 @@
    * Clears activeStandId / player assignment when that stand is sold.
    */
   function sellStand(state, standId) {
+    if (isRestaurantMode(state)) {
+      return {
+        ok: false,
+        message: "You are in restaurant mode — stands were forfeited when you bought the restaurant.",
+      };
+    }
     const count = standCount(state);
     if (count < 1) {
       return { ok: false, message: "You do not own a stand to sell." };
@@ -487,8 +909,12 @@
     return stand ? stand.id : null;
   }
 
-  /** Number of stands with a hired employee. */
+  /**
+   * Hired employees: stand employees in stand mode, restaurant staff in
+   * restaurant mode (player cannot count as restaurant staff).
+   */
   function employeeCount(state) {
+    if (isRestaurantMode(state)) return restaurantEmployeeCount(state);
     if (!ownsStand(state)) return 0;
     let n = 0;
     for (const stand of state.stands) {
@@ -497,16 +923,21 @@
     return n;
   }
 
-  /** Daily wage bill for current employees ($5 each). */
+  /**
+   * Daily wage bill. Stand mode: $5/employee. Restaurant mode: $8/employee
+   * (rent is separate via dailyRestaurantRent).
+   */
   function dailyWageCost(state) {
+    if (isRestaurantMode(state)) return dailyRestaurantWageCost(state);
     return +(employeeCount(state) * STAND_EMPLOYEE_WAGE).toFixed(2);
   }
 
   /**
-   * Staffing is required only with 2+ stands.
-   * With 0–1 stands, the player can run alone (no hire needed).
+   * Staffing is required with 2+ stands, or always in restaurant mode
+   * (min 2 restaurant employees; player cannot staff).
    */
   function staffingRequired(state) {
+    if (isRestaurantMode(state)) return true;
     return standCount(state) >= 2;
   }
 
@@ -520,6 +951,9 @@
   }
 
   function isFullyStaffed(state) {
+    if (isRestaurantMode(state)) {
+      return restaurantStaffingCheck(state).ok;
+    }
     if (!ownsStand(state)) return false;
     if (!staffingRequired(state)) return true;
     return unstaffedStands(state).length === 0;
@@ -527,9 +961,22 @@
 
   /**
    * Human-readable staffing check for Sell Day / morning hint.
+   * Stand mode: every stand staffed when 2+.
+   * Restaurant mode: 2–4 employees and enough cash for wages + rent.
    * Returns { ok, message, unstaffed }.
    */
   function staffingCheck(state) {
+    if (isRestaurantMode(state)) {
+      const overhead = restaurantOverheadCheck(state);
+      return {
+        ok: overhead.ok,
+        message: overhead.message,
+        unstaffed: [],
+        wages: overhead.wages,
+        rent: overhead.rent,
+        overhead: overhead.overhead,
+      };
+    }
     if (!ownsStand(state)) {
       return {
         ok: false,
@@ -568,6 +1015,13 @@
    * If the player was running this stand, they step aside.
    */
   function hireEmployee(state, standId) {
+    if (isRestaurantMode(state)) {
+      return {
+        ok: false,
+        message:
+          "Use restaurant Hire controls — stand employees are not used in restaurant mode.",
+      };
+    }
     const stand = findStand(state, standId);
     if (!stand) {
       return { ok: false, message: "Unknown stand." };
@@ -887,6 +1341,59 @@
     }
 
     const extraStandUnlockNotified = !!raw.extraStandUnlockNotified;
+    const restaurantUnlockNotified = !!raw.restaurantUnlockNotified;
+
+    // Phase 16 restaurants: normalize mode + restaurants (at most one in Phase 16).
+    let mode =
+      raw.mode === MODE_RESTAURANT || raw.mode === MODE_STAND
+        ? raw.mode
+        : MODE_STAND;
+    let restaurants = [];
+    if (Array.isArray(raw.restaurants)) {
+      restaurants = raw.restaurants
+        .filter(function (r) {
+          return r && typeof r === "object";
+        })
+        .map(function (r, i) {
+          const n = i + 1;
+          return {
+            id:
+              typeof r.id === "string" && r.id ? r.id : "restaurant-" + n,
+            name:
+              typeof r.name === "string" && r.name
+                ? r.name
+                : "Restaurant " + n,
+            employeeCount: clampRestaurantStaff(r.employeeCount),
+          };
+        })
+        .slice(0, 1);
+    }
+    // Legacy / inconsistent saves: restaurants present ⇒ restaurant mode.
+    if (restaurants.length > 0) mode = MODE_RESTAURANT;
+    if (mode === MODE_RESTAURANT) {
+      stands = [];
+      activeStandId = null;
+      if (restaurants.length === 0) {
+        restaurants = [createRestaurant(1)];
+      }
+    } else {
+      restaurants = [];
+    }
+
+    let activeRestaurantId =
+      typeof raw.activeRestaurantId === "string"
+        ? raw.activeRestaurantId
+        : null;
+    if (restaurants.length === 0) {
+      activeRestaurantId = null;
+    } else if (
+      !activeRestaurantId ||
+      !restaurants.some(function (r) {
+        return r.id === activeRestaurantId;
+      })
+    ) {
+      activeRestaurantId = restaurants[0].id;
+    }
 
     let supplyPriceMult = Number(raw.supplyPriceMult);
     if (!Number.isFinite(supplyPriceMult) || supplyPriceMult <= 0) {
@@ -933,9 +1440,13 @@
     return {
       day: Number.isFinite(raw.day) && raw.day >= 1 ? Math.floor(raw.day) : 1,
       cash: Number.isFinite(raw.cash) ? raw.cash : base.cash,
+      mode,
       stands,
       activeStandId,
+      restaurants,
+      activeRestaurantId,
       extraStandUnlockNotified,
+      restaurantUnlockNotified,
       activeProduct,
       menuOffered,
       weather,
@@ -1281,6 +1792,14 @@
     STAND_SELL_PRICE,
     STAFF_PLAYER,
     STAFF_EMPLOYEE,
+    RESTAURANT_COST,
+    RESTAURANT_UNLOCK_CASH,
+    RESTAURANT_RENT,
+    RESTAURANT_WAGE,
+    RESTAURANT_MIN_STAFF,
+    RESTAURANT_MAX_STAFF,
+    MODE_STAND,
+    MODE_RESTAURANT,
     SUPPLY_MULT_MIN,
     SUPPLY_MULT_MAX,
     PRODUCTS,
@@ -1296,9 +1815,29 @@
     save,
     normalize,
     createStand,
+    createRestaurant,
     ownsStand,
     standCount,
+    isRestaurantMode,
+    ownsRestaurant,
+    restaurantCount,
+    ownsBusiness,
     getActiveStand,
+    getActiveRestaurant,
+    findRestaurant,
+    restaurantUnlocked,
+    canBuyRestaurant,
+    consumeRestaurantUnlockNotify,
+    buyRestaurant,
+    restaurantEmployeeCount,
+    dailyRestaurantWageCost,
+    dailyRestaurantRent,
+    dailyRestaurantOverhead,
+    restaurantCapacityMult,
+    restaurantStaffingCheck,
+    restaurantOverheadCheck,
+    hireRestaurantEmployee,
+    layoffRestaurantEmployee,
     extraStandUnlocked,
     canBuyExtraStand,
     setActiveStand,

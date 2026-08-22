@@ -5,6 +5,8 @@
  * Phase 12: Sell Day serves all offered menu items; empty menu blocked.
  * Phase 13: multi-stand buy / selector / unlock notify + map refresh.
  * Phase 14: staff hire/layoff/assign; understaffed blocks Sell Day; wages.
+ * Phase 16: buy restaurant ($400), restaurant staff hire/layoff;
+ *           Sell Day gates on restaurant staff + wages/rent; P&L includes rent.
  * Phase 15: sell stand ($10, keep ≥1); morning random events + banner.
  */
 (function () {
@@ -19,6 +21,17 @@
   /** Show one-shot unlock message when cash > $100 and stands < 4. */
   function maybeNotifyExtraStandUnlock() {
     const msg = GameState.consumeExtraStandUnlockNotify(state);
+    if (!msg) return false;
+    GameState.save(state);
+    GameUI.setReport(msg, { flash: true });
+    refresh();
+    return true;
+  }
+
+  /** Show one-shot message when eligible to buy the first restaurant. */
+  function maybeNotifyRestaurantUnlock() {
+    if (!GameState.consumeRestaurantUnlockNotify) return false;
+    const msg = GameState.consumeRestaurantUnlockNotify(state);
     if (!msg) return false;
     GameState.save(state);
     GameUI.setReport(msg, { flash: true });
@@ -169,7 +182,12 @@
   }
 
   function validateSellDay(current) {
-    if (!GameState.ownsStand(current)) {
+    const isRestaurant =
+      GameState.isRestaurantMode && GameState.isRestaurantMode(current);
+    const ownsBusiness = GameState.ownsBusiness
+      ? GameState.ownsBusiness(current)
+      : GameState.ownsStand(current);
+    if (!ownsBusiness) {
       return {
         ok: false,
         message:
@@ -243,7 +261,12 @@
       revenue: plan.revenue,
       cogs: plan.cogs,
       wages: plan.wages,
+      rent: plan.rent || 0,
       employeeCount: plan.employeeCount,
+      capacityMult: plan.capacityMult,
+      isRestaurant: !!plan.isRestaurant,
+      restaurantId: plan.restaurantId || null,
+      restaurantName: plan.restaurantName || null,
       profit: plan.profit,
       soldOut: plan.soldOut,
       message: plan.message,
@@ -268,6 +291,13 @@
     const unlockMsg = GameState.consumeExtraStandUnlockNotify(state);
     if (unlockMsg) {
       reportExtra = (reportExtra ? reportExtra + "\n\n" : "") + unlockMsg;
+    }
+
+    if (GameState.consumeRestaurantUnlockNotify) {
+      const restMsg = GameState.consumeRestaurantUnlockNotify(state);
+      if (restMsg) {
+        reportExtra = (reportExtra ? reportExtra + "\n\n" : "") + restMsg;
+      }
     }
 
     if (reportExtra) {
@@ -388,6 +418,65 @@
     GameUI.setReport(result.message, { flash: true });
   }
 
+  function onBuyRestaurant() {
+    if (selling) return;
+    if (!GameState.canBuyRestaurant || !GameState.canBuyRestaurant(state)) {
+      GameUI.setReport(
+        "Need 4 stands and cash over $" +
+          (GameState.RESTAURANT_UNLOCK_CASH || 1000) +
+          " to buy a restaurant for $" +
+          (GameState.RESTAURANT_COST || 400) +
+          ".",
+        { flash: true }
+      );
+      refresh();
+      return;
+    }
+    const cost = Number(GameState.RESTAURANT_COST) || 400;
+    const confirmed = window.confirm(
+      "Buy a restaurant for $" +
+        cost.toFixed(0) +
+        "? All stands will be forfeited. You will need 2–4 employees (you cannot staff it yourself). Daily rent $" +
+        (GameState.RESTAURANT_RENT || 15) +
+        " + wages $" +
+        (GameState.RESTAURANT_WAGE || 8) +
+        "/employee."
+    );
+    if (!confirmed) return;
+    const result = GameState.buyRestaurant(state);
+    if (!result.ok) {
+      GameUI.setReport(result.message, { flash: true });
+      refresh();
+      return;
+    }
+    GameState.save(state);
+    refresh();
+    GameUI.setReport(result.message, { flash: true });
+  }
+
+  function onRestaurantStaffAction(event) {
+    if (selling) return;
+    const btn = event.target.closest("[data-restaurant-action]");
+    if (!btn) return;
+    const action = btn.getAttribute("data-restaurant-action");
+    let result;
+    if (action === "hire") {
+      result = GameState.hireRestaurantEmployee(state);
+    } else if (action === "layoff") {
+      result = GameState.layoffRestaurantEmployee(state);
+    } else {
+      return;
+    }
+    if (!result.ok) {
+      GameUI.setReport(result.message, { flash: true });
+      refresh();
+      return;
+    }
+    GameState.save(state);
+    refresh();
+    GameUI.setReport(result.message, { flash: true });
+  }
+
   function onDismissEvent() {
     if (selling) return;
     GameState.clearEventBanner(state);
@@ -454,7 +543,7 @@
     }
 
     const confirmed = window.confirm(
-      "Start a new game? This clears your saved day, cash, stands, staff, inventory, recipes, prices, menu, weather, and events."
+      "Start a new game? This clears your saved day, cash, stands, restaurant, staff, inventory, recipes, prices, menu, weather, and events."
     );
     if (!confirmed) return;
 
@@ -501,6 +590,12 @@
   document.getElementById("btn-buy-stand")?.addEventListener("click", onBuyStand);
   document.getElementById("btn-add-stand")?.addEventListener("click", onAddStand);
   document.getElementById("btn-sell-stand")?.addEventListener("click", onSellStand);
+  document
+    .getElementById("btn-buy-restaurant")
+    ?.addEventListener("click", onBuyRestaurant);
+  document
+    .getElementById("restaurant-manage")
+    ?.addEventListener("click", onRestaurantStaffAction);
   document
     .getElementById("btn-dismiss-event")
     ?.addEventListener("click", onDismissEvent);
@@ -553,4 +648,5 @@
 
   refresh();
   maybeNotifyExtraStandUnlock();
+  maybeNotifyRestaurantUnlock();
 })();
