@@ -1,6 +1,8 @@
 /**
- * Phase 8: timed customer events that visualize a planned sell day.
+ * Phase 8–12: timed customer events that visualize a planned sell day.
  * Buy count always equals plan.cupsSold so the stage matches P&L.
+ * Phase 12: buy events carry `product` (what they bought); summary
+ * aggregates sold counts by item plus leave reasons.
  *
  * Day length ≈ DAY_MS (10s). Events are spaced across the day; leave
  * reasons: price | stock | weather. Buy reactions: like | dislike | happy.
@@ -11,6 +13,18 @@
   const DAY_MS = 10000;
   const LEAVE_REASONS = ["price", "stock", "weather"];
   const BUY_REACTIONS = ["like", "dislike", "happy"];
+
+  function productsList() {
+    return global.GameState && global.GameState.PRODUCTS
+      ? global.GameState.PRODUCTS.slice()
+      : ["juice", "cocoa", "burger", "soup"];
+  }
+
+  function emptyProductCounts() {
+    const map = {};
+    for (const product of productsList()) map[product] = 0;
+    return map;
+  }
 
   function rand(randomFn) {
     return typeof randomFn === "function" ? randomFn() : Math.random();
@@ -27,10 +41,12 @@
     return arr;
   }
 
-  function buyReaction(plan, state, randomFn) {
+  function buyReactionForProduct(plan, state, product, randomFn) {
     const weather = plan.weather || state.weather || "mild";
-    const product = plan.product || state.activeProduct;
-    const price = Number(plan.price);
+    const price =
+      plan.prices && Number.isFinite(Number(plan.prices[product]))
+        ? Number(plan.prices[product])
+        : Number(plan.price);
     const favor = global.GameWeather
       ? global.GameWeather.favorsProduct(weather, product)
       : null;
@@ -47,74 +63,182 @@
   }
 
   /**
-   * Build a playable timeline from an economy plan.
-   * Guarantees: buy events === plan.cupsSold.
+   * Expand plan.soldByProduct / plan.purchases into buy event stubs.
+   * Guarantees buy count === plan.cupsSold.
    */
-  function buildTimeline(plan, state, randomFn) {
+  function buildBuyEvents(plan, state, randomFn) {
     const events = [];
-    const cupsSold = Math.max(0, plan.cupsSold | 0);
-    const demand = Math.max(0, plan.demand | 0);
-    const stockLeftAfter = Math.max(0, (plan.stockCups | 0) - cupsSold);
+    if (plan.purchases && plan.purchases.length) {
+      for (const product of plan.purchases) {
+        events.push({
+          outcome: "buy",
+          product: product,
+          reason: null,
+          reaction: buyReactionForProduct(plan, state, product, randomFn),
+        });
+      }
+      return events;
+    }
 
+    if (plan.soldByProduct) {
+      for (const product of productsList()) {
+        const n = Math.max(0, plan.soldByProduct[product] | 0);
+        for (let i = 0; i < n; i++) {
+          events.push({
+            outcome: "buy",
+            product: product,
+            reason: null,
+            reaction: buyReactionForProduct(plan, state, product, randomFn),
+          });
+        }
+      }
+      return events;
+    }
+
+    // Legacy single-product plan.
+    const cupsSold = Math.max(0, plan.cupsSold | 0);
+    const product = plan.product || state.activeProduct || "juice";
     for (let i = 0; i < cupsSold; i++) {
       events.push({
         outcome: "buy",
+        product: product,
         reason: null,
-        reaction: buyReaction(plan, state, randomFn),
+        reaction: buyReactionForProduct(plan, state, product, randomFn),
+      });
+    }
+    return events;
+  }
+
+  /**
+   * Extra walk-aways for weather / price across the offered menu.
+   */
+  function leaveExtras(plan, state) {
+    const weather = plan.weather || state.weather || "mild";
+    const offered =
+      plan.products && plan.products.length
+        ? plan.products.slice()
+        : [plan.product || state.activeProduct || "juice"];
+
+    let weatherLeft = 0;
+    let priceLeft = 0;
+    const ref = global.GameEconomy.REF_PRICE || 1.5;
+
+    let mismatchCount = 0;
+    let matchCount = 0;
+    let prefSum = 0;
+    let highPriceCount = 0;
+    let maxPriceRatio = 1;
+
+    for (const product of offered) {
+      const favor = global.GameWeather
+        ? global.GameWeather.favorsProduct(weather, product)
+        : null;
+      if (favor === false) mismatchCount += 1;
+      if (favor === true) matchCount += 1;
+      const pref =
+        plan.preferences && Number.isFinite(plan.preferences[product])
+          ? plan.preferences[product]
+          : global.GameWeather
+            ? global.GameWeather.preferenceFactor(weather, product)
+            : 1;
+      prefSum += pref;
+
+      const price =
+        plan.prices && Number.isFinite(Number(plan.prices[product]))
+          ? Number(plan.prices[product])
+          : Number(plan.price);
+      if (Number.isFinite(price) && price > ref) {
+        highPriceCount += 1;
+        maxPriceRatio = Math.max(maxPriceRatio, price / ref);
+      }
+    }
+
+    const avgPref = offered.length ? prefSum / offered.length : 1;
+    if (mismatchCount > 0 && matchCount === 0) {
+      weatherLeft = Math.max(2, Math.round(8 * (1 - Math.min(avgPref, 1))));
+    } else if (mismatchCount > 0) {
+      weatherLeft = Math.max(1, mismatchCount);
+    } else if (matchCount === 0) {
+      weatherLeft = 1; // mild
+    }
+
+    if (highPriceCount > 0) {
+      priceLeft = Math.max(1, Math.round((maxPriceRatio - 1) * 6));
+    }
+    if (maxPriceRatio > 2) {
+      priceLeft += 3;
+    }
+
+    weatherLeft = Math.min(weatherLeft, 8);
+    priceLeft = Math.min(priceLeft, 8);
+
+    return { weatherLeft: weatherLeft, priceLeft: priceLeft };
+  }
+
+  /**
+   * Build a playable timeline from an economy plan.
+   * Guarantees: buy events === plan.cupsSold (and per-item sold counts).
+   */
+  function buildTimeline(plan, state, randomFn) {
+    const events = buildBuyEvents(plan, state, randomFn);
+    const cupsSold = Math.max(0, plan.cupsSold | 0);
+
+    // Pad / trim buys if rounding ever drifts (should not happen).
+    while (events.length > cupsSold) events.pop();
+    while (events.length < cupsSold) {
+      const fallback =
+        (plan.products && plan.products[0]) ||
+        plan.product ||
+        state.activeProduct ||
+        "juice";
+      events.push({
+        outcome: "buy",
+        product: fallback,
+        reason: null,
+        reaction: buyReactionForProduct(plan, state, fallback, randomFn),
       });
     }
 
+    const demand = Math.max(0, plan.demand | 0);
+    const stockLeftAfter = Math.max(0, (plan.stockCups | 0) - cupsSold);
     const soldOutLeft = Math.max(0, demand - cupsSold);
     for (let i = 0; i < soldOutLeft; i++) {
       events.push({
         outcome: "leave",
+        product: null,
         reason: "stock",
         reaction: null,
       });
     }
 
-    const weather = plan.weather || state.weather || "mild";
-    const product = plan.product || state.activeProduct;
-    const favor = global.GameWeather
-      ? global.GameWeather.favorsProduct(weather, product)
-      : null;
-    const price = Number(plan.price);
-    const ref = global.GameEconomy.REF_PRICE || 1.5;
-
-    let weatherLeft = 0;
-    if (favor === false) {
-      weatherLeft = Math.max(2, Math.round(8 * (1 - (plan.preference || 0.65))));
-    } else if (favor === null) {
-      weatherLeft = 1;
+    const extras = leaveExtras(plan, state);
+    for (let i = 0; i < extras.weatherLeft; i++) {
+      events.push({
+        outcome: "leave",
+        product: null,
+        reason: "weather",
+        reaction: null,
+      });
+    }
+    for (let i = 0; i < extras.priceLeft; i++) {
+      events.push({
+        outcome: "leave",
+        product: null,
+        reason: "price",
+        reaction: null,
+      });
     }
 
-    let priceLeft = 0;
-    if (Number.isFinite(price) && price > ref) {
-      priceLeft = Math.max(1, Math.round((price / ref - 1) * 6));
-    }
-    if (Number.isFinite(price) && price > ref * 2) {
-      priceLeft += 3;
-    }
-
-    // Keep the stage readable — cap extra walk-aways.
-    weatherLeft = Math.min(weatherLeft, 8);
-    priceLeft = Math.min(priceLeft, 8);
-
-    for (let i = 0; i < weatherLeft; i++) {
-      events.push({ outcome: "leave", reason: "weather", reaction: null });
-    }
-    for (let i = 0; i < priceLeft; i++) {
-      events.push({ outcome: "leave", reason: "price", reaction: null });
-    }
-
-    // If nobody showed and we somehow have zero events, show a quiet beat.
     if (events.length === 0) {
-      events.push({ outcome: "leave", reason: "price", reaction: null });
+      events.push({
+        outcome: "leave",
+        product: null,
+        reason: "price",
+        reaction: null,
+      });
     }
 
-    // Sold-out (stock) leaves must come after all buys — once cups run out,
-    // later visitors cannot succeed. Price/weather walk-aways still shuffle
-    // among the buying window so the day feels mixed, then stock leftovers.
+    // Sold-out (stock) leaves must come after all buys.
     const stockEvents = [];
     const earlyEvents = [];
     for (const event of events) {
@@ -134,6 +258,7 @@
       return {
         atMs: t,
         outcome: event.outcome,
+        product: event.product || null,
         reason: event.reason,
         reaction: event.reaction,
       };
@@ -160,10 +285,14 @@
       likes: 0,
       dislikes: 0,
       happy: 0,
+      boughtByProduct: emptyProductCounts(),
     };
     for (const event of events) {
       if (event.outcome === "buy") {
         summary.bought += 1;
+        if (event.product && summary.boughtByProduct[event.product] != null) {
+          summary.boughtByProduct[event.product] += 1;
+        }
         if (event.reaction === "like") summary.likes += 1;
         else if (event.reaction === "dislike") summary.dislikes += 1;
         else if (event.reaction === "happy") summary.happy += 1;
@@ -223,6 +352,14 @@
     return "Bought";
   }
 
+  function productShortLabel(product) {
+    if (product === "cocoa") return "Cocoa";
+    if (product === "burger") return "Burger";
+    if (product === "soup") return "Soup";
+    if (product === "juice") return "Juice";
+    return "Item";
+  }
+
   global.GameCustomers = {
     DAY_MS,
     LEAVE_REASONS,
@@ -232,5 +369,6 @@
     play,
     leaveReasonLabel,
     buyReactionLabel,
+    productShortLabel,
   };
 })(window);
