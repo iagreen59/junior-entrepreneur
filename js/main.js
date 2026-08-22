@@ -5,6 +5,7 @@
  * Phase 12: Sell Day serves all offered menu items; empty menu blocked.
  * Phase 13: multi-stand buy / selector / unlock notify + map refresh.
  * Phase 14: staff hire/layoff/assign; understaffed blocks Sell Day; wages.
+ * Phase 15: sell stand ($10, keep ≥1); morning random events + banner.
  */
 (function () {
   let state = GameState.load();
@@ -23,6 +24,18 @@
     GameUI.setReport(msg, { flash: true });
     refresh();
     return true;
+  }
+
+  /** After day advances: clear used demand mult, roll rare morning event. */
+  function runMorningEvents() {
+    if (GameState.clearDemandMultiplier) {
+      GameState.clearDemandMultiplier(state);
+    }
+    if (!global.GameEvents || typeof GameEvents.onNewDay !== "function") {
+      return null;
+    }
+    const result = GameEvents.onNewDay(state);
+    return result && result.rolled ? result.event : null;
   }
 
   function onProductSelect(product) {
@@ -236,17 +249,31 @@
       message: plan.message,
       customers: summary,
     };
+
+    const morningEvent = runMorningEvents();
+
     GameState.save(state);
     selling = false;
     playback = null;
     refresh();
     GameUI.showCustomerSummary(summary, plan, state);
+
+    let reportExtra = "";
+    if (morningEvent && morningEvent.message) {
+      reportExtra =
+        (reportExtra ? reportExtra + "\n\n" : "") + morningEvent.message;
+    }
+
     // After Sell Day P&L is shown, notify if cash crossed the multi-stand unlock.
     const unlockMsg = GameState.consumeExtraStandUnlockNotify(state);
     if (unlockMsg) {
+      reportExtra = (reportExtra ? reportExtra + "\n\n" : "") + unlockMsg;
+    }
+
+    if (reportExtra) {
       GameState.save(state);
       GameUI.setReport(
-        (plan && plan.message ? plan.message + "\n\n" : "") + unlockMsg,
+        (plan && plan.message ? plan.message + "\n\n" : "") + reportExtra,
         { flash: true }
       );
       refresh();
@@ -333,6 +360,41 @@
     GameUI.setReport(result.message, { flash: true });
   }
 
+  function onSellStand() {
+    if (selling) return;
+    const active = GameState.getActiveStand(state);
+    const name = active && active.name ? active.name : "this stand";
+    const price = Number(GameState.STAND_SELL_PRICE) || 10;
+    if (!GameState.canSellStand(state)) {
+      GameUI.setReport(
+        "You must keep at least one stand. Selling your last stand is not allowed.",
+        { flash: true }
+      );
+      refresh();
+      return;
+    }
+    const confirmed = window.confirm(
+      "Sell " + name + " for $" + price.toFixed(0) + "? You must keep at least one stand."
+    );
+    if (!confirmed) return;
+    const result = GameState.sellStand(state, state.activeStandId);
+    if (!result.ok) {
+      GameUI.setReport(result.message, { flash: true });
+      refresh();
+      return;
+    }
+    GameState.save(state);
+    refresh();
+    GameUI.setReport(result.message, { flash: true });
+  }
+
+  function onDismissEvent() {
+    if (selling) return;
+    GameState.clearEventBanner(state);
+    GameState.save(state);
+    refresh();
+  }
+
   function onStandSelectChange(event) {
     if (selling) return;
     const select = event.target;
@@ -392,7 +454,7 @@
     }
 
     const confirmed = window.confirm(
-      "Start a new game? This clears your saved day, cash, stands, staff, inventory, recipes, prices, menu, and weather."
+      "Start a new game? This clears your saved day, cash, stands, staff, inventory, recipes, prices, menu, weather, and events."
     );
     if (!confirmed) return;
 
@@ -438,6 +500,10 @@
   document.getElementById("btn-new-game")?.addEventListener("click", onNewGame);
   document.getElementById("btn-buy-stand")?.addEventListener("click", onBuyStand);
   document.getElementById("btn-add-stand")?.addEventListener("click", onAddStand);
+  document.getElementById("btn-sell-stand")?.addEventListener("click", onSellStand);
+  document
+    .getElementById("btn-dismiss-event")
+    ?.addEventListener("click", onDismissEvent);
   document
     .getElementById("stand-select")
     ?.addEventListener("change", onStandSelectChange);

@@ -5,6 +5,8 @@
  * Phase 12: one Sell Day serves every offered menu item; customers choose
  * among offered items weighted by weather preference + price.
  * Phase 14: deduct stand employee wages ($5/day each) from cash/profit.
+ * Phase 15: demandMult (foot-traffic event) scales planned demand;
+ *           unit prices for COGS respect temporary supplyPriceMult.
  *
  * Demand formula (Phase 12 multi-item):
  *   offered   = products with menuOffered[p] === true
@@ -12,8 +14,9 @@
  *               * (REF_PRICE / price[p]) ^ ELASTICITY
  *               (preference: match 1.35, mismatch 0.65, mild 1.00 —
  *                hot favors juice+burger; cold favors cocoa+soup)
- *   demand[p] = floor(max(0, BASE_INTEREST * weight[p]))
+ *   demand[p] = floor(max(0, BASE_INTEREST * weight[p] * demandMult))
  *               (invalid / ≤0 price → treat as very cheap: BASE * 4 * pref)
+ *               demandMult defaults to 1; foot-traffic surge uses ~1.4
  *   stock[p]  = maxCupsFromStock for that product's recipe
  *   sold[p]   = min(demand[p], stock[p])
  *   cupsSold  = sum_p sold[p]
@@ -113,7 +116,7 @@
     for (const key of keys) {
       const perCup = Number(recipe[key]) || 0;
       if (perCup <= 0) continue;
-      total += perCup * global.GameState.unitPrice(key);
+      total += perCup * global.GameState.unitPrice(key, state);
     }
     return +total.toFixed(2);
   }
@@ -222,6 +225,11 @@
     let cogs = 0;
     let soldOut = false;
     let preferenceSum = 0;
+    const demandMult = global.GameState.demandMultiplier
+      ? global.GameState.demandMultiplier(state)
+      : Number(state.demandMult) > 0
+        ? Number(state.demandMult)
+        : 1;
 
     for (const product of offered) {
       const price = priceOf(state, product);
@@ -233,7 +241,10 @@
       preferenceSum += preference;
 
       const stock = maxCupsFromStock(state, product);
-      const want = demandForPrice(price, weather, product);
+      const want = Math.max(
+        0,
+        Math.floor(demandForPrice(price, weather, product) * demandMult)
+      );
       const sold = Math.min(want, stock);
 
       stockByProduct[product] = stock;
@@ -378,6 +389,7 @@
       wages: wages,
       employeeCount: employeeCount,
       profit: profit,
+      demandMult: demandMult,
       cashAfter: +(state.cash + revenue - wages).toFixed(2),
       soldOut: soldOut,
       message: message,

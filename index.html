@@ -22,6 +22,24 @@
         <p class="brand-tag">Mix a drink. Set a price. Make the day pay.</p>
       </header>
 
+      <aside
+        class="event-banner"
+        id="event-banner"
+        hidden
+        role="status"
+        aria-live="polite"
+      >
+        <p class="event-banner-text" id="event-banner-text"></p>
+        <button
+          type="button"
+          class="btn btn-close"
+          id="btn-dismiss-event"
+          aria-label="Dismiss event message"
+        >
+          Dismiss
+        </button>
+      </aside>
+
       <section class="status" aria-label="Stand status">
         <div class="stat">
           <span class="stat-label">Day</span>
@@ -69,6 +87,11 @@
             <strong>$5/day</strong> per employee, paid on Sell Day. Understaffed stands block Sell Day.
           </li>
           <li>
+            You may <strong>Sell a stand for $10</strong> (keep at least one). Rare morning
+            <strong>events</strong> (good or bad) show a banner — supply prices, an employee quitting,
+            or a foot-traffic surge. Impacts are temporary and recoverable.
+          </li>
+          <li>
             Check today’s <strong>Weather</strong>, toggle today’s <strong>Menu</strong>,
             then pick which item to edit (Juice, Hot cocoa, Burger, or Soup).
           </li>
@@ -112,6 +135,9 @@
           </label>
           <button type="button" class="btn btn-primary" id="btn-add-stand" hidden>
             Add stand ($20)
+          </button>
+          <button type="button" class="btn btn-quiet" id="btn-sell-stand" disabled>
+            Sell stand ($10)
           </button>
         </div>
       </section>
@@ -929,6 +955,7 @@
 
     <script src="js/weather.js"></script>
     <script src="js/state.js"></script>
+    <script src="js/events.js"></script>
     <script src="js/recipe.js"></script>
     <script src="js/economy.js"></script>
     <script src="js/customers.js"></script>
