@@ -2,7 +2,7 @@
  * Boot, wire events, day-loop orchestration.
  * Phase 8: Sell Day plays ~10s of customer events, then commits P&L.
  * Phase 11: four-item product picker + daily menuOffered toggles.
- * Sell Day remains single-product (activeProduct) until Phase 12.
+ * Phase 12: Sell Day serves all offered menu items; empty menu blocked.
  */
 (function () {
   let state = GameState.load();
@@ -154,36 +154,44 @@
       };
     }
 
-    const drink = GameState.productLabel(current.activeProduct);
-    const price = Number(GameState.activePrice(current));
-    if (!Number.isFinite(price) || price < 0) {
-      return {
-        ok: false,
-        message: "Set a valid " + drink + " sell price before Sell Day.",
-      };
-    }
-    if (price === 0) {
+    const offered = GameEconomy.offeredProducts(current);
+    if (offered.length === 0) {
       return {
         ok: false,
         message:
-          "A $0.00 " +
-          drink +
-          " price will not earn cash. Set a price above ingredient cost first.",
+          "Today’s menu is empty — toggle on at least one item before Sell Day.",
       };
     }
 
-    const stockCups = GameEconomy.maxCupsFromStock(current);
-    if (stockCups <= 0) {
+    let pricedOk = false;
+    let stockOk = false;
+    for (const product of offered) {
+      const price = Number(
+        current.prices && current.prices[product] != null
+          ? current.prices[product]
+          : 0
+      );
+      if (Number.isFinite(price) && price > 0) pricedOk = true;
+      if (GameEconomy.maxCupsFromStock(current, product) > 0) stockOk = true;
+    }
+
+    if (!pricedOk) {
       return {
         ok: false,
         message:
-          "No stock for today's " +
-          drink +
-          " recipe — buy ingredients (or fix the recipe) before Sell Day.",
+          "Set a sell price above $0.00 for at least one offered menu item before Sell Day.",
       };
     }
 
-    return { ok: true, stockCups };
+    if (!stockOk) {
+      return {
+        ok: false,
+        message:
+          "No stock for today’s offered menu — buy ingredients (or fix a recipe) before Sell Day.",
+      };
+    }
+
+    return { ok: true, offered };
   }
 
   function finishSellDay(summary, plan) {
@@ -193,8 +201,12 @@
     state.weather = GameWeather.roll();
     state.lastDayReport = {
       product: plan.product,
+      products: plan.products,
+      soldByProduct: plan.soldByProduct,
+      demandByProduct: plan.demandByProduct,
       weather: plan.weather,
       preference: plan.preference,
+      preferences: plan.preferences,
       cupsSold: plan.cupsSold,
       demand: plan.demand,
       stockCups: plan.stockCups,
@@ -225,13 +237,27 @@
     const plan = GameEconomy.planSellDay(state);
     const timeline = GameCustomers.buildTimeline(plan, state);
 
-    // Guard: visual buys must match economy cups sold.
+    // Guard: visual buys must match economy cups sold (and per-item when present).
     if (timeline.summary.bought !== plan.cupsSold) {
       GameUI.setReport(
         "Could not build a matching customer day. Try Sell Day again.",
         { flash: true }
       );
       return;
+    }
+    if (plan.soldByProduct && timeline.summary.boughtByProduct) {
+      for (const product of GameState.PRODUCTS) {
+        if (
+          (timeline.summary.boughtByProduct[product] | 0) !==
+          (plan.soldByProduct[product] | 0)
+        ) {
+          GameUI.setReport(
+            "Could not match per-item sales to the customer day. Try Sell Day again.",
+            { flash: true }
+          );
+          return;
+        }
+      }
     }
 
     selling = true;
