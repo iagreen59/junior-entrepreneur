@@ -192,7 +192,7 @@
     };
   }
 
-  function renderBuyPrices() {
+  function renderBuyPrices(state) {
     const labels = global.GameState.inventoryLabels();
     for (const key of global.GameState.INVENTORY_KEYS) {
       const priceEl = document.getElementById("buy-price-" + key);
@@ -200,7 +200,7 @@
         priceEl.textContent =
           labels[key] +
           " — " +
-          formatMoney(global.GameState.unitPrice(key)) +
+          formatMoney(global.GameState.unitPrice(key, state)) +
           " each";
       }
     }
@@ -218,7 +218,7 @@
       }
     }
 
-    const total = global.GameState.cartTotal(supplyCart);
+    const total = global.GameState.cartTotal(supplyCart, state);
     const totalEl = document.getElementById("cart-total");
     if (totalEl) {
       totalEl.textContent = formatMoney(total);
@@ -415,13 +415,16 @@
     const manage = document.getElementById("stand-manage");
     const select = document.getElementById("stand-select");
     const addBtn = document.getElementById("btn-add-stand");
+    const sellBtn = document.getElementById("btn-sell-stand");
     const unlockBanner = document.getElementById("stand-unlock-banner");
     const manageLead = document.getElementById("stand-manage-lead");
     const count = global.GameState.standCount(state);
     const max = global.GameState.MAX_STANDS;
     const unlocked = global.GameState.extraStandUnlocked(state);
     const canAdd = global.GameState.canBuyExtraStand(state);
+    const canSell = global.GameState.canSellStand(state);
     const active = global.GameState.getActiveStand(state);
+    const sellPrice = Number(global.GameState.STAND_SELL_PRICE) || 10;
 
     if (standEl) {
       if (owns) {
@@ -513,6 +516,17 @@
             " to buy another stand";
     }
 
+    if (sellBtn) {
+      sellBtn.hidden = !owns;
+      sellBtn.disabled = !canSell;
+      sellBtn.textContent = "Sell stand ($" + sellPrice.toFixed(0) + ")";
+      sellBtn.title = canSell
+        ? "Sell the active stand for $" +
+          sellPrice.toFixed(0) +
+          " (you must keep at least one)"
+        : "You must keep at least one stand";
+    }
+
     if (unlockBanner) {
       const showBanner = owns && count < max && unlocked;
       unlockBanner.hidden = !showBanner;
@@ -533,6 +547,27 @@
     }
 
     renderStaff(state);
+  }
+
+  function renderEventBanner(state) {
+    const banner = document.getElementById("event-banner");
+    const textEl = document.getElementById("event-banner-text");
+    if (!banner) return;
+    const info = state && state.eventBanner;
+    if (!info || !info.message) {
+      banner.hidden = true;
+      banner.classList.remove("is-good", "is-bad", "is-neutral");
+      if (textEl) textEl.textContent = "";
+      return;
+    }
+    banner.hidden = false;
+    banner.classList.remove("is-good", "is-bad", "is-neutral");
+    const tone =
+      info.tone === "good" || info.tone === "bad" || info.tone === "neutral"
+        ? info.tone
+        : "neutral";
+    banner.classList.add("is-" + tone);
+    if (textEl) textEl.textContent = info.message;
   }
 
   function renderStaff(state) {
@@ -844,12 +879,13 @@
 
     renderWeather(state);
     renderStand(state);
+    renderEventBanner(state);
     renderInstructions();
     renderMenuToggles(state);
     renderProductPicker(state);
     fillRecipeForm(state);
     fillPriceForm(state);
-    renderBuyPrices();
+    renderBuyPrices(state);
     renderCart(state);
     renderMorningHint(state);
 
@@ -1119,6 +1155,7 @@
     morningHint,
     renderStand,
     renderStaff,
+    renderEventBanner,
     renderInstructions,
     setInstructionsHidden,
     setSellDayLocked,

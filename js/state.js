@@ -12,9 +12,12 @@
  * activeStandId selector; shared inventory; unlock notify flag.
  * Phase 14: stand staffing — with 2+ stands each must be player-run (at most
  * one) or have an employee; hire/layoff; $5/day wage per employee on Sell Day.
+ * Phase 15: sell a stand for $10 (keep ≥1); temporary event modifiers
+ * (supplyPriceMult / demandMult) + eventBanner for morning messages.
  *
  * Buy unit prices (cash per inventory unit) — not stored in the save blob;
- * constants live here so Buy UI / helpers share one source.
+ * constants live here so Buy UI / helpers share one source. Event modifiers
+ * temporarily scale effective buy prices via unitPrice(key, state).
  *
  * Migration (Phase 10): legacy inventory `cups` is copied into BOTH coldCups
  * and hotCups when those keys are absent, so neither drink loses cup stock.
@@ -36,9 +39,14 @@
   const EXTRA_STAND_UNLOCK_CASH = 100;
   /** Phase 14: daily wage per stand employee (deducted on Sell Day). */
   const STAND_EMPLOYEE_WAGE = 5;
+  /** Phase 15: cash received when selling a stand (must keep ≥1). */
+  const STAND_SELL_PRICE = 10;
   /** Staffing modes on a stand: player | employee | null (unstaffed). */
   const STAFF_PLAYER = "player";
   const STAFF_EMPLOYEE = "employee";
+  /** Floor/ceiling for temporary supply price event multipliers. */
+  const SUPPLY_MULT_MIN = 0.5;
+  const SUPPLY_MULT_MAX = 1.5;
 
   const PRODUCTS = ["juice", "cocoa", "burger", "soup"];
 
@@ -215,6 +223,16 @@
         soup: 3.5,
       },
       lastDayReport: null,
+      /**
+       * Phase 15 event modifiers — always recoverable (temporary / rehire).
+       * supplyPriceMult: scales UNIT_PRICES while supplyPriceDaysLeft > 0.
+       * demandMult: scales Sell Day foot traffic once, then clears.
+       * eventBanner: { message, tone: "good"|"bad"|"neutral", day } | null.
+       */
+      supplyPriceMult: 1,
+      supplyPriceDaysLeft: 0,
+      demandMult: 1,
+      eventBanner: null,
     };
   }
 
@@ -374,6 +392,79 @@
         " stands. Staff every stand (you may run one; hire for the rest) before Sell Day. Cash left: $" +
         state.cash.toFixed(2) +
         ". Inventory stays shared.",
+    };
+  }
+
+  /** True when the player owns 2+ stands (may sell one and keep ≥1). */
+  function canSellStand(state) {
+    return standCount(state) >= 2;
+  }
+
+  /**
+   * Sell a stand for STAND_SELL_PRICE ($10). Must keep at least one stand.
+   * Defaults to the active stand when standId is omitted.
+   * Clears activeStandId / player assignment when that stand is sold.
+   */
+  function sellStand(state, standId) {
+    const count = standCount(state);
+    if (count < 1) {
+      return { ok: false, message: "You do not own a stand to sell." };
+    }
+    if (count < 2) {
+      return {
+        ok: false,
+        message:
+          "You must keep at least one stand. Selling your last stand is not allowed.",
+      };
+    }
+
+    const id =
+      typeof standId === "string" && standId
+        ? standId
+        : state.activeStandId;
+    const stand = findStand(state, id);
+    if (!stand) {
+      return { ok: false, message: "Unknown stand." };
+    }
+
+    const wasPlayerRun = stand.staffedBy === STAFF_PLAYER;
+    state.stands = state.stands.filter(function (s) {
+      return s.id !== stand.id;
+    });
+    state.cash = +(Number(state.cash) + STAND_SELL_PRICE).toFixed(2);
+
+    if (
+      !state.activeStandId ||
+      state.activeStandId === stand.id ||
+      !state.stands.some(function (s) {
+        return s.id === state.activeStandId;
+      })
+    ) {
+      state.activeStandId = state.stands[0].id;
+    }
+
+    return {
+      ok: true,
+      stand,
+      price: STAND_SELL_PRICE,
+      message:
+        "Sold " +
+        stand.name +
+        " for $" +
+        STAND_SELL_PRICE.toFixed(2) +
+        ". Cash: $" +
+        state.cash.toFixed(2) +
+        ". You still own " +
+        state.stands.length +
+        " stand" +
+        (state.stands.length === 1 ? "" : "s") +
+        "." +
+        (wasPlayerRun
+          ? " You are no longer assigned to the sold stand."
+          : "") +
+        (standCount(state) >= 2
+          ? " Keep every remaining stand staffed before Sell Day."
+          : " With one stand left, staffing is optional again."),
     };
   }
 
@@ -797,6 +888,48 @@
 
     const extraStandUnlockNotified = !!raw.extraStandUnlockNotified;
 
+    let supplyPriceMult = Number(raw.supplyPriceMult);
+    if (!Number.isFinite(supplyPriceMult) || supplyPriceMult <= 0) {
+      supplyPriceMult = 1;
+    }
+    supplyPriceMult = Math.min(
+      SUPPLY_MULT_MAX,
+      Math.max(SUPPLY_MULT_MIN, supplyPriceMult)
+    );
+
+    let supplyPriceDaysLeft = Number(raw.supplyPriceDaysLeft);
+    if (!Number.isFinite(supplyPriceDaysLeft) || supplyPriceDaysLeft < 0) {
+      supplyPriceDaysLeft = 0;
+    } else {
+      supplyPriceDaysLeft = Math.floor(supplyPriceDaysLeft);
+    }
+    if (supplyPriceDaysLeft === 0) supplyPriceMult = 1;
+
+    let demandMult = Number(raw.demandMult);
+    if (!Number.isFinite(demandMult) || demandMult <= 0) demandMult = 1;
+    demandMult = Math.min(2, Math.max(0.5, demandMult));
+
+    let eventBanner = null;
+    if (raw.eventBanner && typeof raw.eventBanner === "object") {
+      const msg =
+        typeof raw.eventBanner.message === "string"
+          ? raw.eventBanner.message.trim()
+          : "";
+      if (msg) {
+        const tone =
+          raw.eventBanner.tone === "good" ||
+          raw.eventBanner.tone === "bad" ||
+          raw.eventBanner.tone === "neutral"
+            ? raw.eventBanner.tone
+            : "neutral";
+        const day =
+          Number.isFinite(raw.eventBanner.day) && raw.eventBanner.day >= 1
+            ? Math.floor(raw.eventBanner.day)
+            : null;
+        eventBanner = { message: msg, tone: tone, day: day };
+      }
+    }
+
     return {
       day: Number.isFinite(raw.day) && raw.day >= 1 ? Math.floor(raw.day) : 1,
       cash: Number.isFinite(raw.cash) ? raw.cash : base.cash,
@@ -813,6 +946,10 @@
         raw.lastDayReport && typeof raw.lastDayReport === "object"
           ? raw.lastDayReport
           : null,
+      supplyPriceMult,
+      supplyPriceDaysLeft,
+      demandMult,
+      eventBanner,
     };
   }
 
@@ -854,8 +991,69 @@
     };
   }
 
-  function unitPrice(key) {
-    return UNIT_PRICES[key] ?? 0;
+  /**
+   * Effective buy price for an ingredient.
+   * When `state` is passed, applies temporary supplyPriceMult from events.
+   */
+  function unitPrice(key, state) {
+    const base = UNIT_PRICES[key] ?? 0;
+    if (!state) return base;
+    let mult = Number(state.supplyPriceMult);
+    if (!Number.isFinite(mult) || mult <= 0) mult = 1;
+    if ((Number(state.supplyPriceDaysLeft) || 0) <= 0) mult = 1;
+    mult = Math.min(SUPPLY_MULT_MAX, Math.max(SUPPLY_MULT_MIN, mult));
+    return +(base * mult).toFixed(4);
+  }
+
+  /** Current demand multiplier for Sell Day (foot-traffic events). */
+  function demandMultiplier(state) {
+    const mult = Number(state && state.demandMult);
+    if (!Number.isFinite(mult) || mult <= 0) return 1;
+    return Math.min(2, Math.max(0.5, mult));
+  }
+
+  /** Clear one-shot demand multiplier after it was used on a Sell Day. */
+  function clearDemandMultiplier(state) {
+    state.demandMult = 1;
+  }
+
+  /**
+   * Tick temporary supply-price modifiers at the start of a new day.
+   * Call before rolling a new morning event.
+   */
+  function tickSupplyPriceModifiers(state) {
+    let days = Number(state.supplyPriceDaysLeft) || 0;
+    if (days <= 0) {
+      state.supplyPriceMult = 1;
+      state.supplyPriceDaysLeft = 0;
+      return;
+    }
+    days -= 1;
+    state.supplyPriceDaysLeft = days;
+    if (days <= 0) {
+      state.supplyPriceMult = 1;
+      state.supplyPriceDaysLeft = 0;
+    }
+  }
+
+  function setEventBanner(state, message, tone, day) {
+    if (!message || typeof message !== "string") {
+      state.eventBanner = null;
+      return;
+    }
+    const t =
+      tone === "good" || tone === "bad" || tone === "neutral"
+        ? tone
+        : "neutral";
+    state.eventBanner = {
+      message: message,
+      tone: t,
+      day: Number.isFinite(day) ? Math.floor(day) : state.day || null,
+    };
+  }
+
+  function clearEventBanner(state) {
+    state.eventBanner = null;
   }
 
   function activeRecipe(state) {
@@ -919,17 +1117,17 @@
     return cart;
   }
 
-  function cartLineCost(key, qty) {
-    return +(unitPrice(key) * qty).toFixed(2);
+  function cartLineCost(key, qty, state) {
+    return +(unitPrice(key, state) * qty).toFixed(2);
   }
 
   /** Total cash needed for a cart object of ingredient → qty. */
-  function cartTotal(cart) {
+  function cartTotal(cart, state) {
     if (!cart || typeof cart !== "object") return 0;
     let total = 0;
     for (const key of INVENTORY_KEYS) {
       const qty = Number(cart[key]) || 0;
-      if (qty > 0) total += unitPrice(key) * qty;
+      if (qty > 0) total += unitPrice(key, state) * qty;
     }
     return +total.toFixed(2);
   }
@@ -959,7 +1157,7 @@
       };
     }
 
-    const price = unitPrice(key);
+    const price = unitPrice(key, state);
     const cost = +(price * amount).toFixed(2);
     if (cost > state.cash + 1e-9) {
       const labels = inventoryLabels();
@@ -1023,11 +1221,11 @@
         key,
         label: labels[key],
         qty,
-        cost: cartLineCost(key, qty),
+        cost: cartLineCost(key, qty, state),
       });
     }
 
-    const total = cartTotal(cart);
+    const total = cartTotal(cart, state);
     if (total > state.cash + 1e-9) {
       return {
         ok: false,
@@ -1080,8 +1278,11 @@
     MAX_STANDS,
     EXTRA_STAND_UNLOCK_CASH,
     STAND_EMPLOYEE_WAGE,
+    STAND_SELL_PRICE,
     STAFF_PLAYER,
     STAFF_EMPLOYEE,
+    SUPPLY_MULT_MIN,
+    SUPPLY_MULT_MAX,
     PRODUCTS,
     JUICE_KEYS,
     COCOA_KEYS,
@@ -1103,6 +1304,8 @@
     setActiveStand,
     consumeExtraStandUnlockNotify,
     buyStand,
+    canSellStand,
+    sellStand,
     findStand,
     playerStandId,
     employeeCount,
@@ -1120,6 +1323,11 @@
     saveInstructionsHidden,
     inventoryLabels,
     unitPrice,
+    demandMultiplier,
+    clearDemandMultiplier,
+    tickSupplyPriceModifiers,
+    setEventBanner,
+    clearEventBanner,
     productLabel,
     recipeKeysFor,
     cupKeyFor,
