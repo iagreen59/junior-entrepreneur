@@ -512,11 +512,7 @@
       global.GameState.isRestaurantMode &&
       global.GameState.isRestaurantMode(state);
     const owns = global.GameState.ownsStand(state);
-    const standEl = document.getElementById("stat-stand");
-    const locationLabel = document.getElementById("stat-location-label");
-    if (locationLabel) {
-      locationLabel.textContent = isRestaurant ? "Restaurant" : "Stand";
-    }
+    const panelTitle = document.getElementById("locations-panel-title");
     const gate = document.getElementById("stand-gate");
     const gateCopy = document.getElementById("stand-gate-copy");
     const buyBtn = document.getElementById("btn-buy-stand");
@@ -534,24 +530,14 @@
     const active = global.GameState.getActiveStand(state);
     const sellPrice = Number(global.GameState.STAND_SELL_PRICE) || 10;
 
-    if (standEl) {
+    if (panelTitle) {
       if (isRestaurant) {
-        const r =
-          global.GameState.getActiveRestaurant &&
-          global.GameState.getActiveRestaurant(state);
-        standEl.textContent = r && r.name ? r.name : "Restaurant";
+        panelTitle.textContent = "Your restaurants";
       } else if (owns) {
-        if (count === 1) {
-          standEl.textContent = active && active.name ? active.name : "Owned";
-        } else {
-          standEl.textContent =
-            count +
-            "/" +
-            max +
-            (active && active.name ? " · " + active.name : "");
-        }
+        panelTitle.textContent =
+          count === 1 ? "Your stand" : "Your stands";
       } else {
-        standEl.textContent = "None yet";
+        panelTitle.textContent = "Your stand";
       }
     }
 
@@ -690,6 +676,83 @@
     renderRestaurant(state);
     renderLocationPnl(state);
     renderStaff(state);
+    renderLocationsSummary(state);
+  }
+
+  function renderLocationsSummary(state) {
+    const summaryEl = document.getElementById("locations-summary");
+    if (!summaryEl) return;
+
+    const isRestaurant =
+      global.GameState.isRestaurantMode &&
+      global.GameState.isRestaurantMode(state);
+    const owns = global.GameState.ownsStand(state);
+
+    if (isRestaurant) {
+      const restaurants = Array.isArray(state.restaurants)
+        ? state.restaurants
+        : [];
+      const count = restaurants.length;
+      const employees = global.GameState.employeeCount(state);
+      const active =
+        global.GameState.getActiveRestaurant &&
+        global.GameState.getActiveRestaurant(state);
+      let text =
+        count +
+        " restaurant" +
+        (count === 1 ? "" : "s") +
+        " · " +
+        employees +
+        " employee" +
+        (employees === 1 ? "" : "s");
+      if (active && active.name) {
+        text += " · " + active.name;
+      }
+      summaryEl.textContent = text;
+      return;
+    }
+
+    if (!owns) {
+      summaryEl.textContent =
+        "No stand yet · Buy one for $" +
+        Number(global.GameState.STAND_COST).toFixed(0);
+      return;
+    }
+
+    const count = global.GameState.standCount(state);
+    const employees = global.GameState.employeeCount(state);
+    const active = global.GameState.getActiveStand(state);
+    const playerStandId = global.GameState.playerStandId(state);
+    const parts = [
+      count + " stand" + (count === 1 ? "" : "s"),
+      employees +
+        " employee" +
+        (employees === 1 ? "" : "s"),
+    ];
+
+    if (playerStandId) {
+      const playerStand = state.stands.find(function (s) {
+        return s.id === playerStandId;
+      });
+      parts.push(
+        "You at " + (playerStand && playerStand.name ? playerStand.name : "one stand")
+      );
+    } else if (count === 1 && employees === 0) {
+      parts.push("You running it");
+    } else if (global.GameState.staffingRequired(state)) {
+      const check = global.GameState.staffingCheck(state);
+      if (!check.ok) {
+        parts.push("Understaffed");
+      } else {
+        parts.push("All employee-run");
+      }
+    }
+
+    if (active && active.name && count > 1) {
+      parts.push("Viewing " + active.name);
+    }
+
+    summaryEl.textContent = parts.join(" · ");
   }
 
   function renderRestaurant(state) {
@@ -1079,7 +1142,9 @@
     }
 
     list.innerHTML = "";
-    for (const stand of state.stands) {
+    const activeStand = global.GameState.getActiveStand(state);
+    const standsToShow = activeStand ? [activeStand] : state.stands.slice(0, 1);
+    for (const stand of standsToShow) {
       const li = document.createElement("li");
       li.className = "staff-row";
       li.dataset.standId = stand.id;
@@ -1326,6 +1391,29 @@
     hint.hidden = !text;
   }
 
+  function renderLocationsVisibility() {
+    const panel = document.getElementById("locations-panel");
+    const details = document.getElementById("locations-details");
+    const summary = document.getElementById("locations-summary");
+    const reveal = document.getElementById("locations-reveal");
+    const header = panel ? panel.querySelector(".panel-header") : null;
+    const hidden = global.GameState.loadLocationsHidden
+      ? global.GameState.loadLocationsHidden()
+      : false;
+    if (panel) panel.classList.toggle("is-collapsed", !!hidden);
+    if (details) details.hidden = !!hidden;
+    if (summary) summary.hidden = !hidden;
+    if (header) header.hidden = !!hidden;
+    if (reveal) reveal.hidden = !hidden;
+  }
+
+  function setLocationsHidden(hidden) {
+    if (global.GameState.saveLocationsHidden) {
+      global.GameState.saveLocationsHidden(!!hidden);
+    }
+    renderLocationsVisibility();
+  }
+
   function renderInventoryVisibility() {
     const section = document.getElementById("inventory-section");
     const reveal = document.getElementById("inventory-reveal");
@@ -1432,6 +1520,7 @@
     renderStand(state);
     renderEventBanner(state);
     renderInstructions();
+    renderLocationsVisibility();
     renderMenuToggles(state);
     renderProductPicker(state);
     fillRecipeForm(state);
@@ -1726,6 +1815,11 @@
     }
   }
 
+  function minimizeCustomerDay() {
+    const day = document.getElementById("customer-day");
+    if (day) day.hidden = true;
+  }
+
   function hideCustomerDay(state) {
     const day = document.getElementById("customer-day");
     const summary = document.getElementById("customer-summary");
@@ -1787,6 +1881,7 @@
     renderInstructions,
     setInstructionsHidden,
     setInventoryHidden,
+    setLocationsHidden,
     setBusinessTab,
     setDailySummaryHidden,
     showDailySummary,
@@ -1797,5 +1892,6 @@
     showCustomerSummary,
     hideCustomerSummary,
     hideCustomerDay,
+    minimizeCustomerDay,
   };
 })(window);

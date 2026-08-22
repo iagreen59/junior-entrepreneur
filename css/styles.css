@@ -111,15 +111,43 @@ body {
   grid-column: 1 / -1;
 }
 
-.stat-weather[data-weather="hot"] {
+.map-weather-section {
+  margin-bottom: 1.25rem;
+}
+
+.map-weather-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border-radius: 1.1rem;
+  border: 1px solid var(--stroke);
+  overflow: hidden;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+.map-weather-stack .weather-card {
+  margin: 0;
+  border-radius: 0;
+  border: none;
+  border-bottom: 1px solid var(--stroke);
+}
+
+.map-weather-stack .stand-map {
+  border-radius: 0;
+  border: none;
+}
+
+.weather-card.stat-weather[data-weather="hot"] {
   background: linear-gradient(135deg, #ffe08a 0%, #ffc14d 100%);
 }
 
-.stat-weather[data-weather="cold"] {
+.stat-weather[data-weather="cold"],
+.weather-card.stat-weather[data-weather="cold"] {
   background: linear-gradient(135deg, #d7efff 0%, #b7d8f5 100%);
 }
 
-.stat-weather[data-weather="mild"] {
+.stat-weather[data-weather="mild"],
+.weather-card.stat-weather[data-weather="mild"] {
   background: var(--cream-juice);
 }
 
@@ -168,8 +196,13 @@ body {
   margin-top: 0.4rem;
 }
 
+.weather-card {
+  padding: 0.85rem 1rem;
+}
+
 .instructions-reveal,
-.inventory-reveal {
+.inventory-reveal,
+.locations-reveal {
   margin: 0 0 1.25rem;
   text-align: center;
 }
@@ -191,11 +224,11 @@ body {
 }
 
 .stand-gate {
-  margin-bottom: 1.25rem;
-  padding: 1.1rem 1.15rem;
+  margin: 0;
+  padding: 1rem 1.05rem;
   background: linear-gradient(145deg, #fff3c4 0%, #ffe08a 55%, #f4c430 120%);
   border: 1px solid rgba(240, 154, 26, 0.35);
-  border-radius: 1.1rem;
+  border-radius: 0.85rem;
   text-align: center;
   animation: stand-gate-pulse 2.4s ease-in-out infinite;
 }
@@ -222,6 +255,17 @@ body {
 }
 
 .stand-manage {
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+}
+
+.stand-manage[hidden] {
+  display: none !important;
+}
+
+.locations-panel {
   margin-bottom: 1.25rem;
   padding: 1rem 1.1rem;
   border-radius: 1.1rem;
@@ -233,8 +277,37 @@ body {
   );
 }
 
-.stand-manage[hidden] {
+.locations-panel.is-collapsed {
+  padding: 0.75rem 1rem;
+}
+
+.locations-summary {
+  margin: 0;
+  color: var(--ink);
+  font-size: 0.92rem;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.locations-summary[hidden] {
   display: none !important;
+}
+
+.locations-details[hidden] {
+  display: none !important;
+}
+
+.locations-details {
+  display: grid;
+  gap: 1rem;
+}
+
+.locations-subtitle {
+  margin: 0 0 0.45rem;
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--leaf-deep);
 }
 
 .stand-manage-lead {
@@ -363,9 +436,9 @@ body {
 }
 
 .staff-panel {
-  margin-bottom: 1.25rem;
-  padding: 1rem 1.1rem;
-  border-radius: 1.1rem;
+  margin: 0;
+  padding: 0.85rem 0.95rem;
+  border-radius: 0.85rem;
   border: 1px solid var(--stroke);
   background: linear-gradient(
     160deg,
@@ -1271,6 +1344,14 @@ body {
   color: var(--ink-soft);
 }
 
+.customer-day-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem 0.75rem;
+}
+
 .customer-stage {
   display: flex;
   flex-wrap: wrap;
@@ -1440,11 +1521,10 @@ body {
 .restaurant-unlock-banner[hidden] { display: none !important; }
 
 .restaurant-manage {
-  margin-bottom: 1.1rem;
-  padding: 0.9rem 1rem 1rem;
-  border-radius: 1rem;
-  border: 1px solid var(--stroke);
-  background: linear-gradient(180deg, #fffaf2, #f3ebe0);
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
 }
 .restaurant-manage[hidden] { display: none !important; }
 .restaurant-manage-lead {
