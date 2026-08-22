@@ -14,6 +14,8 @@ Then visit `http://localhost:8000`.
 
 **Play on GitHub Pages:** https://iagreen59.github.io/junior-entrepreneur/
 
+Static assets use `?v=` cache busting on each release. If the live site looks stale after a merge, check the repo **Actions** tab for **Deploy to GitHub Pages** and confirm **Settings → Pages → Build and deployment** uses **GitHub Actions** as the source.
+
 No build step or install is required — open the HTML file and play.
 
 ## Cursor workflow
