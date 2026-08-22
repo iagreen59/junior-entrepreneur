@@ -59,6 +59,11 @@
             before you can Sell Day.
           </li>
           <li>
+            When cash is over <strong>$100</strong>, you may <strong>Add stand ($20)</strong>
+            up to <strong>4</strong> stands. Use the dropdown to switch which stand you are
+            managing. All stands share one supply bag.
+          </li>
+          <li>
             Check today’s <strong>Weather</strong>, toggle today’s <strong>Menu</strong>,
             then pick which item to edit (Juice, Hot cocoa, Burger, or Soup).
           </li>
@@ -85,6 +90,33 @@
         <button type="button" class="btn btn-primary" id="btn-buy-stand">
           Buy stand ($20)
         </button>
+      </section>
+
+      <section class="stand-manage" id="stand-manage" hidden aria-label="Manage stands">
+        <h2 class="section-title">Your stands</h2>
+        <p class="stand-manage-lead" id="stand-manage-lead">
+          Pick which stand you are managing. Inventory is shared across all stands.
+        </p>
+        <p class="stand-unlock-banner" id="stand-unlock-banner" hidden role="status">
+          Cash over $100 — you can add another stand for $20 (max 4).
+        </p>
+        <div class="stand-manage-row">
+          <label class="stand-select-label" for="stand-select">
+            Active stand
+            <select id="stand-select" class="stand-select" aria-label="Switch active stand"></select>
+          </label>
+          <button type="button" class="btn btn-primary" id="btn-add-stand" hidden>
+            Add stand ($20)
+          </button>
+        </div>
+      </section>
+
+      <section class="stand-map-section" id="stand-map-section" aria-label="Neighborhood map">
+        <h2 class="section-title">Neighborhood map</h2>
+        <p class="stand-map-lead">
+          Cartoon map of your corner. Owned stands light up; empty pads wait for Add stand.
+        </p>
+        <div class="stand-map" id="stand-map"></div>
       </section>
 
       <section class="menu-today" id="menu-today" aria-label="Today's menu">
@@ -165,7 +197,7 @@
       <section class="morning" aria-label="Morning checklist">
         <h2 class="section-title">Before you sell</h2>
         <ol class="morning-list" id="morning-list">
-          <li>Own a <strong>stand</strong> (buy one if you haven’t yet).</li>
+          <li>Own a <strong>stand</strong> (buy one if you haven’t yet; add more when cash &gt; $100).</li>
           <li>Check today’s <strong>Weather</strong> (hot / mild / cold).</li>
           <li>Set <strong>Today’s menu</strong> toggles (at least one item on).</li>
           <li>For each offered item: check <strong>Recipe</strong>, <strong>Buy</strong> stock, set <strong>Price</strong>.</li>
@@ -174,7 +206,8 @@
       </section>
 
       <section class="inventory" aria-label="Inventory">
-        <h2 class="section-title">Inventory</h2>
+        <h2 class="section-title">Shared inventory</h2>
+        <p class="inventory-lead">One supply bag for every stand.</p>
         <ul class="inventory-list" id="inventory-list"></ul>
       </section>
 
@@ -882,6 +915,7 @@
     <script src="js/recipe.js"></script>
     <script src="js/economy.js"></script>
     <script src="js/customers.js"></script>
+    <script src="js/map.js"></script>
     <script src="js/ui.js"></script>
     <script src="js/main.js"></script>
   </body>

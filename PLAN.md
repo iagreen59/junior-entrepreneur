@@ -74,7 +74,7 @@ Future agents: skip anything already checked.
 - [x] Phase 10 — Hot/cold cups + recipe yield and COGS
 - [x] Phase 11 — Four-item menu + daily offers + per-item prices
 - [x] Phase 12 — Multi-item Sell Day + purchase feedback icons
-- [ ] Phase 13 — Multi-stand unlock, selector, map
+- [x] Phase 13 — Multi-stand unlock, selector, map
 - [ ] Phase 14 — Employees for multi-stand
 - [ ] Phase 15 — Sell stands + random events
 - [ ] Phase 16 — First restaurant (rent + per-location P&L)
@@ -581,7 +581,7 @@ One Sell Day serves **all offered menu items**. Customers choose among offered i
 
 ## Phase 13 — Multi-stand unlock, selector, shared inventory, map
 
-**Status:** not started — start only after Phase 12 is checked done
+**Status:** done
 
 ### Goal
 
@@ -600,12 +600,12 @@ When **cash > $100**, notify the player and allow **Add stand ($20)** up to **4*
 
 ### Play-test checklist
 
-- [ ] Unlock / notify when cash > $100
-- [ ] Buy 2nd–4th stand at $20 each; cannot exceed 4
-- [ ] Dropdown switches active stand
-- [ ] Inventory shared across stands
-- [ ] Map updates with owned stands
-- [ ] **Preview:** screenshots of stand dropdown, Add flow, and map — attach to the PR
+- [x] Unlock / notify when cash > $100
+- [x] Buy 2nd–4th stand at $20 each; cannot exceed 4
+- [x] Dropdown switches active stand
+- [x] Inventory shared across stands
+- [x] Map updates with owned stands
+- [x] **Preview:** screenshots of stand dropdown, Add flow, and map — attach to the PR
 
 ### Out of scope
 
