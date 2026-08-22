@@ -73,7 +73,7 @@ Future agents: skip anything already checked.
 - [x] Phase 9 — Starting cash, first stand, hideable instructions
 - [x] Phase 10 — Hot/cold cups + recipe yield and COGS
 - [x] Phase 11 — Four-item menu + daily offers + per-item prices
-- [ ] Phase 12 — Multi-item Sell Day + purchase feedback icons
+- [x] Phase 12 — Multi-item Sell Day + purchase feedback icons
 - [ ] Phase 13 — Multi-stand unlock, selector, map
 - [ ] Phase 14 — Employees for multi-stand
 - [ ] Phase 15 — Sell stands + random events
@@ -542,7 +542,7 @@ Add **burger** and **soup** with the locked unique ingredient lists. Player enab
 
 ## Phase 12 — Multi-item Sell Day + richer purchase/feedback icons
 
-**Status:** not started — start only after Phase 11 is checked done
+**Status:** done
 
 ### Goal
 
@@ -565,12 +565,12 @@ One Sell Day serves **all offered menu items**. Customers choose among offered i
 
 ### Play-test checklist
 
-- [ ] Two or more offered items → mixed purchases in one Sell Day
-- [ ] Weather skews burger/juice vs soup/cocoa as designed
-- [ ] Icons show purchased item and/or leave reason + reaction
-- [ ] Summary aggregates by item and matches economy
-- [ ] Empty menu cannot start Sell Day
-- [ ] **Preview:** short Sell Day video + summary screenshot — attach to the PR
+- [x] Two or more offered items → mixed purchases in one Sell Day
+- [x] Weather skews burger/juice vs soup/cocoa as designed
+- [x] Icons show purchased item and/or leave reason + reaction
+- [x] Summary aggregates by item and matches economy
+- [x] Empty menu cannot start Sell Day
+- [x] **Preview:** short Sell Day video + summary screenshot — attach to the PR
 
 ### Out of scope
 

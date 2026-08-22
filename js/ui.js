@@ -4,10 +4,12 @@
  * Phase 9: stand ownership gate + hideable instructions panel.
  * Phase 10: coldCups / hotCups fields; recipe yield + COGS display.
  * Phase 11: four products + daily menuOffered toggles; food recipes/prices.
+ * Phase 12: multi-item Sell Day chips (bought item + reaction) and
+ * per-item customer summary aggregates.
  */
 (function (global) {
   const MORNING_COPY =
-    "Good morning. Buy your stand if needed, check the weather, set today’s menu, pick an item → Recipe → Buy → Price → Sell Day.";
+    "Good morning. Buy your stand if needed, check the weather, set today’s menu, edit recipes & prices for offered items, Buy stock, then Sell Day.";
 
   const PANEL_IDS = {
     recipe: "panel-recipe",
@@ -267,12 +269,12 @@
     if (hint) {
       if (on.length === 0) {
         hint.textContent =
-          "No items on today’s menu yet — toggle at least one before multi-item Sell Day arrives.";
+          "No items on today’s menu — toggle at least one before Sell Day.";
       } else {
         hint.textContent =
           "Offered today: " +
           on.join(", ") +
-          ". Sell Day still sells the Edit / sell item for now.";
+          ". Sell Day serves every offered item; customers choose among them.";
       }
     }
   }
@@ -307,9 +309,11 @@
       }
       const onMenu = global.GameState.isMenuOffered(state, product);
       hint.textContent =
-        "Editing / selling " +
+        "Editing " +
         global.GameState.productLabel(product) +
-        (onMenu ? " (on today’s menu). " : " (off today’s menu). ") +
+        (onMenu
+          ? " (on today’s menu — Sell Day can sell it). "
+          : " (off today’s menu — not sold until you toggle it on). ") +
         fit;
     }
 
@@ -456,48 +460,77 @@
       );
     }
 
-    const product = activeProduct(state);
-    const item = global.GameState.productLabel(product);
-    const weather = state.weather || "mild";
-    const stockCups = global.GameEconomy.maxCupsFromStock(state, product);
-    const price = Number(global.GameState.activePrice(state));
-    const favor = global.GameWeather
-      ? global.GameWeather.favorsProduct(weather, product)
-      : null;
-    const unit =
-      product === "burger" || product === "soup"
-        ? stockCups === 1
-          ? "serving"
-          : "servings"
-        : stockCups === 1
-          ? "cup"
-          : "cups";
+    const offered = global.GameEconomy.offeredProducts
+      ? global.GameEconomy.offeredProducts(state)
+      : global.GameState.PRODUCTS.filter(function (p) {
+          return global.GameState.isMenuOffered(state, p);
+        });
 
-    if (stockCups <= 0) {
+    if (offered.length === 0) {
+      return "Toggle at least one item on Today’s menu before Sell Day.";
+    }
+
+    const weather = state.weather || "mild";
+    let totalStock = 0;
+    const stocked = [];
+    const unpriced = [];
+
+    for (const product of offered) {
+      const stock = global.GameEconomy.maxCupsFromStock(state, product);
+      totalStock += stock;
+      if (stock > 0) stocked.push(product);
+      const price = Number(
+        state.prices && state.prices[product] != null
+          ? state.prices[product]
+          : 0
+      );
+      if (!Number.isFinite(price) || price <= 0) unpriced.push(product);
+    }
+
+    if (stocked.length === 0) {
       return (
-        "No " +
-        item +
-        " ready — buy ingredients that match that recipe first."
+        "No stock for today’s menu (" +
+        offered
+          .map(function (p) {
+            return global.GameState.productLabel(p);
+          })
+          .join(", ") +
+        ") — buy ingredients first."
       );
     }
-    if (!Number.isFinite(price) || price <= 0) {
-      return "Set a sell price for " + item + " before you open.";
+
+    if (unpriced.length === offered.length) {
+      return "Set a sell price above $0 for at least one offered item.";
     }
 
+    const labels = stocked.map(function (p) {
+      return global.GameState.productLabel(p);
+    });
     let fit = "";
-    if (favor === true) fit = " Weather match.";
-    if (favor === false) fit = " Weather mismatch — expect fewer buyers.";
+    const favors = stocked.filter(function (p) {
+      return global.GameWeather
+        ? global.GameWeather.favorsProduct(weather, p) === true
+        : false;
+    });
+    if (favors.length) {
+      fit =
+        " " +
+        global.GameWeather.label(weather) +
+        " weather favors " +
+        favors
+          .map(function (p) {
+            return global.GameState.productLabel(p);
+          })
+          .join(" / ") +
+        ".";
+    }
 
     return (
-      "Ready for about " +
-      stockCups +
-      " " +
-      item +
-      " " +
-      unit +
-      " at " +
-      formatMoney(price) +
-      "." +
+      "Menu ready: " +
+      labels.join(", ") +
+      " (~" +
+      totalStock +
+      " servings in stock)." +
       fit
     );
   }
@@ -596,6 +629,17 @@
       svg.appendChild(el);
     }
 
+    function circle(cx, cy, r, fill) {
+      const el = document.createElementNS(ns, "circle");
+      el.setAttribute("cx", String(cx));
+      el.setAttribute("cy", String(cy));
+      el.setAttribute("r", String(r));
+      el.setAttribute("fill", fill || "none");
+      el.setAttribute("stroke", stroke);
+      el.setAttribute("stroke-width", "2");
+      svg.appendChild(el);
+    }
+
     if (kind === "price") {
       path("M12 3v18");
       path("M16 8a3 3 0 0 0-3-2h-2a3 3 0 0 0 0 6h2a3 3 0 0 1 0 6h-2a3 3 0 0 1-3-2");
@@ -619,6 +663,30 @@
       path(
         "M7 13V4H4a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h3zm3-9h6.5a2 2 0 0 1 1.9 1.4l2 6A2 2 0 0 1 18.5 14H14v4a2 2 0 0 1-2 2l-2-7V4z"
       );
+    } else if (kind === "juice") {
+      // Tall cold cup with straw.
+      path("M8 7h8l-1 12a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2L8 7z");
+      path("M9 7V5h6");
+      path("M14 3v5");
+      path("M10 12h4");
+    } else if (kind === "cocoa") {
+      // Mug with steam.
+      path("M6 9h10v7a3 3 0 0 1-3 3H9a3 3 0 0 1-3-3V9z");
+      path("M16 11h2a2 2 0 0 1 0 4h-2");
+      path("M9 5c0 1 .5 1.5.5 2.5");
+      path("M12 4.5c0 1 .5 1.5.5 2.5");
+    } else if (kind === "burger") {
+      // Layered burger.
+      path("M5 11h14v2H5z");
+      path("M6 9c0-2.5 2.5-4 6-4s6 1.5 6 4H6z");
+      path("M6 15h12c0 2-2.5 3.5-6 3.5S6 17 6 15z");
+      circle(9, 12, 0.6, "currentColor");
+      circle(15, 12, 0.6, "currentColor");
+    } else if (kind === "soup") {
+      // Bowl with spoon.
+      path("M4 11h16a6 6 0 0 1-6 6h-4a6 6 0 0 1-6-6z");
+      path("M8 11c0-2 1.5-3.5 4-3.5");
+      path("M16 6l3-2 1 1-2 3");
     } else {
       path("M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z");
     }
@@ -655,21 +723,27 @@
     chip.className =
       "customer-chip " + (event.outcome === "buy" ? "is-buy" : "is-leave");
 
-    let kind = "like";
     let label = "Bought";
     if (event.outcome === "leave") {
-      kind = event.reason || "price";
+      chip.appendChild(svgIcon(event.reason || "price"));
       label = global.GameCustomers
         ? global.GameCustomers.leaveReasonLabel(event.reason)
         : "Left";
     } else {
-      kind = event.reaction || "like";
-      label = global.GameCustomers
+      // Bought item icon + reaction icon (Phase 12).
+      if (event.product) {
+        chip.appendChild(svgIcon(event.product));
+      }
+      chip.appendChild(svgIcon(event.reaction || "like"));
+      const itemName = global.GameCustomers
+        ? global.GameCustomers.productShortLabel(event.product)
+        : "Item";
+      const reaction = global.GameCustomers
         ? global.GameCustomers.buyReactionLabel(event.reaction)
         : "Bought";
+      label = itemName + " · " + reaction;
     }
 
-    chip.appendChild(svgIcon(kind));
     const text = document.createElement("span");
     text.textContent = label;
     chip.appendChild(text);
@@ -691,16 +765,33 @@
     if (progress) progress.textContent = "Day complete";
     if (summaryEl) summaryEl.hidden = false;
     if (list) {
-      const rows = [
-        ["Bought", summary.bought],
+      const rows = [];
+      const byProduct =
+        (summary && summary.boughtByProduct) ||
+        (plan && plan.soldByProduct) ||
+        {};
+      for (const product of global.GameState.PRODUCTS) {
+        const qty = byProduct[product] | 0;
+        if (qty > 0) {
+          rows.push([
+            "Bought " +
+              (global.GameCustomers
+                ? global.GameCustomers.productShortLabel(product)
+                : product),
+            qty,
+          ]);
+        }
+      }
+      rows.push(
+        ["Bought total", summary.bought],
         ["Happy", summary.happy],
         ["Liked", summary.likes],
         ["Disliked", summary.dislikes],
         ["Left (price)", summary.leftPrice],
         ["Left (stock)", summary.leftStock],
         ["Left (weather)", summary.leftWeather],
-        ["Left total", summary.left],
-      ];
+        ["Left total", summary.left]
+      );
       list.innerHTML = "";
       for (const [name, qty] of rows) {
         const li = document.createElement("li");

@@ -853,6 +853,10 @@ body {
   flex-shrink: 0;
 }
 
+.customer-chip .customer-icon + .customer-icon {
+  margin-left: -0.1rem;
+}
+
 .summary-list {
   list-style: none;
   margin: 0;
