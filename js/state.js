@@ -39,6 +39,7 @@
   const STORAGE_KEY = "junior-entrepreneur-v1";
   const INSTRUCTIONS_HIDDEN_KEY = "junior-entrepreneur-instructions-hidden";
   const INVENTORY_HIDDEN_KEY = "junior-entrepreneur-inventory-hidden";
+  const LOCATIONS_HIDDEN_KEY = "junior-entrepreneur-locations-hidden";
 
   /** Phase 9 / 13 locked constants. */
   const STARTING_CASH = 50;
@@ -1457,6 +1458,22 @@
     }
   }
 
+  function loadLocationsHidden() {
+    try {
+      return localStorage.getItem(LOCATIONS_HIDDEN_KEY) === "1";
+    } catch {
+      return false;
+    }
+  }
+
+  function saveLocationsHidden(hidden) {
+    try {
+      localStorage.setItem(LOCATIONS_HIDDEN_KEY, hidden ? "1" : "0");
+    } catch {
+      // Ignore storage failures; UI still toggles in-session.
+    }
+  }
+
   function productLabel(product) {
     if (product === "cocoa") return "hot cocoa";
     if (product === "burger") return "burger";
@@ -2100,6 +2117,7 @@
     STORAGE_KEY,
     INSTRUCTIONS_HIDDEN_KEY,
     INVENTORY_HIDDEN_KEY,
+    LOCATIONS_HIDDEN_KEY,
     STARTING_CASH,
     STAND_COST,
     MAX_STANDS,
@@ -2187,6 +2205,8 @@
     saveInstructionsHidden,
     loadInventoryHidden,
     saveInventoryHidden,
+    loadLocationsHidden,
+    saveLocationsHidden,
     inventoryLabels,
     unitPrice,
     demandMultiplier,

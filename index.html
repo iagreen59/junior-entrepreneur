@@ -49,14 +49,23 @@
           <span class="stat-label">Cash</span>
           <span class="stat-value" id="stat-cash">$50.00</span>
         </div>
-        <div class="stat" id="stat-stand-card">
-          <span class="stat-label" id="stat-location-label">Stand</span>
-          <span class="stat-value" id="stat-stand">None yet</span>
+      </section>
+
+      <section
+        class="map-weather-section"
+        id="map-weather-section"
+        aria-label="Weather and neighborhood map"
+      >
+        <div class="map-weather-stack">
+          <div class="weather-card stat-weather" id="stat-weather-card" data-weather="mild">
+            <span class="stat-label">Weather</span>
+            <span class="stat-value" id="stat-weather">Mild</span>
+          </div>
+          <div class="stand-map" id="stand-map"></div>
         </div>
-        <div class="stat stat-weather" id="stat-weather-card">
-          <span class="stat-label">Weather</span>
-          <span class="stat-value" id="stat-weather">Mild</span>
-        </div>
+        <p class="stand-map-lead" id="stand-map-lead">
+          City map of your corner. Owned stands light up; empty pads wait for Add stand.
+        </p>
       </section>
 
       <section class="instructions" id="instructions" aria-label="How to play">
@@ -160,77 +169,106 @@
         </button>
       </p>
 
-      <section class="stand-gate" id="stand-gate" aria-label="Buy your stand">
-        <h2 class="section-title">Your stand</h2>
-        <p class="stand-gate-copy" id="stand-gate-copy">
-          You need a corner stand before customers can buy. Cost:
-          <strong>$20.00</strong>.
-        </p>
-        <button type="button" class="btn btn-primary" id="btn-buy-stand">
-          Buy stand ($20)
+      <section class="locations-panel" id="locations-panel" aria-label="Stands and staffing">
+        <div class="panel-header">
+          <h2 class="section-title" id="locations-panel-title">Your stand</h2>
+          <button
+            type="button"
+            class="btn btn-close"
+            id="btn-hide-locations"
+            aria-label="Hide stand and staff details"
+          >
+            Hide
+          </button>
+        </div>
+        <p class="locations-summary" id="locations-summary" role="status"></p>
+        <div class="locations-details" id="locations-details">
+          <div class="stand-gate" id="stand-gate" aria-label="Buy your stand">
+            <p class="stand-gate-copy" id="stand-gate-copy">
+              You need a corner stand before customers can buy. Cost:
+              <strong>$20.00</strong>.
+            </p>
+            <button type="button" class="btn btn-primary" id="btn-buy-stand">
+              Buy stand ($20)
+            </button>
+          </div>
+
+          <div class="stand-manage" id="stand-manage" hidden aria-label="Manage stands">
+            <p class="stand-manage-lead" id="stand-manage-lead">
+              Pick which stand you are managing. Inventory is shared across all stands.
+            </p>
+            <p class="stand-unlock-banner" id="stand-unlock-banner" hidden role="status">
+              Cash over $100 — you can add another stand for $20 (max 4).
+            </p>
+            <p class="restaurant-unlock-banner" id="restaurant-unlock-banner" hidden role="status">
+              4 stands and cash over $1000 — you can buy a restaurant for $400 (stands will be forfeited).
+            </p>
+            <div class="stand-manage-row">
+              <label class="stand-select-label" for="stand-select">
+                Active stand
+                <select id="stand-select" class="stand-select" aria-label="Switch active stand"></select>
+              </label>
+              <button type="button" class="btn btn-primary" id="btn-add-stand" hidden>
+                Add stand ($20)
+              </button>
+              <button type="button" class="btn btn-quiet" id="btn-sell-stand" disabled>
+                Sell stand ($10)
+              </button>
+              <button type="button" class="btn btn-primary" id="btn-buy-restaurant" hidden>
+                Buy restaurant ($400)
+              </button>
+            </div>
+          </div>
+
+          <div class="restaurant-manage" id="restaurant-manage" hidden aria-label="Manage restaurants">
+            <p class="restaurant-manage-lead" id="restaurant-manage-lead">
+              You run restaurants now. Hire 2–4 employees at each (you cannot staff them yourself).
+              Shared menu and inventory continue. Daily rent $18 each + $8 per employee on Sell Day.
+            </p>
+            <p class="restaurant-unlock-banner" id="extra-restaurant-unlock-banner" hidden role="status">
+              Cash over $1000 — you can buy another restaurant for $400 (max 4).
+            </p>
+            <div class="restaurant-manage-row" id="restaurant-select-row">
+              <label class="stand-select-label" for="restaurant-select">
+                Active restaurant
+                <select id="restaurant-select" class="stand-select" aria-label="Switch active restaurant"></select>
+              </label>
+              <button type="button" class="btn btn-primary" id="btn-add-restaurant" hidden>
+                Add restaurant ($400)
+              </button>
+              <button type="button" class="btn btn-quiet" id="btn-sell-restaurant" disabled>
+                Sell restaurant ($200)
+              </button>
+            </div>
+            <div class="restaurant-manage-row" id="restaurant-staff-controls">
+              <p class="restaurant-staff-count" id="restaurant-staff-count">Employees: 0 / 4</p>
+              <button type="button" class="btn btn-primary" id="btn-hire-restaurant" data-restaurant-action="hire">
+                Hire ($8/day)
+              </button>
+              <button type="button" class="btn btn-quiet" id="btn-layoff-restaurant" data-restaurant-action="layoff">
+                Lay off
+              </button>
+            </div>
+            <p class="restaurant-status" id="restaurant-status" role="status"></p>
+          </div>
+
+          <div class="staff-panel" id="staff-panel" hidden aria-label="Stand staffing">
+            <h3 class="locations-subtitle">Staff at this stand</h3>
+            <p class="staff-lead" id="staff-lead">
+              With 2 or more stands, every stand needs a worker. You may run one stand yourself;
+              hire employees for the rest ($5/day each, paid on Sell Day). Or staff every stand
+              with employees.
+            </p>
+            <p class="staff-status" id="staff-status" role="status"></p>
+            <ul class="staff-list" id="staff-list"></ul>
+          </div>
+        </div>
+      </section>
+      <p class="locations-reveal" id="locations-reveal" hidden>
+        <button type="button" class="btn btn-quiet" id="btn-show-locations">
+          Show stands &amp; staff
         </button>
-      </section>
-
-      <section class="stand-manage" id="stand-manage" hidden aria-label="Manage stands">
-        <h2 class="section-title">Your stands</h2>
-        <p class="stand-manage-lead" id="stand-manage-lead">
-          Pick which stand you are managing. Inventory is shared across all stands.
-        </p>
-        <p class="stand-unlock-banner" id="stand-unlock-banner" hidden role="status">
-          Cash over $100 — you can add another stand for $20 (max 4).
-        </p>
-        <p class="restaurant-unlock-banner" id="restaurant-unlock-banner" hidden role="status">
-          4 stands and cash over $1000 — you can buy a restaurant for $400 (stands will be forfeited).
-        </p>
-        <div class="stand-manage-row">
-          <label class="stand-select-label" for="stand-select">
-            Active stand
-            <select id="stand-select" class="stand-select" aria-label="Switch active stand"></select>
-          </label>
-          <button type="button" class="btn btn-primary" id="btn-add-stand" hidden>
-            Add stand ($20)
-          </button>
-          <button type="button" class="btn btn-quiet" id="btn-sell-stand" disabled>
-            Sell stand ($10)
-          </button>
-          <button type="button" class="btn btn-primary" id="btn-buy-restaurant" hidden>
-            Buy restaurant ($400)
-          </button>
-        </div>
-      </section>
-
-      <section class="restaurant-manage" id="restaurant-manage" hidden aria-label="Manage restaurants">
-        <h2 class="section-title">Your restaurants</h2>
-        <p class="restaurant-manage-lead" id="restaurant-manage-lead">
-          You run restaurants now. Hire 2–4 employees at each (you cannot staff them yourself).
-          Shared menu and inventory continue. Daily rent $18 each + $8 per employee on Sell Day.
-        </p>
-        <p class="restaurant-unlock-banner" id="extra-restaurant-unlock-banner" hidden role="status">
-          Cash over $1000 — you can buy another restaurant for $400 (max 4).
-        </p>
-        <div class="restaurant-manage-row" id="restaurant-select-row">
-          <label class="stand-select-label" for="restaurant-select">
-            Active restaurant
-            <select id="restaurant-select" class="stand-select" aria-label="Switch active restaurant"></select>
-          </label>
-          <button type="button" class="btn btn-primary" id="btn-add-restaurant" hidden>
-            Add restaurant ($400)
-          </button>
-          <button type="button" class="btn btn-quiet" id="btn-sell-restaurant" disabled>
-            Sell restaurant ($200)
-          </button>
-        </div>
-        <div class="restaurant-manage-row" id="restaurant-staff-controls">
-          <p class="restaurant-staff-count" id="restaurant-staff-count">Employees: 0 / 4</p>
-          <button type="button" class="btn btn-primary" id="btn-hire-restaurant" data-restaurant-action="hire">
-            Hire ($8/day)
-          </button>
-          <button type="button" class="btn btn-quiet" id="btn-layoff-restaurant" data-restaurant-action="layoff">
-            Lay off
-          </button>
-        </div>
-        <p class="restaurant-status" id="restaurant-status" role="status"></p>
-      </section>
+      </p>
 
       <section class="location-pnl" id="location-pnl" hidden aria-label="Location profit and loss">
         <h2 class="section-title">Location P&amp;L</h2>
@@ -247,25 +285,6 @@
         </div>
         <ul class="location-pnl-list" id="location-pnl-list" hidden></ul>
         <p class="location-pnl-note" id="location-pnl-note"></p>
-      </section>
-
-      <section class="staff-panel" id="staff-panel" hidden aria-label="Stand staffing">
-        <h2 class="section-title">Staff</h2>
-        <p class="staff-lead" id="staff-lead">
-          With 2 or more stands, every stand needs a worker. You may run one stand yourself;
-          hire employees for the rest ($5/day each, paid on Sell Day). Or staff every stand
-          with employees.
-        </p>
-        <p class="staff-status" id="staff-status" role="status"></p>
-        <ul class="staff-list" id="staff-list"></ul>
-      </section>
-
-      <section class="stand-map-section" id="stand-map-section" aria-label="Neighborhood map">
-        <h2 class="section-title">Neighborhood map</h2>
-        <p class="stand-map-lead" id="stand-map-lead">
-          City map of your corner. Owned stands light up; empty pads wait for Add stand.
-        </p>
-        <div class="stand-map" id="stand-map"></div>
       </section>
 
       <section class="menu-today" id="menu-today" aria-label="Today's menu">
@@ -332,7 +351,17 @@
       <section class="customer-day" id="customer-day" hidden aria-live="polite">
         <div class="panel-header">
           <h2 class="section-title">Customers today</h2>
-          <p class="customer-day-progress" id="customer-day-progress">Opening the stand…</p>
+          <div class="customer-day-header-actions">
+            <p class="customer-day-progress" id="customer-day-progress">Opening the stand…</p>
+            <button
+              type="button"
+              class="btn btn-close"
+              id="btn-close-customer-day"
+              aria-label="Close customers today"
+            >
+              Close
+            </button>
+          </div>
         </div>
         <div class="customer-stage" id="customer-stage" aria-label="Customer activity"></div>
       </section>

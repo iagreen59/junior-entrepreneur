@@ -719,12 +719,24 @@
     GameUI.setInventoryHidden(false);
   }
 
+  function onHideLocations() {
+    GameUI.setLocationsHidden(true);
+  }
+
+  function onShowLocations() {
+    GameUI.setLocationsHidden(false);
+  }
+
   function onCloseDailySummary() {
     GameUI.setDailySummaryHidden(true);
   }
 
   function onCloseCustomerSummary() {
     GameUI.hideCustomerSummary();
+  }
+
+  function onCloseCustomerDay() {
+    GameUI.minimizeCustomerDay();
   }
 
   function onBusinessTabClick(event) {
@@ -830,6 +842,12 @@
     .getElementById("btn-show-inventory")
     ?.addEventListener("click", onShowInventory);
   document
+    .getElementById("btn-hide-locations")
+    ?.addEventListener("click", onHideLocations);
+  document
+    .getElementById("btn-show-locations")
+    ?.addEventListener("click", onShowLocations);
+  document
     .getElementById("btn-close-daily-summary")
     ?.addEventListener("click", onCloseDailySummary);
   document
@@ -838,6 +856,9 @@
   document
     .getElementById("btn-close-customer-summary")
     ?.addEventListener("click", onCloseCustomerSummary);
+  document
+    .getElementById("btn-close-customer-day")
+    ?.addEventListener("click", onCloseCustomerDay);
   document
     .getElementById("panel-business")
     ?.addEventListener("click", onBusinessTabClick);
