@@ -71,59 +71,88 @@
             Hide
           </button>
         </div>
-        <ol class="instructions-list" id="instructions-list">
-          <li>
-            Start with <strong>$50</strong>. Buy your first <strong>stand for $20</strong>
-            before Sell Day unlocks.
-          </li>
-          <li>
-            Each day, choose which menu items to offer:
-            <strong>juice</strong>, <strong>cocoa</strong>, <strong>burger</strong>, and/or
-            <strong>soup</strong>. Weather matters — hot days favor juice &amp; burgers; cold
-            days favor cocoa &amp; soup. Set a <strong>Recipe</strong>, <strong>Buy</strong>
-            ingredients into one shared supply bag, set a <strong>Price</strong> per offered
-            item, then <strong>Sell Day</strong> (customers pick among today’s offers).
-          </li>
-          <li>
-            When cash is over <strong>$100</strong>, you may <strong>Add stand ($20)</strong>
-            up to <strong>4</strong>. Use the stand dropdown to switch which location you
-            manage; the <strong>map</strong> shows every stand you own. Inventory stays shared.
-          </li>
-          <li>
-            With <strong>2+ stands</strong>, staff every stand: you may run <strong>one</strong>
-            yourself; hire employees for the others (or run all with employees). Stand wage is
-            <strong>$5/day</strong> per employee, paid on Sell Day. Understaffed stands block
-            Sell Day. You may <strong>Sell a stand for $10</strong> (keep at least one).
-          </li>
-          <li>
-            Rare morning <strong>events</strong> (less than about one per week) show a banner —
-            supply prices up or down, an employee quitting, or a foot-traffic surge. Impacts are
-            temporary and recoverable; never an instant game over.
-          </li>
-          <li>
-            Own <strong>4 stands</strong> with cash over <strong>$1000</strong> to buy a
-            <strong>restaurant for $400</strong> (all stands are forfeited — you cannot own
-            stands and restaurants together). Hire <strong>2–4 employees</strong> per restaurant;
-            you cannot work a restaurant shift. Sell Day charges
-            <strong>rent $18/day</strong> per restaurant plus <strong>$8/day</strong> per
-            employee — overhead is a profitability challenge, so watch each location’s P&amp;L.
-          </li>
-          <li>
-            Cash over <strong>$1000</strong> unlocks more restaurants (max <strong>4</strong>),
-            each with its own staff and rent. <strong>Sell a restaurant for $200</strong>
-            (keep at least one). Selling the <strong>last</strong> restaurant returns you to
-            stand mode with one stand — a viable choice if rent and wages eat your profit.
-          </li>
-          <li>
-            Open <strong>Business</strong> for the ledger: running revenue, COGS, wages, rent,
-            profit, and per-restaurant rollups. Tap <strong>(?)</strong> on a metric for a short
-            explanation.
-          </li>
-          <li>
-            Use <strong>New Game</strong> anytime to reset. Hide these instructions with
-            <strong>Hide</strong>; <strong>Show instructions</strong> brings them back.
-          </li>
-        </ol>
+        <div class="instructions-body" id="instructions-list">
+          <section class="instructions-block" aria-labelledby="instr-quick-start">
+            <h3 class="instructions-heading" id="instr-quick-start">Quick start</h3>
+            <ol class="instructions-list">
+              <li>
+                Start with <strong>$50</strong>. Buy your first <strong>stand for $20</strong>
+                before Sell Day unlocks.
+              </li>
+              <li>
+                Each day, choose which menu items to offer:
+                <strong>juice</strong>, <strong>cocoa</strong>, <strong>burger</strong>, and/or
+                <strong>soup</strong>. Weather matters — hot days favor juice &amp; burgers; cold
+                days favor cocoa &amp; soup.
+              </li>
+            </ol>
+          </section>
+          <section class="instructions-block" aria-labelledby="instr-before-sell">
+            <h3 class="instructions-heading" id="instr-before-sell">Before you sell</h3>
+            <ol class="instructions-list">
+              <li>Own a <strong>stand</strong> (buy one if you haven’t yet; add more when cash &gt; $100).</li>
+              <li>With 2+ stands, <strong>staff</strong> every location (you +/or employees).</li>
+              <li>Check today’s <strong>Weather</strong> (hot / mild / cold).</li>
+              <li>Set <strong>Today’s menu</strong> toggles (at least one item on).</li>
+              <li>
+                For each offered item: open <strong>Recipe</strong> or <strong>Price</strong> and
+                use the item dropdown to switch products (closing or switching without save discards
+                edits). <strong>Buy</strong> stock into the shared bag, then press
+                <strong>Sell Day</strong> — customers choose among offered items (~10s); wages are paid then.
+              </li>
+            </ol>
+          </section>
+          <section class="instructions-block" aria-labelledby="instr-growing">
+            <h3 class="instructions-heading" id="instr-growing">Growing business</h3>
+            <ol class="instructions-list">
+              <li>
+                When cash is over <strong>$100</strong>, you may <strong>Add stand ($20)</strong>
+                up to <strong>4</strong>. Use the stand dropdown to switch which location you
+                manage; the <strong>map</strong> shows every stand you own. Inventory stays shared.
+              </li>
+              <li>
+                With <strong>2+ stands</strong>, staff every stand: you may run <strong>one</strong>
+                yourself; hire employees for the others (or run all with employees). Stand wage is
+                <strong>$5/day</strong> per employee, paid on Sell Day. Understaffed stands block
+                Sell Day. You may <strong>Sell a stand for $10</strong> (keep at least one).
+              </li>
+              <li>
+                Rare morning <strong>events</strong> (less than about one per week) show a banner —
+                supply prices up or down, an employee quitting, or a foot-traffic surge. Impacts are
+                temporary and recoverable; never an instant game over.
+              </li>
+              <li>
+                Open <strong>Business</strong> for the ledger (Business summary) or today’s Day
+                report (Daily summary). Tap <strong>(?)</strong> on a metric for a short explanation.
+                Use <strong>Inventory</strong> below Sell Day to peek at stock without cluttering the
+                screen.
+              </li>
+              <li>
+                Use <strong>New Game</strong> anytime to reset. Hide these instructions with
+                <strong>Hide</strong>; <strong>Show instructions</strong> brings them back.
+              </li>
+            </ol>
+          </section>
+          <section class="instructions-block" aria-labelledby="instr-restaurants">
+            <h3 class="instructions-heading" id="instr-restaurants">Restaurants</h3>
+            <ol class="instructions-list">
+              <li>
+                Own <strong>4 stands</strong> with cash over <strong>$1000</strong> to buy a
+                <strong>restaurant for $400</strong> (all stands are forfeited — you cannot own
+                stands and restaurants together). Hire <strong>2–4 employees</strong> per restaurant;
+                you cannot work a restaurant shift. Sell Day charges
+                <strong>rent $18/day</strong> per restaurant plus <strong>$8/day</strong> per
+                employee — overhead is a profitability challenge, so watch each location’s P&amp;L.
+              </li>
+              <li>
+                Cash over <strong>$1000</strong> unlocks more restaurants (max <strong>4</strong>),
+                each with its own staff and rent. <strong>Sell a restaurant for $200</strong>
+                (keep at least one). Selling the <strong>last</strong> restaurant returns you to
+                stand mode with one stand — a viable choice if rent and wages eat your profit.
+              </li>
+            </ol>
+          </section>
+        </div>
       </section>
       <p class="instructions-reveal" id="instructions-reveal" hidden>
         <button type="button" class="btn btn-quiet" id="btn-show-instructions">
@@ -234,7 +263,7 @@
       <section class="stand-map-section" id="stand-map-section" aria-label="Neighborhood map">
         <h2 class="section-title">Neighborhood map</h2>
         <p class="stand-map-lead" id="stand-map-lead">
-          Cartoon map of your corner. Owned stands light up; empty pads wait for Add stand.
+          City map of your corner. Owned stands light up; empty pads wait for Add stand.
         </p>
         <div class="stand-map" id="stand-map"></div>
       </section>
@@ -242,8 +271,8 @@
       <section class="menu-today" id="menu-today" aria-label="Today's menu">
         <h2 class="section-title">Today’s menu</h2>
         <p class="menu-lead">
-          Choose which items are offered today. Editing a recipe or price is separate —
-          use the buttons below.
+          Choose which items are offered today. Open Recipe or Price and use the item dropdown
+          to edit each product (unsaved switches are discarded).
         </p>
         <div class="menu-toggles" role="group" aria-label="Items on today's menu">
           <label class="menu-toggle">
@@ -268,69 +297,7 @@
         </p>
       </section>
 
-      <section class="product-picker" aria-label="Item to edit">
-        <h2 class="section-title">Edit item</h2>
-        <div class="product-toggle" role="group" aria-label="Choose menu item">
-          <button
-            type="button"
-            class="btn btn-product is-active"
-            id="btn-product-juice"
-            data-product="juice"
-            aria-pressed="true"
-          >
-            Juice
-          </button>
-          <button
-            type="button"
-            class="btn btn-product"
-            id="btn-product-cocoa"
-            data-product="cocoa"
-            aria-pressed="false"
-          >
-            Hot cocoa
-          </button>
-          <button
-            type="button"
-            class="btn btn-product"
-            id="btn-product-burger"
-            data-product="burger"
-            aria-pressed="false"
-          >
-            Burger
-          </button>
-          <button
-            type="button"
-            class="btn btn-product"
-            id="btn-product-soup"
-            data-product="soup"
-            aria-pressed="false"
-          >
-            Soup
-          </button>
-        </div>
-        <p class="product-hint" id="product-hint">
-          Recipe and price edit the item you pick here. Sell Day sells every item
-          toggled on in Today’s menu.
-        </p>
-      </section>
-
-      <section class="morning" aria-label="Morning checklist">
-        <h2 class="section-title">Before you sell</h2>
-        <ol class="morning-list" id="morning-list">
-          <li>Own a <strong>stand</strong> (buy one if you haven’t yet; add more when cash &gt; $100).</li>
-          <li>With 2+ stands, <strong>staff</strong> every location (you +/or employees).</li>
-          <li>Check today’s <strong>Weather</strong> (hot / mild / cold).</li>
-          <li>Set <strong>Today’s menu</strong> toggles (at least one item on).</li>
-          <li>For each offered item: check <strong>Recipe</strong>, <strong>Buy</strong> stock, set <strong>Price</strong>.</li>
-          <li>Press <strong>Sell Day</strong> — customers choose among offered items (~10s); wages are paid then.</li>
-        </ol>
-      </section>
-
-      <section class="inventory" aria-label="Inventory">
-        <h2 class="section-title">Shared inventory</h2>
-        <p class="inventory-lead">One supply bag for every stand.</p>
-        <ul class="inventory-list" id="inventory-list"></ul>
-      </section>
+      <p class="day-tip" id="morning-hint" hidden></p>
 
       <section class="actions" aria-label="Day actions">
         <button type="button" class="btn" id="btn-recipe">Recipe</button>
@@ -341,6 +308,27 @@
         <button type="button" class="btn btn-quiet" id="btn-new-game">New Game</button>
       </section>
 
+      <section class="inventory" id="inventory-section" aria-label="Inventory">
+        <div class="panel-header">
+          <h2 class="section-title">Shared inventory</h2>
+          <button
+            type="button"
+            class="btn btn-close"
+            id="btn-hide-inventory"
+            aria-label="Hide inventory"
+          >
+            Hide
+          </button>
+        </div>
+        <p class="inventory-lead">One supply bag for every stand and restaurant.</p>
+        <ul class="inventory-list" id="inventory-list"></ul>
+      </section>
+      <p class="inventory-reveal" id="inventory-reveal" hidden>
+        <button type="button" class="btn btn-quiet" id="btn-show-inventory">
+          Show inventory
+        </button>
+      </p>
+
       <section class="customer-day" id="customer-day" hidden aria-live="polite">
         <div class="panel-header">
           <h2 class="section-title">Customers today</h2>
@@ -350,8 +338,33 @@
       </section>
 
       <section class="customer-summary" id="customer-summary" hidden aria-label="Customer summary">
-        <h2 class="section-title">Customer summary</h2>
-        <ul class="summary-list" id="customer-summary-list"></ul>
+        <div class="panel-header">
+          <h2 class="section-title">Customer summary</h2>
+          <button
+            type="button"
+            class="btn btn-close"
+            id="btn-close-customer-summary"
+            aria-label="Close customer summary"
+          >
+            Close
+          </button>
+        </div>
+        <div class="summary-table-wrap">
+          <table class="summary-table" id="customer-summary-table">
+            <thead>
+              <tr>
+                <th scope="col">Item</th>
+                <th scope="col">Happy</th>
+                <th scope="col">Liked</th>
+                <th scope="col">Disliked</th>
+                <th scope="col">Sold out</th>
+                <th scope="col">Price</th>
+                <th scope="col">Weather</th>
+              </tr>
+            </thead>
+            <tbody id="customer-summary-body"></tbody>
+          </table>
+        </div>
       </section>
 
       <section class="panel" id="panel-recipe" hidden aria-label="Recipe editor">
@@ -361,8 +374,21 @@
             Close
           </button>
         </div>
+        <label class="panel-product-select" for="recipe-product-select">
+          Item
+          <select
+            id="recipe-product-select"
+            class="stand-select"
+            aria-label="Switch recipe item"
+          >
+            <option value="juice">Juice</option>
+            <option value="cocoa">Hot cocoa</option>
+            <option value="burger">Burger</option>
+            <option value="soup">Soup</option>
+          </select>
+        </label>
         <p class="panel-lead" id="recipe-panel-lead">
-          Units of each ingredient used per serving. Each product has its own unique ingredients.
+          Units of each ingredient used per serving. Switching items or closing without save discards edits.
         </p>
         <form id="form-recipe" class="panel-form">
           <div class="recipe-fields" data-recipe-product="juice">
@@ -1004,8 +1030,21 @@
             Close
           </button>
         </div>
+        <label class="panel-product-select" for="price-product-select">
+          Item
+          <select
+            id="price-product-select"
+            class="stand-select"
+            aria-label="Switch price item"
+          >
+            <option value="juice">Juice</option>
+            <option value="cocoa">Hot cocoa</option>
+            <option value="burger">Burger</option>
+            <option value="soup">Soup</option>
+          </select>
+        </label>
         <p class="panel-lead" id="price-panel-lead">
-          Set what you charge per serving for the item you are editing.
+          Set what you charge per serving. Switching items or closing without save discards edits.
         </p>
         <form id="form-price" class="panel-form panel-form-price">
           <label class="field">
@@ -1031,33 +1070,95 @@
             Close
           </button>
         </div>
-        <p class="panel-lead">
-          Running totals across Sell Days. Tap <strong>?</strong> next to a metric to learn what it means.
-        </p>
-        <div class="ledger-metrics" id="ledger-metrics" role="list"></div>
-        <div class="ledger-restaurants" id="ledger-restaurants" hidden>
-          <div class="ledger-subtitle-row">
-            <h3 class="ledger-subtitle">Per restaurant</h3>
+        <div class="business-tabs" role="tablist" aria-label="Business views">
+          <button
+            type="button"
+            class="btn business-tab is-active"
+            id="tab-business-summary"
+            role="tab"
+            aria-selected="true"
+            data-business-tab="business"
+          >
+            Business summary
+          </button>
+          <button
+            type="button"
+            class="btn business-tab"
+            id="tab-daily-summary"
+            role="tab"
+            aria-selected="false"
+            data-business-tab="daily"
+          >
+            Daily summary
+          </button>
+        </div>
+        <div
+          class="business-tab-panel"
+          id="business-tab-business"
+          role="tabpanel"
+          aria-labelledby="tab-business-summary"
+        >
+          <p class="panel-lead">
+            Running totals across Sell Days. Tap <strong>?</strong> next to a metric to learn what it means.
+          </p>
+          <div class="ledger-metrics" id="ledger-metrics" role="list"></div>
+          <div class="ledger-restaurants" id="ledger-restaurants" hidden>
+            <div class="ledger-subtitle-row">
+              <h3 class="ledger-subtitle">Per restaurant</h3>
+              <button
+                type="button"
+                class="btn-ledger-info"
+                data-ledger-info="restaurantRollup"
+                aria-label="What are restaurant rollups?"
+                id="btn-ledger-info-restaurants"
+              >
+                ?
+              </button>
+            </div>
+            <p class="ledger-info-blurb" id="ledger-info-restaurantRollup" hidden></p>
+            <p class="ledger-restaurants-lead">
+              Cumulative sales and costs for each restaurant (matches day-report location lines).
+            </p>
+            <ul class="ledger-restaurant-list" id="ledger-restaurant-list"></ul>
+          </div>
+        </div>
+        <div
+          class="business-tab-panel"
+          id="business-tab-daily"
+          role="tabpanel"
+          aria-labelledby="tab-daily-summary"
+          hidden
+        >
+          <div class="panel-header daily-summary-header">
+            <h3 class="ledger-subtitle">Daily summary</h3>
             <button
               type="button"
-              class="btn-ledger-info"
-              data-ledger-info="restaurantRollup"
-              aria-label="What are restaurant rollups?"
-              id="btn-ledger-info-restaurants"
+              class="btn btn-close"
+              id="btn-close-daily-summary-tab"
+              aria-label="Close daily summary"
             >
-              ?
+              Close
             </button>
           </div>
-          <p class="ledger-info-blurb" id="ledger-info-restaurantRollup" hidden></p>
-          <p class="ledger-restaurants-lead">
-            Cumulative sales and costs for each restaurant (matches day-report location lines).
+          <p class="panel-lead">Results from your most recent Sell Day.</p>
+          <p class="daily-summary-body" id="business-daily-summary-body">
+            No Sell Day yet. Run a day to see today’s report here.
           </p>
-          <ul class="ledger-restaurant-list" id="ledger-restaurant-list"></ul>
         </div>
       </section>
 
-      <section class="report" aria-live="polite">
-        <h2 class="section-title">Day report</h2>
+      <section class="report" id="daily-summary" aria-live="polite">
+        <div class="panel-header">
+          <h2 class="section-title">Daily summary</h2>
+          <button
+            type="button"
+            class="btn btn-close"
+            id="btn-close-daily-summary"
+            aria-label="Close daily summary"
+          >
+            Close
+          </button>
+        </div>
         <p class="report-body" id="report-body">
           Good morning. Buy your stand ($20), set today’s menu, then Recipe → Buy → Price → Sell Day.
         </p>

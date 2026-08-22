@@ -38,6 +38,7 @@
 (function (global) {
   const STORAGE_KEY = "junior-entrepreneur-v1";
   const INSTRUCTIONS_HIDDEN_KEY = "junior-entrepreneur-instructions-hidden";
+  const INVENTORY_HIDDEN_KEY = "junior-entrepreneur-inventory-hidden";
 
   /** Phase 9 / 13 locked constants. */
   const STARTING_CASH = 50;
@@ -1440,6 +1441,22 @@
     }
   }
 
+  function loadInventoryHidden() {
+    try {
+      return localStorage.getItem(INVENTORY_HIDDEN_KEY) === "1";
+    } catch {
+      return false;
+    }
+  }
+
+  function saveInventoryHidden(hidden) {
+    try {
+      localStorage.setItem(INVENTORY_HIDDEN_KEY, hidden ? "1" : "0");
+    } catch {
+      // Ignore storage failures; UI still toggles in-session.
+    }
+  }
+
   function productLabel(product) {
     if (product === "cocoa") return "hot cocoa";
     if (product === "burger") return "burger";
@@ -2082,6 +2099,7 @@
   global.GameState = {
     STORAGE_KEY,
     INSTRUCTIONS_HIDDEN_KEY,
+    INVENTORY_HIDDEN_KEY,
     STARTING_CASH,
     STAND_COST,
     MAX_STANDS,
@@ -2167,6 +2185,8 @@
     staffLabel,
     loadInstructionsHidden,
     saveInstructionsHidden,
+    loadInventoryHidden,
+    saveInventoryHidden,
     inventoryLabels,
     unitPrice,
     demandMultiplier,

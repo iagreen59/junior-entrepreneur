@@ -7,10 +7,10 @@
 (function (global) {
   /** Fixed slots on the cartoon map (max 4 stands / restaurants). */
   const SLOTS = [
-    { x: 52, y: 118, labelX: 52, labelY: 178 },
-    { x: 168, y: 98, labelX: 168, labelY: 158 },
-    { x: 284, y: 118, labelX: 284, labelY: 178 },
-    { x: 210, y: 48, labelX: 210, labelY: 28 },
+    { x: 52, y: 128, labelX: 52, labelY: 178 },
+    { x: 168, y: 118, labelX: 168, labelY: 168 },
+    { x: 284, y: 128, labelX: 284, labelY: 178 },
+    { x: 210, y: 58, labelX: 210, labelY: 28 },
   ];
 
   function standBoothSvg(ns, x, y, active) {
@@ -175,40 +175,95 @@
     sky.setAttribute("class", "map-sky");
     svg.appendChild(sky);
 
-    const hill = document.createElementNS(ns, "path");
-    hill.setAttribute(
-      "d",
-      "M0 130 Q60 100 120 120 T240 110 T340 125 L340 200 L0 200 Z"
-    );
-    hill.setAttribute("class", "map-hill");
-    svg.appendChild(hill);
-
-    const road = document.createElementNS(ns, "path");
-    road.setAttribute("d", "M20 170 Q100 150 170 155 T320 165");
-    road.setAttribute("class", "map-road");
-    road.setAttribute("fill", "none");
-    svg.appendChild(road);
+    // Soft distant haze band.
+    const haze = document.createElementNS(ns, "rect");
+    haze.setAttribute("x", "0");
+    haze.setAttribute("y", "70");
+    haze.setAttribute("width", "340");
+    haze.setAttribute("height", "55");
+    haze.setAttribute("class", "map-city-haze");
+    svg.appendChild(haze);
 
     const sun = document.createElementNS(ns, "circle");
     sun.setAttribute("cx", "300");
-    sun.setAttribute("cy", "36");
-    sun.setAttribute("r", "18");
+    sun.setAttribute("cy", "34");
+    sun.setAttribute("r", "16");
     sun.setAttribute("class", "map-sun");
     svg.appendChild(sun);
 
-    const treeTrunk = document.createElementNS(ns, "rect");
-    treeTrunk.setAttribute("x", "28");
-    treeTrunk.setAttribute("y", "88");
-    treeTrunk.setAttribute("width", "8");
-    treeTrunk.setAttribute("height", "28");
-    treeTrunk.setAttribute("class", "map-tree-trunk");
-    svg.appendChild(treeTrunk);
-    const treeTop = document.createElementNS(ns, "circle");
-    treeTop.setAttribute("cx", "32");
-    treeTop.setAttribute("cy", "78");
-    treeTop.setAttribute("r", "18");
-    treeTop.setAttribute("class", "map-tree-top");
-    svg.appendChild(treeTop);
+    // Far skyline silhouettes.
+    const farSkyline = document.createElementNS(ns, "path");
+    farSkyline.setAttribute(
+      "d",
+      "M0 118 L18 118 L18 88 L34 88 L34 70 L48 70 L48 96 L62 96 L62 78 L78 78 L78 108 L96 108 L96 64 L112 64 L112 92 L128 92 L128 74 L146 74 L146 110 L162 110 L162 82 L180 82 L180 58 L198 58 L198 98 L214 98 L214 72 L232 72 L232 90 L250 90 L250 66 L268 66 L268 104 L286 104 L286 80 L304 80 L304 94 L322 94 L322 112 L340 112 L340 130 L0 130 Z"
+    );
+    farSkyline.setAttribute("class", "map-city-far");
+    svg.appendChild(farSkyline);
+
+    // Mid-ground buildings with simple windows.
+    const buildings = [
+      { x: 8, y: 102, w: 36, h: 58, tone: "a" },
+      { x: 48, y: 88, w: 42, h: 72, tone: "b" },
+      { x: 96, y: 110, w: 30, h: 50, tone: "c" },
+      { x: 132, y: 78, w: 48, h: 82, tone: "a" },
+      { x: 186, y: 96, w: 38, h: 64, tone: "b" },
+      { x: 230, y: 84, w: 44, h: 76, tone: "c" },
+      { x: 280, y: 106, w: 50, h: 54, tone: "a" },
+    ];
+    for (const b of buildings) {
+      const body = document.createElementNS(ns, "rect");
+      body.setAttribute("x", String(b.x));
+      body.setAttribute("y", String(b.y));
+      body.setAttribute("width", String(b.w));
+      body.setAttribute("height", String(b.h));
+      body.setAttribute("class", "map-city-building map-city-building-" + b.tone);
+      svg.appendChild(body);
+
+      const roof = document.createElementNS(ns, "rect");
+      roof.setAttribute("x", String(b.x - 2));
+      roof.setAttribute("y", String(b.y - 4));
+      roof.setAttribute("width", String(b.w + 4));
+      roof.setAttribute("height", "5");
+      roof.setAttribute("class", "map-city-roof");
+      svg.appendChild(roof);
+
+      const cols = Math.max(2, Math.floor(b.w / 12));
+      const rows = Math.max(2, Math.floor(b.h / 16));
+      for (let row = 0; row < rows; row++) {
+        for (let col = 0; col < cols; col++) {
+          const win = document.createElementNS(ns, "rect");
+          win.setAttribute("x", String(b.x + 5 + col * 10));
+          win.setAttribute("y", String(b.y + 8 + row * 14));
+          win.setAttribute("width", "5");
+          win.setAttribute("height", "7");
+          win.setAttribute("class", "map-city-window");
+          svg.appendChild(win);
+        }
+      }
+    }
+
+    // Street / sidewalk base.
+    const street = document.createElementNS(ns, "rect");
+    street.setAttribute("x", "0");
+    street.setAttribute("y", "158");
+    street.setAttribute("width", "340");
+    street.setAttribute("height", "42");
+    street.setAttribute("class", "map-city-street");
+    svg.appendChild(street);
+
+    const curb = document.createElementNS(ns, "rect");
+    curb.setAttribute("x", "0");
+    curb.setAttribute("y", "152");
+    curb.setAttribute("width", "340");
+    curb.setAttribute("height", "8");
+    curb.setAttribute("class", "map-city-curb");
+    svg.appendChild(curb);
+
+    const lane = document.createElementNS(ns, "path");
+    lane.setAttribute("d", "M12 180 H328");
+    lane.setAttribute("class", "map-city-lane");
+    lane.setAttribute("fill", "none");
+    svg.appendChild(lane);
   }
 
   function render(state) {
