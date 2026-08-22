@@ -76,7 +76,7 @@ Future agents: skip anything already checked.
 - [x] Phase 12 — Multi-item Sell Day + purchase feedback icons
 - [x] Phase 13 — Multi-stand unlock, selector, map
 - [x] Phase 14 — Employees for multi-stand
-- [ ] Phase 15 — Sell stands + random events
+- [x] Phase 15 — Sell stands + random events
 - [ ] Phase 16 — First restaurant (rent + per-location P&L)
 - [ ] Phase 17 — Multi-restaurant, sell, restart stand
 - [ ] Phase 18 — Business ledger and educational metrics
@@ -651,7 +651,7 @@ With **2+ stands**, each stand must be staffed. Player may assign themselves to 
 
 ## Phase 15 — Sell stands + random events (v1 set)
 
-**Status:** not started — start only after Phase 14 is checked done
+**Status:** done
 
 ### Goal
 
@@ -671,12 +671,12 @@ Sell any stand for **$10** (must keep ≥1 stand in stand mode). Add random even
 
 ### Play-test checklist
 
-- [ ] Sell stand updates cash, dropdown, and map
-- [ ] Cannot sell the last stand
-- [ ] Events are rare (< ~1/week expected)
-- [ ] Event message banner displays
-- [ ] Impacts are recoverable (no instant lose)
-- [ ] **Preview:** sell-stand UI + an event banner screenshot — attach to the PR
+- [x] Sell stand updates cash, dropdown, and map
+- [x] Cannot sell the last stand
+- [x] Events are rare (< ~1/week expected)
+- [x] Event message banner displays
+- [x] Impacts are recoverable (no instant lose)
+- [x] **Preview:** sell-stand UI + an event banner screenshot — attach to the PR
 
 ### Out of scope
 
