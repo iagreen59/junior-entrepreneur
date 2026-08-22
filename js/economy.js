@@ -8,12 +8,15 @@
  * Phase 15: demandMult (foot-traffic event) scales planned demand;
  *           unit prices for COGS respect temporary supplyPriceMult.
  * Phase 16: restaurant mode — capacityMult = 0.7 + 0.2 * employeeCount
- *           scales demand; wages $8/employee + rent $15/day; P&L breaks out
- *           sales vs wages vs rent vs profit.
+ *           scales demand; wages $8/employee + rent (Phase 19: $18/day); P&L
+ *           breaks out sales vs wages vs rent vs profit.
  * Phase 17: multi-restaurant — demand/capacity rolled PER restaurant with that
  *           location's staff (shared inventory allocated in ownership order);
  *           rent × restaurant count; day report includes locations[] rollups.
  * Phase 18: Sell Day plans feed GameLedger running totals (caller records).
+ * Phase 19: light balance — BASE_INTEREST 22 (was 20) so restaurant rent/wage
+ *           overhead creates pressure without instant loss; rent comes from
+ *           GameState.RESTAURANT_RENT ($18).
  *
  * Demand formula (Phase 12 multi-item, Phase 16–17 capacity):
  *   offered   = products with menuOffered[p] === true
@@ -33,7 +36,7 @@
  *   revenue   = sum sold * price
  *   cogs      = sum costOfGoodsPerServing * sold
  *   wages     = stand: employeeCount * $5; restaurant: sum staff * $8
- *   rent      = restaurant: $15/day × restaurant count (0 in stand mode)
+ *   rent      = restaurant: $18/day × restaurant count (0 in stand mode)
  *   profit    = revenue − cogs − wages − rent
  *
  * Single offered item reduces to the Phase 7 single-product formula.
@@ -44,8 +47,12 @@
  * Reported profit = revenue − COGS − wages − rent.
  */
 (function (global) {
-  /** Typical daily foot traffic at the reference price (per item weight). */
-  const BASE_INTEREST = 20;
+  /**
+   * Typical daily foot traffic at the reference price (per item weight).
+   * Phase 19: 22 (was 20) — slight demand bump so $18 rent + wages stay avoidable
+   * with solid pricing/stock, while multi-restaurant overhead still bites.
+   */
+  const BASE_INTEREST = 22;
   /** Price where BASE_INTEREST customers show up before weather preference. */
   const REF_PRICE = 1.5;
   /** How sharply demand falls as price rises (1 = inverse to price). */
@@ -280,7 +287,7 @@
       ? global.GameState.restaurantCapacityMultFor(restaurant)
       : +(0.7 + 0.2 * staff).toFixed(2);
     const wageRate = Number(global.GameState.RESTAURANT_WAGE) || 8;
-    const rentEach = Number(global.GameState.RESTAURANT_RENT) || 15;
+    const rentEach = Number(global.GameState.RESTAURANT_RENT) || 18;
     const soldByProduct = emptySoldMap();
     const demandByProduct = emptySoldMap();
     let cupsSold = 0;
@@ -520,7 +527,7 @@
             ? " (" +
               locations.length +
               " × " +
-              formatMoney(Number(global.GameState.RESTAURANT_RENT) || 15) +
+              formatMoney(Number(global.GameState.RESTAURANT_RENT) || 18) +
               ")"
             : "")
         : "";
