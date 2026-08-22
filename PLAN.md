@@ -77,7 +77,7 @@ Future agents: skip anything already checked.
 - [x] Phase 13 — Multi-stand unlock, selector, map
 - [x] Phase 14 — Employees for multi-stand
 - [x] Phase 15 — Sell stands + random events
-- [ ] Phase 16 — First restaurant (rent + per-location P&L)
+- [x] Phase 16 — First restaurant (rent + per-location P&L)
 - [ ] Phase 17 — Multi-restaurant, sell, restart stand
 - [ ] Phase 18 — Business ledger and educational metrics
 - [ ] Phase 19 — Instructions refresh + balance + event polish
@@ -686,7 +686,7 @@ Sell any stand for **$10** (must keep ≥1 stand in stand mode). Add random even
 
 ## Phase 16 — First restaurant conversion (rent + per-location P&L)
 
-**Status:** not started — start only after Phase 15 is checked done
+**Status:** done
 
 ### Goal
 
@@ -706,13 +706,13 @@ With **4 stands** and **cash > $1000**, offer buy restaurant for **$400**. On bu
 
 ### Play-test checklist
 
-- [ ] Gate enforced (4 stands + cash > $1000)
-- [ ] After buy: no stands; restaurant mode active
-- [ ] Must have 2+ employees and afford wages+rent to Sell Day
-- [ ] Day report breaks out sales vs wages vs rent vs profit
-- [ ] Changing employee count visibly changes sales and profitability
-- [ ] Understaffed or can’t cover overhead → clear block message
-- [ ] **Preview:** buy-restaurant flow + per-location P&L screenshot — attach to the PR
+- [x] Gate enforced (4 stands + cash > $1000)
+- [x] After buy: no stands; restaurant mode active
+- [x] Must have 2+ employees and afford wages+rent to Sell Day
+- [x] Day report breaks out sales vs wages vs rent vs profit
+- [x] Changing employee count visibly changes sales and profitability
+- [x] Understaffed or can’t cover overhead → clear block message
+- [x] **Preview:** buy-restaurant flow + per-location P&L screenshot — attach to the PR
 
 ### Out of scope
 

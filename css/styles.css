@@ -1303,3 +1303,104 @@ body {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* Phase 16 — restaurant conversion */
+.restaurant-unlock-banner {
+  margin: 0.5rem 0 0;
+  padding: 0.55rem 0.75rem;
+  border-radius: 0.65rem;
+  background: linear-gradient(135deg, #fff4d6, #ffe8a8);
+  border: 1px solid #e0c56a;
+  color: #5c4a12;
+  font-size: 0.92rem;
+  line-height: 1.35;
+}
+.restaurant-unlock-banner[hidden] { display: none !important; }
+
+.restaurant-manage {
+  margin-bottom: 1.1rem;
+  padding: 0.9rem 1rem 1rem;
+  border-radius: 1rem;
+  border: 1px solid var(--stroke);
+  background: linear-gradient(180deg, #fffaf2, #f3ebe0);
+}
+.restaurant-manage[hidden] { display: none !important; }
+.restaurant-manage-lead {
+  margin: 0 0 0.65rem;
+  color: var(--ink-soft);
+  font-size: 0.92rem;
+  line-height: 1.4;
+}
+.restaurant-manage-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+.restaurant-staff-count {
+  margin: 0;
+  font-weight: 700;
+  min-width: 8rem;
+}
+.restaurant-status {
+  margin: 0.65rem 0 0;
+  font-size: 0.9rem;
+  line-height: 1.35;
+}
+.restaurant-status.is-ok { color: #1f6b3a; }
+.restaurant-status.is-warn {
+  color: #8a3b12;
+  animation: staff-warn-pulse 1.8s ease-in-out infinite;
+}
+
+.location-pnl {
+  margin-bottom: 1.1rem;
+  padding: 0.9rem 1rem 1rem;
+  border-radius: 1rem;
+  border: 1px solid var(--stroke);
+  background: linear-gradient(180deg, #f7fbff, #eef5fa);
+}
+.location-pnl[hidden] { display: none !important; }
+.location-pnl-lead {
+  margin: 0 0 0.65rem;
+  color: var(--ink-soft);
+  font-size: 0.92rem;
+}
+.location-pnl-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem 1rem;
+  margin: 0;
+}
+.location-pnl-grid div {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.35rem 0;
+  border-bottom: 1px dashed rgba(0,0,0,0.08);
+}
+.location-pnl-grid dt {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 0.88rem;
+}
+.location-pnl-grid dd {
+  margin: 0;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.location-pnl-note {
+  margin: 0.65rem 0 0;
+  font-size: 0.88rem;
+  color: var(--ink-soft);
+  line-height: 1.35;
+}
+
+.map-restaurant-body { fill: #f4e4c8; stroke: #b0894b; stroke-width: 1.5; }
+.map-restaurant-roof { fill: #c45c3e; }
+.map-restaurant-door { fill: #6b4a2e; }
+.map-restaurant-window { fill: #7eb6d9; }
+.map-restaurant-sign { fill: #fff8e8; stroke: #8a5a2b; stroke-width: 1; }
+.map-restaurant-sign-text { fill: #5c3b1a; font-size: 9px; font-weight: 700; }
+.map-restaurant-label { fill: #3d2a14; font-size: 11px; font-weight: 700; }
