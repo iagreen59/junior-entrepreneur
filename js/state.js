@@ -20,6 +20,8 @@
  * Phase 17: multi-restaurant — cash > $1000 unlocks another for $400 (max 4);
  * each has own 2–4 staff + daily rent; sell for $200 (keep ≥1); sell last →
  * one stand + stand mode; never own stands and restaurants together.
+ * Phase 18: business ledger — running revenue/COGS/wages/rent/overhead/profit
+ * + days operated + optional per-restaurant rollups (see js/ledger.js).
  *
  * Buy unit prices (cash per inventory unit) — not stored in the save blob;
  * constants live here so Buy UI / helpers share one source. Event modifiers
@@ -292,6 +294,23 @@
       supplyPriceDaysLeft: 0,
       demandMult: 1,
       eventBanner: null,
+      /**
+       * Phase 18 business ledger — running operating totals.
+       * Shape owned by GameLedger.createEmptyLedger / normalizeLedger.
+       */
+      ledger:
+        global.GameLedger && global.GameLedger.createEmptyLedger
+          ? global.GameLedger.createEmptyLedger()
+          : {
+              revenue: 0,
+              cogs: 0,
+              wages: 0,
+              rent: 0,
+              otherOverhead: 0,
+              profit: 0,
+              daysOperated: 0,
+              restaurantBreakdown: {},
+            },
     };
   }
 
@@ -1725,6 +1744,11 @@
       supplyPriceDaysLeft,
       demandMult,
       eventBanner,
+      // Phase 18: invent empty ledger when missing on older saves.
+      ledger:
+        global.GameLedger && global.GameLedger.normalizeLedger
+          ? global.GameLedger.normalizeLedger(raw.ledger)
+          : base.ledger,
     };
   }
 

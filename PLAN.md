@@ -79,7 +79,7 @@ Future agents: skip anything already checked.
 - [x] Phase 15 — Sell stands + random events
 - [x] Phase 16 — First restaurant (rent + per-location P&L)
 - [x] Phase 17 — Multi-restaurant, sell, restart stand
-- [ ] Phase 18 — Business ledger and educational metrics
+- [x] Phase 18 — Business ledger and educational metrics
 - [ ] Phase 19 — Instructions refresh + balance + event polish
 
 ---
@@ -758,7 +758,7 @@ In restaurant mode, **cash > $1000** unlocks another restaurant for **$400** (ma
 
 ## Phase 18 — Business ledger and educational metrics
 
-**Status:** not started — start only after Phase 17 is checked done
+**Status:** done
 
 ### Goal
 
@@ -778,11 +778,11 @@ Openable **Business** menu with running totals: revenue, COGS, **wages**, **rent
 
 ### Play-test checklist
 
-- [ ] After several days, ledger matches summed history including rent and wages
-- [ ] Per-restaurant lines match day reports when applicable
-- [ ] Info blurbs present for metrics
-- [ ] Panel open/close works
-- [ ] **Preview:** ledger panel screenshot with info open — attach to the PR
+- [x] After several days, ledger matches summed history including rent and wages
+- [x] Per-restaurant lines match day reports when applicable
+- [x] Info blurbs present for metrics
+- [x] Panel open/close works
+- [x] **Preview:** ledger panel screenshot with info open — attach to the PR
 
 ### Out of scope
 
