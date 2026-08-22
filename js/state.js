@@ -16,7 +16,8 @@
  * (supplyPriceMult / demandMult) + eventBanner for morning messages.
  * Phase 16: first restaurant — own 4 stands + cash > $1000 → buy for $400;
  * forfeit all stands; mode "restaurant"; 2–4 employees (player cannot staff);
- * daily rent $15 + wage $8/employee on Sell Day; shared menu/inventory.
+ * daily rent (Phase 19: $18) + wage $8/employee on Sell Day; shared menu/inventory.
+ * Phase 19: instructions refresh + light rent/demand/event balance polish.
  * Phase 17: multi-restaurant — cash > $1000 unlocks another for $400 (max 4);
  * each has own 2–4 staff + daily rent; sell for $200 (keep ≥1); sell last →
  * one stand + stand mode; never own stands and restaurants together.
@@ -60,9 +61,13 @@
   const MAX_RESTAURANTS = 4;
   /** Cash received when selling a restaurant (Phase 17). */
   const RESTAURANT_SELL_PRICE = 200;
-  /** Daily rent charged on Sell Day per restaurant. */
-  const RESTAURANT_RENT = 15;
-  /** Daily wage per restaurant employee (higher than stand wage). */
+  /**
+   * Daily rent charged on Sell Day per restaurant.
+   * Phase 19: $18 (was $15) — enough overhead to pressure restaurant P&L without
+   * instant loss when staffed at the minimum and sales are decent.
+   */
+  const RESTAURANT_RENT = 18;
+  /** Daily wage per restaurant employee (higher than stand wage; Phase 19: kept $8). */
   const RESTAURANT_WAGE = 8;
   /** Min / max employees per restaurant; player cannot work a restaurant shift. */
   const RESTAURANT_MIN_STAFF = 2;

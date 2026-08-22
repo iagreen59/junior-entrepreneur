@@ -1,8 +1,10 @@
 /**
  * Phase 15 — random morning events (rare: less than ~1 per week expected).
+ * Phase 19 — chance tuned slightly down so events stay rare and manageable
+ * alongside restaurant overhead pressure.
  *
  * Roll after Sell Day advances the day (morning of the new day):
- *   chance ≈ 11% per day → ~0.77 events/week (keep expected < 1/week).
+ *   chance ≈ 10% per day → ~0.70 events/week (keep expected < 1/week).
  *
  * Event set (good + bad, always manageable — no instant game over):
  *   - supply_bump  — buy prices ↑ for a few days
@@ -13,8 +15,8 @@
  * Banner message is stored on state.eventBanner for the stand UI.
  */
 (function (global) {
-  /** ~0.11/day → ~0.77/week expected. */
-  const EVENT_CHANCE_PER_DAY = 0.11;
+  /** Phase 19: ~0.10/day → ~0.70/week expected (was 0.11 → ~0.77). */
+  const EVENT_CHANCE_PER_DAY = 0.1;
 
   const SUPPLY_BUMP_MULT = 1.25;
   const SUPPLY_DROP_MULT = 0.75;

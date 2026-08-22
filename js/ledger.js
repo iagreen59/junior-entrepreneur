@@ -17,7 +17,7 @@
     wages:
       "Wages are what you pay employees each Sell Day. Stand workers cost $5/day; restaurant staff cost $8/day each. More staff can raise sales but also raise this cost.",
     rent:
-      "Rent is the daily fee to keep each restaurant open (default $15 per restaurant). Stands do not pay rent. Rent is charged on Sell Day with wages.",
+      "Rent is the daily fee to keep each restaurant open (default $18 per restaurant). Stands do not pay rent. Rent is charged on Sell Day with wages.",
     otherOverhead:
       "Other overhead is extra operating costs that are not COGS, wages, or rent — for example unusual fees from events. Most days this stays at $0.",
     profit:

@@ -9,6 +9,7 @@
  * Phase 13: multi-stand dropdown + Add stand + unlock banner; map render.
  * Phase 14: staff panel (hire / layoff / assign player) + understaffed hints.
  * Phase 18: Business ledger panel with metric info blurbs + restaurant rollups.
+ * Phase 19: hideable instructions cover stands → restaurants, rent/wages, ledger.
  */
 (function (global) {
   const MORNING_COPY =
@@ -747,7 +748,7 @@
     const minStaff = Number(global.GameState.RESTAURANT_MIN_STAFF) || 2;
     const maxStaff = Number(global.GameState.RESTAURANT_MAX_STAFF) || 4;
     const wage = Number(global.GameState.RESTAURANT_WAGE) || 8;
-    const rentEach = Number(global.GameState.RESTAURANT_RENT) || 15;
+    const rentEach = Number(global.GameState.RESTAURANT_RENT) || 18;
     const sellPrice = Number(global.GameState.RESTAURANT_SELL_PRICE) || 200;
     const cost = Number(global.GameState.RESTAURANT_COST) || 400;
     const unlockCash = Number(global.GameState.RESTAURANT_UNLOCK_CASH) || 1000;
@@ -1000,7 +1001,7 @@
       if (locations.length > 1) {
         noteEl.textContent =
           "Totals above · per-restaurant lines show how employee count changes sales vs wages against $" +
-          (Number(global.GameState.RESTAURANT_RENT) || 15).toFixed(0) +
+          (Number(global.GameState.RESTAURANT_RENT) || 18).toFixed(0) +
           " rent each.";
       } else {
         noteEl.textContent =
@@ -1208,7 +1209,7 @@
         : 1;
       const rent = global.GameState.dailyRestaurantRent
         ? global.GameState.dailyRestaurantRent(state)
-        : Number(global.GameState.RESTAURANT_RENT) || 15;
+        : Number(global.GameState.RESTAURANT_RENT) || 18;
       const wages = global.GameState.dailyRestaurantWageCost
         ? global.GameState.dailyRestaurantWageCost(state)
         : 0;

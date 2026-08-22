@@ -36,7 +36,7 @@ Agents must follow these rules unless a later phase explicitly changes a constan
 | Restaurant gate | Own **4 stands** and **cash > $1000** → may buy restaurant for **$400**; **stands forfeited**; cannot own stands + restaurants together |
 | More restaurants | When **cash > $1000**, unlock buy another restaurant for **$400**; max **4** |
 | Restaurant staff | Min **2**, max **4** employees **per restaurant**; player **cannot** work a restaurant shift |
-| Restaurant rent | **Daily rent per restaurant** (default **$15/day** each, tunable in Phase 19). Charged on Sell Day with wages |
+| Restaurant rent | **Daily rent per restaurant** (**$18/day** each after Phase 19 polish; was $15). Charged on Sell Day with wages |
 | Stay open | Must pay **today’s wages + rent** to stay open; underfunded/understaffed → clear block message. Overhead should push profitability or a return to stands via selling restaurants |
 | Per-restaurant P&L | UI shows **sales and profitability per restaurant** so the player sees employee-count (and rent) effects |
 | Sell locations | Sell a stand for **$10** (keep ≥1 in stand mode); sell a restaurant for **$200** (keep ≥1 in restaurant mode) |
@@ -80,7 +80,7 @@ Future agents: skip anything already checked.
 - [x] Phase 16 — First restaurant (rent + per-location P&L)
 - [x] Phase 17 — Multi-restaurant, sell, restart stand
 - [x] Phase 18 — Business ledger and educational metrics
-- [ ] Phase 19 — Instructions refresh + balance + event polish
+- [x] Phase 19 — Instructions refresh + balance + event polish
 
 ---
 
@@ -792,7 +792,7 @@ Openable **Business** menu with running totals: revenue, COGS, **wages**, **rent
 
 ## Phase 19 — Instructions refresh + balance pass + event pack polish
 
-**Status:** not started — start only after Phase 18 is checked done
+**Status:** done
 
 ### Goal
 
@@ -807,11 +807,11 @@ Instructions cover stands, menu, employees, **restaurant rent/wages**, ledger, e
 
 ### Play-test checklist
 
-- [ ] New player can learn core rules from in-game help alone
-- [ ] Smoke path: stand → multi-stand → restaurant works
-- [ ] Rent + wages create visible pressure without instant loss
-- [ ] Event rates still feel rare and manageable
-- [ ] **Preview:** instructions panel screenshots covering new systems — attach to the PR
+- [x] New player can learn core rules from in-game help alone
+- [x] Smoke path: stand → multi-stand → restaurant works
+- [x] Rent + wages create visible pressure without instant loss
+- [x] Event rates still feel rare and manageable
+- [x] **Preview:** instructions panel screenshots covering new systems — attach to the PR
 
 ### Out of scope
 
