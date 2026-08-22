@@ -31,6 +31,10 @@
 
   /** Latest state from render() — used for live recipe yield/COGS updates. */
   let cachedState = null;
+  /** Business panel tab: "business" (default) | "daily". */
+  let businessTab = "business";
+  /** Whether the on-page daily summary section is hidden by the player. */
+  let dailySummaryHidden = false;
 
   function formatMoney(amount) {
     const sign = amount < 0 ? "-" : "";
@@ -286,40 +290,12 @@
 
   function renderProductPicker(state) {
     const product = activeProduct(state);
-    const weather = state.weather || "mild";
-    document.querySelectorAll("[data-product]").forEach(function (btn) {
-      const isActive = btn.getAttribute("data-product") === product;
-      btn.classList.toggle("is-active", isActive);
-      btn.setAttribute("aria-pressed", isActive ? "true" : "false");
-    });
-
-    const hint = document.getElementById("product-hint");
-    if (hint) {
-      const favor = global.GameWeather
-        ? global.GameWeather.favorsProduct(weather, product)
-        : null;
-      let fit = "Mild weather — any item is fine.";
-      if (favor === true) {
-        fit =
-          global.GameWeather.label(weather) +
-          " weather favors " +
-          global.GameState.productLabel(product) +
-          ".";
-      } else if (favor === false) {
-        fit =
-          global.GameWeather.label(weather) +
-          " weather is a mismatch for " +
-          global.GameState.productLabel(product) +
-          ".";
-      }
-      const onMenu = global.GameState.isMenuOffered(state, product);
-      hint.textContent =
-        "Editing " +
-        global.GameState.productLabel(product) +
-        (onMenu
-          ? " (on today’s menu — Sell Day can sell it). "
-          : " (off today’s menu — not sold until you toggle it on). ") +
-        fit;
+    const selects = [
+      document.getElementById("recipe-product-select"),
+      document.getElementById("price-product-select"),
+    ];
+    for (const select of selects) {
+      if (select && select.value !== product) select.value = product;
     }
 
     document.querySelectorAll("[data-recipe-product]").forEach(function (block) {
@@ -337,7 +313,7 @@
       recipeLead.textContent =
         "Units of each ingredient used per serving of " +
         item +
-        ". Ingredients are unique to this product.";
+        ". Switching items or closing without save discards edits.";
     }
 
     const priceTitle = document.getElementById("price-panel-title");
@@ -354,7 +330,7 @@
         unit +
         " of " +
         item +
-        ". Each menu item has its own saved price.";
+        ". Switching items or closing without save discards edits.";
     }
     if (priceLabel) {
       priceLabel.textContent = "Dollars per " + unit;
@@ -734,8 +710,8 @@
     if (panel) panel.hidden = !isRestaurant;
     if (mapLead) {
       mapLead.textContent = isRestaurant
-        ? "Your restaurants on the corner map. Shared supply bag continues."
-        : "Cartoon map of your corner. Owned stands light up; empty pads wait for Add stand.";
+        ? "Your restaurants on the city map. Shared supply bag continues."
+        : "City map of your corner. Owned stands light up; empty pads wait for Add stand.";
     }
     if (!isRestaurant) return;
 
@@ -1343,16 +1319,88 @@
   }
 
   function renderMorningHint(state) {
-    const list = document.getElementById("morning-list");
-    if (!list) return;
-    let hint = document.getElementById("morning-hint");
-    if (!hint) {
-      hint = document.createElement("p");
-      hint.id = "morning-hint";
-      hint.className = "morning-hint";
-      list.insertAdjacentElement("afterend", hint);
+    const hint = document.getElementById("morning-hint");
+    if (!hint) return;
+    const text = morningHint(state);
+    hint.textContent = text || "";
+    hint.hidden = !text;
+  }
+
+  function renderInventoryVisibility() {
+    const section = document.getElementById("inventory-section");
+    const reveal = document.getElementById("inventory-reveal");
+    const hidden = global.GameState.loadInventoryHidden
+      ? global.GameState.loadInventoryHidden()
+      : false;
+    if (section) section.hidden = !!hidden;
+    if (reveal) reveal.hidden = !hidden;
+  }
+
+  function setInventoryHidden(hidden) {
+    if (global.GameState.saveInventoryHidden) {
+      global.GameState.saveInventoryHidden(!!hidden);
     }
-    hint.textContent = morningHint(state);
+    renderInventoryVisibility();
+  }
+
+  function setBusinessTab(tab) {
+    businessTab = tab === "daily" ? "daily" : "business";
+    const businessPanel = document.getElementById("business-tab-business");
+    const dailyPanel = document.getElementById("business-tab-daily");
+    const businessBtn = document.getElementById("tab-business-summary");
+    const dailyBtn = document.getElementById("tab-daily-summary");
+    if (businessPanel) businessPanel.hidden = businessTab !== "business";
+    if (dailyPanel) dailyPanel.hidden = businessTab !== "daily";
+    if (businessBtn) {
+      businessBtn.classList.toggle("is-active", businessTab === "business");
+      businessBtn.setAttribute(
+        "aria-selected",
+        businessTab === "business" ? "true" : "false"
+      );
+    }
+    if (dailyBtn) {
+      dailyBtn.classList.toggle("is-active", businessTab === "daily");
+      dailyBtn.setAttribute(
+        "aria-selected",
+        businessTab === "daily" ? "true" : "false"
+      );
+    }
+  }
+
+  function syncBusinessDailySummary(text) {
+    const body = document.getElementById("business-daily-summary-body");
+    if (!body) return;
+    if (text) {
+      body.textContent = text;
+      return;
+    }
+    if (cachedState && cachedState.lastDayReport) {
+      const formatted = formatDayReport(cachedState.lastDayReport);
+      if (formatted) {
+        body.textContent = formatted;
+        return;
+      }
+    }
+    body.textContent =
+      "No Sell Day yet. Run a day to see today’s report here.";
+  }
+
+  function renderDailySummaryVisibility() {
+    const section = document.getElementById("daily-summary");
+    if (section) section.hidden = !!dailySummaryHidden;
+  }
+
+  function setDailySummaryHidden(hidden) {
+    dailySummaryHidden = !!hidden;
+    renderDailySummaryVisibility();
+    if (hidden && businessTab === "daily") {
+      setBusinessTab("business");
+    }
+  }
+
+  function showDailySummary() {
+    dailySummaryHidden = false;
+    renderDailySummaryVisibility();
   }
 
   function render(state) {
@@ -1391,6 +1439,9 @@
     renderBuyPrices(state);
     renderCart(state);
     renderMorningHint(state);
+    renderInventoryVisibility();
+    renderDailySummaryVisibility();
+    setBusinessTab(businessTab);
 
     const sellBtn = document.getElementById("btn-sell");
     if (sellBtn && !sellBtn.textContent.includes("Selling")) {
@@ -1404,17 +1455,22 @@
       const text = formatDayReport(state.lastDayReport);
       reportEl.textContent = text || MORNING_COPY;
       reportEl.classList.remove("is-receipt");
+      syncBusinessDailySummary(text || null);
     }
   }
 
-  function setReport(message, { flash, receipt } = {}) {
+  function setReport(message, { flash, receipt, revealDaily } = {}) {
     const reportEl = document.getElementById("report-body");
-    const panel = document.querySelector(".report");
+    const panel = document.getElementById("daily-summary") || document.querySelector(".report");
     if (reportEl) {
       reportEl.textContent = message;
       reportEl.classList.toggle("is-receipt", !!receipt);
     }
-    if (flash && panel) {
+    syncBusinessDailySummary(message);
+    if (revealDaily || receipt) {
+      showDailySummary();
+    }
+    if (flash && panel && !panel.hidden) {
       panel.classList.remove("is-fresh");
       void panel.offsetWidth;
       panel.classList.add("is-fresh");
@@ -1517,17 +1573,14 @@
       sell.textContent = locked ? "Selling…" : "Sell Day";
     }
 
-    // Recipe / Buy / Price / Business / product pickers leave standby while
-    // the day plays so they can return when the report completes.
+    // Recipe / Buy / Price / Business leave standby while the day plays.
     const standbyIds = [
       "btn-recipe",
       "btn-buy",
       "btn-price",
       "btn-business",
-      "btn-product-juice",
-      "btn-product-cocoa",
-      "btn-product-burger",
-      "btn-product-soup",
+      "recipe-product-select",
+      "price-product-select",
     ];
     for (const id of standbyIds) {
       const btn = document.getElementById(id);
@@ -1558,9 +1611,12 @@
 
     let label = "Bought";
     if (event.outcome === "leave") {
+      if (event.product) {
+        chip.appendChild(svgIcon(event.product));
+      }
       chip.appendChild(svgIcon(event.reason || "price"));
       label = global.GameCustomers
-        ? global.GameCustomers.leaveReasonLabel(event.reason)
+        ? global.GameCustomers.leaveReasonLabel(event.reason, event.product)
         : "Left";
     } else {
       // Bought item icon + reaction icon (Phase 12).
@@ -1568,13 +1624,9 @@
         chip.appendChild(svgIcon(event.product));
       }
       chip.appendChild(svgIcon(event.reaction || "like"));
-      const itemName = global.GameCustomers
-        ? global.GameCustomers.productShortLabel(event.product)
-        : "Item";
-      const reaction = global.GameCustomers
-        ? global.GameCustomers.buyReactionLabel(event.reaction)
+      label = global.GameCustomers
+        ? global.GameCustomers.buyReactionLabel(event.reaction, event.product)
         : "Bought";
-      label = itemName + " · " + reaction;
     }
 
     const text = document.createElement("span");
@@ -1593,54 +1645,84 @@
   function showCustomerSummary(summary, plan, state) {
     const day = document.getElementById("customer-day");
     const summaryEl = document.getElementById("customer-summary");
-    const list = document.getElementById("customer-summary-list");
+    const body = document.getElementById("customer-summary-body");
     const progress = document.getElementById("customer-day-progress");
     if (progress) progress.textContent = "Day complete";
     if (summaryEl) summaryEl.hidden = false;
-    if (list) {
-      const rows = [];
-      const byProduct =
-        (summary && summary.boughtByProduct) ||
-        (plan && plan.soldByProduct) ||
-        {};
-      for (const product of global.GameState.PRODUCTS) {
-        const qty = byProduct[product] | 0;
-        if (qty > 0) {
-          rows.push([
-            "Bought " +
-              (global.GameCustomers
-                ? global.GameCustomers.productShortLabel(product)
-                : product),
-            qty,
-          ]);
-        }
+    if (body) {
+      body.innerHTML = "";
+      const byProduct = (summary && summary.byProduct) || {};
+      const products = global.GameState.PRODUCTS || [
+        "juice",
+        "cocoa",
+        "burger",
+        "soup",
+      ];
+      const totals = {
+        happy: 0,
+        likes: 0,
+        dislikes: 0,
+        leftStock: 0,
+        leftPrice: 0,
+        leftWeather: 0,
+      };
+
+      function addRow(name, row, isTotal) {
+        const tr = document.createElement("tr");
+        const cells = [
+          name,
+          row.happy | 0,
+          row.likes | 0,
+          row.dislikes | 0,
+          row.leftStock | 0,
+          row.leftPrice | 0,
+          row.leftWeather | 0,
+        ];
+        cells.forEach(function (value, index) {
+          const cell = document.createElement(index === 0 || isTotal ? "th" : "td");
+          if (index === 0) cell.setAttribute("scope", "row");
+          cell.textContent = String(value);
+          tr.appendChild(cell);
+        });
+        body.appendChild(tr);
       }
-      rows.push(
-        ["Bought total", summary.bought],
-        ["Happy", summary.happy],
-        ["Liked", summary.likes],
-        ["Disliked", summary.dislikes],
-        ["Left (price)", summary.leftPrice],
-        ["Left (stock)", summary.leftStock],
-        ["Left (weather)", summary.leftWeather],
-        ["Left total", summary.left]
-      );
-      list.innerHTML = "";
-      for (const [name, qty] of rows) {
-        const li = document.createElement("li");
-        const label = document.createElement("span");
-        label.textContent = name;
-        const value = document.createElement("span");
-        value.className = "qty";
-        value.textContent = String(qty);
-        li.append(label, value);
-        list.appendChild(li);
+
+      for (const product of products) {
+        const row = byProduct[product] || {
+          happy: 0,
+          likes: 0,
+          dislikes: 0,
+          leftStock: 0,
+          leftPrice: 0,
+          leftWeather: 0,
+        };
+        const hasActivity =
+          (row.happy | 0) +
+            (row.likes | 0) +
+            (row.dislikes | 0) +
+            (row.leftStock | 0) +
+            (row.leftPrice | 0) +
+            (row.leftWeather | 0) >
+          0;
+        if (!hasActivity) continue;
+        totals.happy += row.happy | 0;
+        totals.likes += row.likes | 0;
+        totals.dislikes += row.dislikes | 0;
+        totals.leftStock += row.leftStock | 0;
+        totals.leftPrice += row.leftPrice | 0;
+        totals.leftWeather += row.leftWeather | 0;
+        const label = global.GameCustomers
+          ? global.GameCustomers.productShortLabel(product)
+          : product;
+        addRow(label, row, false);
       }
+
+      addRow("Total", totals, true);
     }
     if (day) day.hidden = false;
     setSellDayLocked(false, state);
     if (plan && plan.message) {
-      setReport(plan.message, { flash: true });
+      setReport(plan.message, { flash: true, revealDaily: true });
     }
   }
 
@@ -1652,6 +1734,11 @@
     if (summary) summary.hidden = true;
     if (stage) stage.innerHTML = "";
     setSellDayLocked(false, state);
+  }
+
+  function hideCustomerSummary() {
+    const summary = document.getElementById("customer-summary");
+    if (summary) summary.hidden = true;
   }
 
   const recipeForm = document.getElementById("form-recipe");
@@ -1670,6 +1757,9 @@
       if (key) toggleLedgerInfo(key);
     });
   }
+
+  // Default business tab on load.
+  setBusinessTab("business");
 
   global.GameUI = {
     MORNING_COPY,
@@ -1696,11 +1786,16 @@
     renderEventBanner,
     renderInstructions,
     setInstructionsHidden,
+    setInventoryHidden,
+    setBusinessTab,
+    setDailySummaryHidden,
+    showDailySummary,
     setSellDayLocked,
     renderLedger,
     startCustomerDay,
     showCustomerEvent,
     showCustomerSummary,
+    hideCustomerSummary,
     hideCustomerDay,
   };
 })(window);

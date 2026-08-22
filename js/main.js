@@ -64,7 +64,7 @@
     return result && result.rolled ? result.event : null;
   }
 
-  function onProductSelect(product) {
+  function onProductSelect(product, { quiet } = {}) {
     if (selling) return;
     const result = GameState.setActiveProduct(state, product);
     if (!result.ok) {
@@ -72,8 +72,37 @@
       return;
     }
     GameState.save(state);
+    // Reloading forms from saved state discards any unsaved recipe/price edits.
     refresh();
-    GameUI.setReport(result.message, { flash: true });
+    if (!quiet) {
+      GameUI.setReport(result.message, { flash: true });
+    }
+  }
+
+  function onPanelProductChange(event) {
+    if (selling) return;
+    const select = event.target;
+    const product = select && select.value;
+    if (!product) return;
+    onProductSelect(product, { quiet: true });
+    const open = GameUI.getOpenPanel();
+    if (open === "recipe") {
+      GameUI.setReport(
+        "Editing " +
+          GameState.productLabel(state.activeProduct) +
+          " recipe. Unsaved edits were discarded.",
+        { flash: true }
+      );
+    } else if (open === "price") {
+      GameUI.setReport(
+        "Editing " +
+          GameState.productLabel(state.activeProduct) +
+          " price. Unsaved edits were discarded. Current: " +
+          GameUI.formatMoney(GameState.activePrice(state)) +
+          ".",
+        { flash: true }
+      );
+    }
   }
 
   function onMenuToggle(product, offered) {
@@ -125,6 +154,7 @@
 
   function onBusinessOpen() {
     if (selling) return;
+    GameUI.setBusinessTab("business");
     GameUI.setPanel("business");
     GameUI.renderLedger(state);
     GameUI.setReport(
@@ -299,6 +329,7 @@
         restaurantCount: plan.restaurantCount || 0,
         profit: plan.profit,
         soldOut: plan.soldOut,
+        soldOutProducts: plan.soldOutProducts || [],
         message: plan.message,
         customers: summary,
       };
@@ -320,7 +351,7 @@
       } catch {
         GameUI.setSellDayLocked(false, state);
         if (plan && plan.message) {
-          GameUI.setReport(plan.message, { flash: true });
+          GameUI.setReport(plan.message, { flash: true, revealDaily: true });
         }
       }
     }
@@ -680,6 +711,32 @@
     GameUI.setInstructionsHidden(false);
   }
 
+  function onHideInventory() {
+    GameUI.setInventoryHidden(true);
+  }
+
+  function onShowInventory() {
+    GameUI.setInventoryHidden(false);
+  }
+
+  function onCloseDailySummary() {
+    GameUI.setDailySummaryHidden(true);
+  }
+
+  function onCloseCustomerSummary() {
+    GameUI.hideCustomerSummary();
+  }
+
+  function onBusinessTabClick(event) {
+    const btn = event.target.closest("[data-business-tab]");
+    if (!btn) return;
+    const tab = btn.getAttribute("data-business-tab");
+    GameUI.setBusinessTab(tab);
+    if (tab === "business") {
+      GameUI.renderLedger(state);
+    }
+  }
+
   function onNewGame() {
     if (selling) {
       if (playback) playback.cancel();
@@ -716,11 +773,12 @@
     );
   }
 
-  document.querySelectorAll("[data-product]").forEach(function (btn) {
-    btn.addEventListener("click", function () {
-      onProductSelect(btn.getAttribute("data-product"));
-    });
-  });
+  document
+    .getElementById("recipe-product-select")
+    ?.addEventListener("change", onPanelProductChange);
+  document
+    .getElementById("price-product-select")
+    ?.addEventListener("change", onPanelProductChange);
 
   document.querySelectorAll("[data-menu-product]").forEach(function (input) {
     input.addEventListener("change", function () {
@@ -765,6 +823,24 @@
   document
     .getElementById("btn-show-instructions")
     ?.addEventListener("click", onShowInstructions);
+  document
+    .getElementById("btn-hide-inventory")
+    ?.addEventListener("click", onHideInventory);
+  document
+    .getElementById("btn-show-inventory")
+    ?.addEventListener("click", onShowInventory);
+  document
+    .getElementById("btn-close-daily-summary")
+    ?.addEventListener("click", onCloseDailySummary);
+  document
+    .getElementById("btn-close-daily-summary-tab")
+    ?.addEventListener("click", onCloseDailySummary);
+  document
+    .getElementById("btn-close-customer-summary")
+    ?.addEventListener("click", onCloseCustomerSummary);
+  document
+    .getElementById("panel-business")
+    ?.addEventListener("click", onBusinessTabClick);
 
   document
     .getElementById("form-recipe")

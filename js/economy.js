@@ -221,6 +221,39 @@
     return parts;
   }
 
+  function soldOutProductList(demandByProduct, soldByProduct, stockByProduct, offered) {
+    const out = [];
+    for (const product of offered || productsList()) {
+      const want = Math.max(0, demandByProduct[product] | 0);
+      const sold = Math.max(0, soldByProduct[product] | 0);
+      const stock = Math.max(0, stockByProduct[product] | 0);
+      if (want > sold && (stock === 0 || sold >= stock)) {
+        out.push(product);
+      }
+    }
+    return out;
+  }
+
+  function formatSoldOutNote(soldOutProducts) {
+    if (!soldOutProducts || !soldOutProducts.length) {
+      return " Sold out of at least one item!";
+    }
+    const labels = soldOutProducts.map(function (product) {
+      return global.GameState.productLabel(product);
+    });
+    if (labels.length === 1) return " Sold out of " + labels[0] + "!";
+    if (labels.length === 2) {
+      return " Sold out of " + labels[0] + " and " + labels[1] + "!";
+    }
+    return (
+      " Sold out of " +
+      labels.slice(0, -1).join(", ") +
+      ", and " +
+      labels[labels.length - 1] +
+      "!"
+    );
+  }
+
   function cloneInventory(inventory) {
     const bag = {};
     const keys = global.GameState.INVENTORY_KEYS || Object.keys(inventory || {});
@@ -314,6 +347,7 @@
       cogs += costOfGoodsForProduct(state, product, sold);
       consumeBagForProduct(state, bag, product, sold);
       if (stock > 0 && sold === stock && want > stock) soldOut = true;
+      else if (stock === 0 && want > 0) soldOut = true;
     }
 
     revenue = +revenue.toFixed(2);
@@ -445,6 +479,7 @@
         revenue += sold * (Number.isFinite(price) ? price : 0);
         cogs += costOfGoodsForProduct(state, product, sold);
         if (stock > 0 && sold === stock && want > stock) soldOut = true;
+        else if (stock === 0 && want > 0) soldOut = true;
       }
     }
 
@@ -473,6 +508,13 @@
 
     const purchases = buildPurchaseList(soldByProduct);
     const breakdown = formatSoldBreakdown(soldByProduct, prices);
+    const soldOutProducts = soldOutProductList(
+      demandByProduct,
+      soldByProduct,
+      stockByProduct,
+      offered
+    );
+    if (soldOutProducts.length) soldOut = true;
 
     let weatherNote = "";
     if (offered.length > 0 && demand === 0 && stockCups > 0) {
@@ -579,7 +621,7 @@
           ", COGS " +
           formatMoney(cogs) +
           ".";
-        if (soldOut) message += " Sold out of at least one item!";
+        if (soldOut) message += formatSoldOutNote(soldOutProducts);
         else message += weatherNote;
       }
     } else if (offered.length === 0) {
@@ -616,7 +658,7 @@
         ", profit " +
         formatMoney(profit) +
         ".";
-      if (soldOut) message += " Sold out of at least one item!";
+      if (soldOut) message += formatSoldOutNote(soldOutProducts);
       else message += weatherNote;
     }
 
@@ -658,6 +700,7 @@
       demandMult: demandMult,
       cashAfter: +(state.cash + revenue - wages - rent).toFixed(2),
       soldOut: soldOut,
+      soldOutProducts: soldOutProducts,
       message: message,
     };
   }

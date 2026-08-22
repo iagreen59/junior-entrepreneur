@@ -113,6 +113,7 @@
 
   /**
    * Extra walk-aways for weather / price across the offered menu.
+   * Returns leave stubs with the product customers were unhappy about.
    */
   function leaveExtras(plan, state) {
     const weather = plan.weather || state.weather || "mild";
@@ -121,8 +122,8 @@
         ? plan.products.slice()
         : [plan.product || state.activeProduct || "juice"];
 
-    let weatherLeft = 0;
-    let priceLeft = 0;
+    const weatherProducts = [];
+    const priceProducts = [];
     const ref = global.GameEconomy.REF_PRICE || 1.5;
 
     let mismatchCount = 0;
@@ -135,7 +136,10 @@
       const favor = global.GameWeather
         ? global.GameWeather.favorsProduct(weather, product)
         : null;
-      if (favor === false) mismatchCount += 1;
+      if (favor === false) {
+        mismatchCount += 1;
+        weatherProducts.push(product);
+      }
       if (favor === true) matchCount += 1;
       const pref =
         plan.preferences && Number.isFinite(plan.preferences[product])
@@ -152,9 +156,12 @@
       if (Number.isFinite(price) && price > ref) {
         highPriceCount += 1;
         maxPriceRatio = Math.max(maxPriceRatio, price / ref);
+        priceProducts.push(product);
       }
     }
 
+    let weatherLeft = 0;
+    let priceLeft = 0;
     const avgPref = offered.length ? prefSum / offered.length : 1;
     if (mismatchCount > 0 && matchCount === 0) {
       weatherLeft = Math.max(2, Math.round(8 * (1 - Math.min(avgPref, 1))));
@@ -162,6 +169,9 @@
       weatherLeft = Math.max(1, mismatchCount);
     } else if (matchCount === 0) {
       weatherLeft = 1; // mild
+      if (!weatherProducts.length && offered.length) {
+        weatherProducts.push(offered[0]);
+      }
     }
 
     if (highPriceCount > 0) {
@@ -174,7 +184,50 @@
     weatherLeft = Math.min(weatherLeft, MAX_WALKAWAYS);
     priceLeft = Math.min(priceLeft, MAX_WALKAWAYS);
 
-    return { weatherLeft: weatherLeft, priceLeft: priceLeft };
+    return {
+      weatherLeft: weatherLeft,
+      priceLeft: priceLeft,
+      weatherProducts: weatherProducts.length ? weatherProducts : offered.slice(),
+      priceProducts: priceProducts.length ? priceProducts : offered.slice(),
+    };
+  }
+
+  /** Spread count leave events across candidate products (round-robin). */
+  function leaveEventsFor(reason, count, products) {
+    const events = [];
+    const pool =
+      products && products.length ? products : ["juice"];
+    for (let i = 0; i < count; i++) {
+      events.push({
+        outcome: "leave",
+        product: pool[i % pool.length],
+        reason: reason,
+        reaction: null,
+      });
+    }
+    return events;
+  }
+
+  /**
+   * Sold-out leave counts per product from demand vs sold.
+   */
+  function soldOutLeaveProducts(plan) {
+    const products = [];
+    const demandBy =
+      (plan && plan.demandByProduct) || {};
+    const soldBy =
+      (plan && plan.soldByProduct) || {};
+    const offered =
+      plan && plan.products && plan.products.length
+        ? plan.products
+        : productsList();
+    for (const product of offered) {
+      const want = Math.max(0, demandBy[product] | 0);
+      const sold = Math.max(0, soldBy[product] | 0);
+      const short = Math.max(0, want - sold);
+      for (let i = 0; i < short; i++) products.push(product);
+    }
+    return products;
   }
 
   /**
@@ -207,37 +260,36 @@
       MAX_WALKAWAYS,
       Math.max(0, demand - cupsSold)
     );
-    for (let i = 0; i < soldOutLeft; i++) {
-      events.push({
-        outcome: "leave",
-        product: null,
-        reason: "stock",
-        reaction: null,
-      });
-    }
+    const soldOutPool = soldOutLeaveProducts(plan);
+    const stockProducts =
+      soldOutPool.length > 0
+        ? soldOutPool
+        : (plan.products && plan.products.length
+            ? plan.products
+            : [plan.product || state.activeProduct || "juice"]);
+    events.push.apply(
+      events,
+      leaveEventsFor("stock", soldOutLeft, stockProducts)
+    );
 
     const extras = leaveExtras(plan, state);
-    for (let i = 0; i < extras.weatherLeft; i++) {
-      events.push({
-        outcome: "leave",
-        product: null,
-        reason: "weather",
-        reaction: null,
-      });
-    }
-    for (let i = 0; i < extras.priceLeft; i++) {
-      events.push({
-        outcome: "leave",
-        product: null,
-        reason: "price",
-        reaction: null,
-      });
-    }
+    events.push.apply(
+      events,
+      leaveEventsFor("weather", extras.weatherLeft, extras.weatherProducts)
+    );
+    events.push.apply(
+      events,
+      leaveEventsFor("price", extras.priceLeft, extras.priceProducts)
+    );
 
     if (events.length === 0) {
       events.push({
         outcome: "leave",
-        product: null,
+        product:
+          (plan.products && plan.products[0]) ||
+          plan.product ||
+          state.activeProduct ||
+          "juice",
         reason: "price",
         reaction: null,
       });
@@ -280,6 +332,19 @@
     };
   }
 
+  function emptyFeedbackRow() {
+    return {
+      happy: 0,
+      likes: 0,
+      dislikes: 0,
+      leftStock: 0,
+      leftPrice: 0,
+      leftWeather: 0,
+      bought: 0,
+      left: 0,
+    };
+  }
+
   function summarize(events) {
     const summary = {
       bought: 0,
@@ -291,21 +356,46 @@
       dislikes: 0,
       happy: 0,
       boughtByProduct: emptyProductCounts(),
+      byProduct: {},
     };
+    for (const product of productsList()) {
+      summary.byProduct[product] = emptyFeedbackRow();
+    }
     for (const event of events) {
+      const product = event.product || null;
+      const row =
+        product && summary.byProduct[product]
+          ? summary.byProduct[product]
+          : null;
       if (event.outcome === "buy") {
         summary.bought += 1;
-        if (event.product && summary.boughtByProduct[event.product] != null) {
-          summary.boughtByProduct[event.product] += 1;
+        if (product && summary.boughtByProduct[product] != null) {
+          summary.boughtByProduct[product] += 1;
         }
-        if (event.reaction === "like") summary.likes += 1;
-        else if (event.reaction === "dislike") summary.dislikes += 1;
-        else if (event.reaction === "happy") summary.happy += 1;
+        if (row) row.bought += 1;
+        if (event.reaction === "like") {
+          summary.likes += 1;
+          if (row) row.likes += 1;
+        } else if (event.reaction === "dislike") {
+          summary.dislikes += 1;
+          if (row) row.dislikes += 1;
+        } else if (event.reaction === "happy") {
+          summary.happy += 1;
+          if (row) row.happy += 1;
+        }
       } else {
         summary.left += 1;
-        if (event.reason === "price") summary.leftPrice += 1;
-        else if (event.reason === "stock") summary.leftStock += 1;
-        else if (event.reason === "weather") summary.leftWeather += 1;
+        if (row) row.left += 1;
+        if (event.reason === "price") {
+          summary.leftPrice += 1;
+          if (row) row.leftPrice += 1;
+        } else if (event.reason === "stock") {
+          summary.leftStock += 1;
+          if (row) row.leftStock += 1;
+        } else if (event.reason === "weather") {
+          summary.leftWeather += 1;
+          if (row) row.leftWeather += 1;
+        }
       }
     }
     return summary;
@@ -370,18 +460,28 @@
     };
   }
 
-  function leaveReasonLabel(reason) {
-    if (reason === "price") return "Price too high";
-    if (reason === "stock") return "Sold out";
-    if (reason === "weather") return "Weather mismatch";
-    return "Left";
+  function leaveReasonLabel(reason, product) {
+    const item = product ? productShortLabel(product) : null;
+    if (reason === "price") {
+      return item ? item + " · price too high" : "Price too high";
+    }
+    if (reason === "stock") {
+      return item ? "Sold out of " + item : "Sold out";
+    }
+    if (reason === "weather") {
+      return item ? item + " · weather mismatch" : "Weather mismatch";
+    }
+    return item ? "Left · " + item : "Left";
   }
 
-  function buyReactionLabel(reaction) {
-    if (reaction === "happy") return "Happy";
-    if (reaction === "like") return "Liked it";
-    if (reaction === "dislike") return "Disliked it";
-    return "Bought";
+  function buyReactionLabel(reaction, product) {
+    const item = product ? productShortLabel(product) : null;
+    if (reaction === "happy") return item ? item + " · happy" : "Happy";
+    if (reaction === "like") return item ? item + " · liked" : "Liked it";
+    if (reaction === "dislike") {
+      return item ? "Disliked " + item : "Disliked it";
+    }
+    return item ? "Bought " + item : "Bought";
   }
 
   function productShortLabel(product) {
