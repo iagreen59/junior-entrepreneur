@@ -57,7 +57,7 @@
     if (GameState.clearDemandMultiplier) {
       GameState.clearDemandMultiplier(state);
     }
-    if (!global.GameEvents || typeof GameEvents.onNewDay !== "function") {
+    if (!window.GameEvents || typeof GameEvents.onNewDay !== "function") {
       return null;
     }
     const result = GameEvents.onNewDay(state);
@@ -272,7 +272,7 @@
       state.cash = plan.cashAfter;
       state.day += 1;
       state.weather = GameWeather.roll();
-      if (global.GameLedger && GameLedger.recordSellDay) {
+      if (window.GameLedger && GameLedger.recordSellDay) {
         GameLedger.recordSellDay(state, plan);
       }
       state.lastDayReport = {
@@ -463,7 +463,7 @@
     );
     if (!confirmed) return;
     const result = GameState.sellStand(state, state.activeStandId);
-    if (result.ok && global.GameLedger && GameLedger.recordCashEvent) {
+    if (result.ok && window.GameLedger && GameLedger.recordCashEvent) {
       GameLedger.recordCashEvent(state, {
         kind: "sellStand",
         amount: Number(GameState.STAND_SELL_PRICE) || 10,
@@ -528,7 +528,7 @@
       refresh();
       return;
     }
-    if (global.GameLedger && GameLedger.recordCashEvent) {
+    if (window.GameLedger && GameLedger.recordCashEvent) {
       GameLedger.recordCashEvent(state, {
         kind: "buyRestaurant",
         amount: -(Number(GameState.RESTAURANT_COST) || 400),
@@ -575,7 +575,7 @@
       refresh();
       return;
     }
-    if (global.GameLedger && GameLedger.recordCashEvent) {
+    if (window.GameLedger && GameLedger.recordCashEvent) {
       GameLedger.recordCashEvent(state, {
         kind: "sellRestaurant",
         amount: Number(GameState.RESTAURANT_SELL_PRICE) || 200,
