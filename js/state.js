@@ -1768,7 +1768,12 @@
   }
 
   function save(state) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } catch {
+      // iOS private mode / quota / blocked storage: keep the in-memory
+      // day going so Sell Day can still finish and return to standby.
+    }
   }
 
   function inventoryLabels() {

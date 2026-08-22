@@ -11,6 +11,8 @@
  */
 (function (global) {
   const DAY_MS = 10000;
+  /** Cap walk-aways so the stage stays readable (buys still match cupsSold). */
+  const MAX_WALKAWAYS = 8;
   const LEAVE_REASONS = ["price", "stock", "weather"];
   const BUY_REACTIONS = ["like", "dislike", "happy"];
 
@@ -169,8 +171,8 @@
       priceLeft += 3;
     }
 
-    weatherLeft = Math.min(weatherLeft, 8);
-    priceLeft = Math.min(priceLeft, 8);
+    weatherLeft = Math.min(weatherLeft, MAX_WALKAWAYS);
+    priceLeft = Math.min(priceLeft, MAX_WALKAWAYS);
 
     return { weatherLeft: weatherLeft, priceLeft: priceLeft };
   }
@@ -201,7 +203,10 @@
 
     const demand = Math.max(0, plan.demand | 0);
     const stockLeftAfter = Math.max(0, (plan.stockCups | 0) - cupsSold);
-    const soldOutLeft = Math.max(0, demand - cupsSold);
+    const soldOutLeft = Math.min(
+      MAX_WALKAWAYS,
+      Math.max(0, demand - cupsSold)
+    );
     for (let i = 0; i < soldOutLeft; i++) {
       events.push({
         outcome: "leave",
@@ -306,34 +311,61 @@
     return summary;
   }
 
+  function nowMs() {
+    return typeof performance !== "undefined" && performance.now
+      ? performance.now()
+      : Date.now();
+  }
+
   /**
    * Play a timeline. Calls onEvent(event, index) and onDone().
+   * Uses one short interval instead of N+1 long timeouts so iOS Safari
+   * cannot drop the end-of-day timer after the last customer.
    * Returns a controller { cancel() }.
    */
   function play(timeline, { onEvent, onDone } = {}) {
-    const timers = [];
-    let cancelled = false;
     const events = (timeline && timeline.events) || [];
     const dayMs = (timeline && timeline.dayMs) || DAY_MS;
+    let cancelled = false;
+    let finished = false;
+    let index = 0;
+    const startedAt = nowMs();
+    let tickId = 0;
 
-    events.forEach(function (event, index) {
-      const id = setTimeout(function () {
-        if (cancelled) return;
-        if (typeof onEvent === "function") onEvent(event, index);
-      }, event.atMs);
-      timers.push(id);
-    });
+    function finish() {
+      if (cancelled || finished) return;
+      finished = true;
+      clearInterval(tickId);
+      if (typeof onDone === "function") {
+        onDone(timeline.summary, timeline.plan);
+      }
+    }
 
-    const doneId = setTimeout(function () {
-      if (cancelled) return;
-      if (typeof onDone === "function") onDone(timeline.summary, timeline.plan);
-    }, dayMs);
-    timers.push(doneId);
+    function tick() {
+      if (cancelled || finished) return;
+      const elapsed = nowMs() - startedAt;
+      while (index < events.length && events[index].atMs <= elapsed) {
+        const event = events[index];
+        const eventIndex = index;
+        index += 1;
+        if (typeof onEvent === "function") {
+          try {
+            onEvent(event, eventIndex);
+          } catch {
+            // Keep the day moving if a chip fails to render.
+          }
+        }
+      }
+      if (elapsed >= dayMs) finish();
+    }
+
+    tickId = setInterval(tick, 50);
+    tick();
 
     return {
       cancel: function () {
         cancelled = true;
-        timers.forEach(clearTimeout);
+        clearInterval(tickId);
       },
     };
   }
@@ -362,6 +394,7 @@
 
   global.GameCustomers = {
     DAY_MS,
+    MAX_WALKAWAYS,
     LEAVE_REASONS,
     BUY_REACTIONS,
     buildTimeline,
