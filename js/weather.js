@@ -1,15 +1,16 @@
 /**
  * Typed daily weather + product preference helpers.
- * Phase 7: hot / mild / cold replace anonymous weather noise.
- * Phase 11: food prefs — burger favored on hot; soup favored on cold.
+ * Five levels: steaming hot → bitter cold.
  *
  * Preference (applied in GameEconomy demand):
- *   hot  → favors juice + burger (cold drink / hot-day food), reduces cocoa + soup
- *   cold → favors cocoa + soup (hot drink / cold-day food), reduces juice + burger
- *   mild → roughly even (factor 1.0 for all four)
+ *   steaming → strongly favors juice + burger; reduces cocoa + soup
+ *   hot      → favors juice + burger; reduces cocoa + soup
+ *   mild     → roughly even (factor 1.0 for all four)
+ *   cold     → favors cocoa + soup; reduces juice + burger
+ *   bitter   → strongly favors cocoa + soup; reduces juice + burger
  */
 (function (global) {
-  const TYPES = ["hot", "mild", "cold"];
+  const TYPES = ["steaming", "hot", "mild", "cold", "bitter"];
 
   /** Demand multiplier when the active product matches the weather. */
   const MATCH_FACTOR = 1.35;
@@ -17,45 +18,64 @@
   const MISMATCH_FACTOR = 0.65;
   /** Mild days stay even for all products. */
   const MILD_FACTOR = 1.0;
+  /** Extra-strong match / mismatch on extreme days. */
+  const STRONG_MATCH_FACTOR = 1.5;
+  const STRONG_MISMATCH_FACTOR = 0.5;
 
   function isType(value) {
     return TYPES.includes(value);
   }
 
   function label(weather) {
+    if (weather === "steaming") return "Steaming hot";
     if (weather === "hot") return "Hot";
     if (weather === "cold") return "Cold";
+    if (weather === "bitter") return "Bitter cold";
     return "Mild";
   }
 
   function tip(weather) {
+    if (weather === "steaming") {
+      return "Steaming hot — shoppers crave icy juice and grilled burgers; skip cocoa and soup.";
+    }
     if (weather === "hot") {
-      return "Hot day — shoppers want juice and burgers more than cocoa or soup.";
+      return "Hot day — juice and burgers sell well; cocoa and soup are a harder sell.";
     }
     if (weather === "cold") {
-      return "Cold day — shoppers want hot cocoa and soup more than juice or burgers.";
+      return "Cold day — hot cocoa and hearty soup beat juice and burgers.";
+    }
+    if (weather === "bitter") {
+      return "Bitter cold — rich cocoa and filling soup are in demand; cold drinks struggle.";
     }
     return "Mild day — juice, cocoa, burgers, and soup draw about the same interest.";
   }
 
+  function isExtremeHot(weather) {
+    return weather === "steaming" || weather === "hot";
+  }
+
+  function isExtremeCold(weather) {
+    return weather === "bitter" || weather === "cold";
+  }
+
   /**
-   * Roll today's weather. Equal odds hot / mild / cold.
+   * Roll today's weather. Equal odds across all five levels.
    * Optional randomFn returns 0..1 for tests.
    */
   function roll(randomFn) {
     const r = typeof randomFn === "function" ? randomFn() : Math.random();
-    if (r < 1 / 3) return "hot";
-    if (r < 2 / 3) return "mild";
-    return "cold";
+    const slot = Math.floor(r * TYPES.length);
+    return TYPES[Math.min(TYPES.length - 1, Math.max(0, slot))];
   }
 
   function normalize(value, randomFn) {
-    return isType(value) ? value : roll(randomFn);
+    if (isType(value)) return value;
+    return roll(randomFn);
   }
 
   /**
    * Whether the product is weather-favored.
-   * Hot: juice + burger. Cold: cocoa + soup. Mild: neither (null).
+   * Hot end: juice + burger. Cold end: cocoa + soup. Mild: neither (null).
    */
   function favorsProduct(weather, product) {
     const item =
@@ -65,15 +85,35 @@
         ? product
         : "juice";
 
-    if (weather === "hot") {
+    if (weather === "steaming" || weather === "hot") {
       if (item === "juice" || item === "burger") return true;
       return false;
     }
-    if (weather === "cold") {
+    if (weather === "bitter" || weather === "cold") {
       if (item === "cocoa" || item === "soup") return true;
       return false;
     }
     return null; // mild — none favored
+  }
+
+  function matchFactor(weather) {
+    if (weather === "steaming" || weather === "bitter") {
+      return STRONG_MATCH_FACTOR;
+    }
+    if (weather === "hot" || weather === "cold") {
+      return MATCH_FACTOR;
+    }
+    return MILD_FACTOR;
+  }
+
+  function mismatchFactor(weather) {
+    if (weather === "steaming" || weather === "bitter") {
+      return STRONG_MISMATCH_FACTOR;
+    }
+    if (weather === "hot" || weather === "cold") {
+      return MISMATCH_FACTOR;
+    }
+    return MILD_FACTOR;
   }
 
   /**
@@ -81,8 +121,8 @@
    */
   function preferenceFactor(weather, product) {
     const favor = favorsProduct(weather, product);
-    if (favor === true) return MATCH_FACTOR;
-    if (favor === false) return MISMATCH_FACTOR;
+    if (favor === true) return matchFactor(weather);
+    if (favor === false) return mismatchFactor(weather);
     return MILD_FACTOR;
   }
 
@@ -91,6 +131,8 @@
     MATCH_FACTOR,
     MISMATCH_FACTOR,
     MILD_FACTOR,
+    STRONG_MATCH_FACTOR,
+    STRONG_MISMATCH_FACTOR,
     isType,
     label,
     tip,
@@ -98,5 +140,9 @@
     normalize,
     favorsProduct,
     preferenceFactor,
+    isExtremeHot,
+    isExtremeCold,
+    matchFactor,
+    mismatchFactor,
   };
 })(window);

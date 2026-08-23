@@ -138,26 +138,41 @@
     return +total.toFixed(2);
   }
 
-  /**
-   * Price + weather preference demand for selling `product`.
-   * `weather` should be hot | mild | cold (from state.weather).
-   */
-  function demandForPrice(price, weather, product) {
-    const sellPrice = Number(price);
-    if (!Number.isFinite(sellPrice) || sellPrice <= 0) {
-      const preference = global.GameWeather
-        ? global.GameWeather.preferenceFactor(weather, product)
-        : 1;
-      return Math.floor(BASE_INTEREST * 4 * preference);
-    }
+  function recipeForProduct(state, product) {
+    return (
+      (state.recipes && state.recipes[product]) ||
+      global.GameState.activeRecipe(
+        Object.assign({}, state, { activeProduct: product })
+      ) ||
+      {}
+    );
+  }
 
+  function tasteFactor(state, weather, product) {
+    if (!global.GameRecipePrefs) return 1;
+    const recipe = recipeForProduct(state, product);
+    return global.GameRecipePrefs.demandFactor(product, recipe, weather);
+  }
+
+  /**
+   * Price + weather + recipe taste demand for selling `product`.
+   * `weather` should be one of GameWeather.TYPES (from state.weather).
+   */
+  function demandForPrice(price, weather, product, state) {
     const preference = global.GameWeather
       ? global.GameWeather.preferenceFactor(weather, product)
       : 1;
+    const taste = state ? tasteFactor(state, weather, product) : 1;
+    const sellPrice = Number(price);
+    if (!Number.isFinite(sellPrice) || sellPrice <= 0) {
+      return Math.floor(BASE_INTEREST * 4 * preference * taste);
+    }
+
     const interest =
       BASE_INTEREST *
       Math.pow(REF_PRICE / sellPrice, ELASTICITY) *
-      preference;
+      preference *
+      taste;
     return Math.max(0, Math.floor(interest));
   }
 
@@ -335,7 +350,9 @@
       const want = Math.max(
         0,
         Math.floor(
-          demandForPrice(price, weather, product) * demandMult * capacityMult
+          demandForPrice(price, weather, product, state) *
+            demandMult *
+            capacityMult
         )
       );
       const sold = Math.min(want, stock);
@@ -468,7 +485,7 @@
         const want = Math.max(
           0,
           Math.floor(
-            demandForPrice(price, weather, product) * demandMult * capacityMult
+            demandForPrice(price, weather, product, state) * demandMult * capacityMult
           )
         );
         const sold = Math.min(want, stock);
@@ -701,6 +718,11 @@
       cashAfter: +(state.cash + revenue - wages - rent).toFixed(2),
       soldOut: soldOut,
       soldOutProducts: soldOutProducts,
+      recipes: offered.reduce(function (acc, product) {
+        const recipe = recipeForProduct(state, product);
+        acc[product] = Object.assign({}, recipe);
+        return acc;
+      }, {}),
       message: message,
     };
   }

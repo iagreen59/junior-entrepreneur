@@ -33,8 +33,332 @@
   let cachedState = null;
   /** Business panel tab: "business" (default) | "daily". */
   let businessTab = "business";
-  /** Whether the on-page daily summary section is hidden by the player. */
-  let dailySummaryHidden = false;
+  /** Whether the day-results panel is hidden by the player. */
+  let dayResultsHidden = true;
+  /** Hint blurb visible inside day-results. */
+  let dayHintsVisible = false;
+  /** Latest completed-day report bound to the panel (live or history). */
+  let activeDayReport = null;
+  /** "live" after Sell Day; "history" when opened from Business / day stat. */
+  let dayResultsMode = "live";
+
+  function dayHistoryList(state) {
+    const history = state && Array.isArray(state.dayHistory) ? state.dayHistory : [];
+    if (history.length) return history;
+    if (state && state.lastDayReport) return [state.lastDayReport];
+    return [];
+  }
+
+  function reportForCompletedDay(state, completedDay) {
+    const day = Number(completedDay);
+    if (!Number.isFinite(day)) return null;
+    const history = dayHistoryList(state);
+    for (let i = history.length - 1; i >= 0; i--) {
+      const entry = history[i];
+      if (Number(entry.completedDay) === day) return entry;
+    }
+    return null;
+  }
+
+  function latestCompletedReport(state) {
+    const history = dayHistoryList(state);
+    return history.length ? history[history.length - 1] : null;
+  }
+
+  function populateDayHistorySelect(selectEl, state, selectedDay) {
+    if (!selectEl) return;
+    const history = dayHistoryList(state);
+    selectEl.innerHTML = "";
+    if (!history.length) {
+      const opt = document.createElement("option");
+      opt.value = "";
+      opt.textContent = "No completed days yet";
+      selectEl.appendChild(opt);
+      selectEl.disabled = true;
+      return;
+    }
+    selectEl.disabled = false;
+    for (let i = history.length - 1; i >= 0; i--) {
+      const entry = history[i];
+      const dayNum = Number(entry.completedDay) || i + 1;
+      const opt = document.createElement("option");
+      opt.value = String(dayNum);
+      const weatherLabel =
+        entry.weather && global.GameWeather
+          ? global.GameWeather.label(entry.weather)
+          : "";
+      opt.textContent =
+        "Day " +
+        dayNum +
+        (weatherLabel ? " · " + weatherLabel : "");
+      selectEl.appendChild(opt);
+    }
+    const pick =
+      selectedDay != null
+        ? String(selectedDay)
+        : String(history[history.length - 1].completedDay || history.length);
+    if (selectEl.querySelector('option[value="' + pick + '"]')) {
+      selectEl.value = pick;
+    }
+  }
+
+  function renderCustomerSummaryTable(summary) {
+    const body = document.getElementById("customer-summary-body");
+    const wrap = document.getElementById("day-results-table-wrap");
+    if (!body) return;
+    body.innerHTML = "";
+    const byProduct = (summary && summary.byProduct) || {};
+    const products = global.GameState.PRODUCTS || [
+      "juice",
+      "cocoa",
+      "burger",
+      "soup",
+    ];
+    const totals = {
+      happy: 0,
+      likes: 0,
+      dislikes: 0,
+      leftStock: 0,
+      leftPrice: 0,
+      leftWeather: 0,
+    };
+    let anyRow = false;
+
+    function addRow(name, row, isTotal) {
+      const tr = document.createElement("tr");
+      const cells = [
+        name,
+        row.happy | 0,
+        row.likes | 0,
+        row.dislikes | 0,
+        row.leftStock | 0,
+        row.leftPrice | 0,
+        row.leftWeather | 0,
+      ];
+      cells.forEach(function (value, index) {
+        const cell = document.createElement(index === 0 || isTotal ? "th" : "td");
+        if (index === 0) cell.setAttribute("scope", "row");
+        cell.textContent = String(value);
+        tr.appendChild(cell);
+      });
+      body.appendChild(tr);
+    }
+
+    for (const product of products) {
+      const row = byProduct[product] || {
+        happy: 0,
+        likes: 0,
+        dislikes: 0,
+        leftStock: 0,
+        leftPrice: 0,
+        leftWeather: 0,
+      };
+      const hasActivity =
+        (row.happy | 0) +
+          (row.likes | 0) +
+          (row.dislikes | 0) +
+          (row.leftStock | 0) +
+          (row.leftPrice | 0) +
+          (row.leftWeather | 0) >
+        0;
+      if (!hasActivity) continue;
+      anyRow = true;
+      totals.happy += row.happy | 0;
+      totals.likes += row.likes | 0;
+      totals.dislikes += row.dislikes | 0;
+      totals.leftStock += row.leftStock | 0;
+      totals.leftPrice += row.leftPrice | 0;
+      totals.leftWeather += row.leftWeather | 0;
+      const label = global.GameCustomers
+        ? global.GameCustomers.productShortLabel(product)
+        : product;
+      addRow(label, row, false);
+    }
+
+    if (anyRow) addRow("Total", totals, true);
+    if (wrap) wrap.hidden = !anyRow;
+  }
+
+  function renderDayHints(report, state) {
+    const hintsEl = document.getElementById("day-results-hints");
+    const btn = document.getElementById("btn-day-hints");
+    if (!hintsEl || !btn) return;
+    const hints =
+      global.GameRecipePrefs && report
+        ? global.GameRecipePrefs.buildHints(report, state)
+        : [];
+    hintsEl.innerHTML = "";
+    if (!hints.length) {
+      hintsEl.hidden = true;
+      btn.hidden = true;
+      dayHintsVisible = false;
+      btn.setAttribute("aria-expanded", "false");
+      btn.textContent = "Show hints";
+      return;
+    }
+    btn.hidden = false;
+    const list = document.createElement("ul");
+    list.className = "day-results-hints-list";
+    for (const line of hints) {
+      const li = document.createElement("li");
+      li.textContent = line;
+      list.appendChild(li);
+    }
+    hintsEl.appendChild(list);
+    hintsEl.hidden = !dayHintsVisible;
+    btn.setAttribute("aria-expanded", dayHintsVisible ? "true" : "false");
+    btn.textContent = dayHintsVisible ? "Hide hints" : "Show hints";
+  }
+
+  function setDayHintsVisible(visible) {
+    dayHintsVisible = !!visible;
+    const hintsEl = document.getElementById("day-results-hints");
+    const btn = document.getElementById("btn-day-hints");
+    if (hintsEl) hintsEl.hidden = !dayHintsVisible;
+    if (btn) {
+      btn.setAttribute("aria-expanded", dayHintsVisible ? "true" : "false");
+      btn.textContent = dayHintsVisible ? "Hide hints" : "Show hints";
+    }
+  }
+
+  function setDayResultsTitle(mode, report) {
+    const titleEl = document.getElementById("day-results-title");
+    if (!titleEl) return;
+    if (mode === "history") {
+      const dayNum = report && report.completedDay ? report.completedDay : "—";
+      titleEl.textContent = "Previous day · Day " + dayNum;
+      return;
+    }
+    if (mode === "live-complete") {
+      titleEl.textContent = "Day complete";
+      return;
+    }
+    titleEl.textContent = "Customers today";
+  }
+
+  function renderDayResultsVisibility() {
+    const panel = document.getElementById("day-results");
+    if (panel) panel.hidden = !!dayResultsHidden;
+  }
+
+  function showDayResultsPanel() {
+    dayResultsHidden = false;
+    renderDayResultsVisibility();
+  }
+
+  function hideDayResultsPanel() {
+    dayResultsHidden = true;
+    dayHintsVisible = false;
+    renderDayResultsVisibility();
+    setDayHintsVisible(false);
+  }
+
+  function bindDayResultsReport(report, summary, state, mode) {
+    activeDayReport = report || null;
+    dayResultsMode = mode || "live";
+    const historyWrap = document.getElementById("day-history-select-wrap");
+    const historySelect = document.getElementById("day-history-select");
+    if (historyWrap) historyWrap.hidden = mode !== "history";
+    if (historySelect && mode === "history" && state) {
+      populateDayHistorySelect(
+        historySelect,
+        state,
+        report && report.completedDay
+      );
+    }
+
+    setDayResultsTitle(
+      mode === "history"
+        ? "history"
+        : mode === "live-complete"
+          ? "live-complete"
+          : "live",
+      report
+    );
+
+    const progress = document.getElementById("day-results-progress");
+    if (progress) {
+      if (mode === "live") {
+        progress.textContent = "Customers are arriving…";
+      } else if (summary) {
+        const bought = summary.bought | 0;
+        const left = summary.left | 0;
+        progress.textContent = bought + " bought · " + left + " left";
+      } else {
+        progress.textContent = "";
+      }
+    }
+
+    if (summary) renderCustomerSummaryTable(summary);
+    else {
+      const wrap = document.getElementById("day-results-table-wrap");
+      if (wrap) wrap.hidden = true;
+    }
+
+    const stage = document.getElementById("customer-stage");
+    if (stage && mode === "history") stage.innerHTML = "";
+
+    const reportEl = document.getElementById("report-body");
+    const text = formatDayReport(report);
+    if (reportEl) {
+      if (mode === "live") {
+        reportEl.textContent = "";
+        reportEl.hidden = true;
+      } else {
+        reportEl.hidden = false;
+        reportEl.textContent = text || MORNING_COPY;
+      }
+      reportEl.classList.remove("is-receipt");
+    }
+
+    const hintsBtn = document.getElementById("btn-day-hints");
+    if (hintsBtn) hintsBtn.hidden = mode === "live";
+
+    if (mode === "live") {
+      renderDayHints(null, state);
+    } else {
+      renderDayHints(report, state);
+    }
+    setDayHintsVisible(false);
+    showDayResultsPanel();
+  }
+
+  function showPreviousDay(state, completedDay) {
+    const report =
+      reportForCompletedDay(state, completedDay) || latestCompletedReport(state);
+    if (!report) {
+      return {
+        ok: false,
+        message: "No completed Sell Day yet — run Sell Day to see results here.",
+      };
+    }
+    closePanel();
+    bindDayResultsReport(
+      report,
+      report.customers || null,
+      state,
+      "history"
+    );
+    const panel = document.getElementById("day-results");
+    if (panel) {
+      panel.classList.remove("is-fresh");
+      void panel.offsetWidth;
+      panel.classList.add("is-fresh");
+    }
+    return { ok: true, report: report };
+  }
+
+  function renderBusinessDaySelect(state) {
+    populateDayHistorySelect(
+      document.getElementById("business-day-select"),
+      state,
+      latestCompletedReport(state) &&
+        latestCompletedReport(state).completedDay
+    );
+    const viewBtn = document.getElementById("btn-view-previous-day");
+    const history = dayHistoryList(state);
+    if (viewBtn) viewBtn.disabled = history.length === 0;
+  }
 
   function formatMoney(amount) {
     const sign = amount < 0 ? "-" : "";
@@ -1453,42 +1777,9 @@
         businessTab === "daily" ? "true" : "false"
       );
     }
-  }
-
-  function syncBusinessDailySummary(text) {
-    const body = document.getElementById("business-daily-summary-body");
-    if (!body) return;
-    if (text) {
-      body.textContent = text;
-      return;
+    if (businessTab === "daily" && cachedState) {
+      renderBusinessDaySelect(cachedState);
     }
-    if (cachedState && cachedState.lastDayReport) {
-      const formatted = formatDayReport(cachedState.lastDayReport);
-      if (formatted) {
-        body.textContent = formatted;
-        return;
-      }
-    }
-    body.textContent =
-      "No Sell Day yet. Run a day to see today’s report here.";
-  }
-
-  function renderDailySummaryVisibility() {
-    const section = document.getElementById("daily-summary");
-    if (section) section.hidden = !!dailySummaryHidden;
-  }
-
-  function setDailySummaryHidden(hidden) {
-    dailySummaryHidden = !!hidden;
-    renderDailySummaryVisibility();
-    if (hidden && businessTab === "daily") {
-      setBusinessTab("business");
-    }
-  }
-
-  function showDailySummary() {
-    dailySummaryHidden = false;
-    renderDailySummaryVisibility();
   }
 
   function render(state) {
@@ -1529,8 +1820,13 @@
     renderCart(state);
     renderMorningHint(state);
     renderInventoryVisibility();
-    renderDailySummaryVisibility();
+    renderDayResultsVisibility();
+    renderBusinessDaySelect(state);
     setBusinessTab(businessTab);
+
+    const dayBtn = document.getElementById("stat-day-btn");
+    const hasHistory = dayHistoryList(state).length > 0;
+    if (dayBtn) dayBtn.disabled = !hasHistory;
 
     const sellBtn = document.getElementById("btn-sell");
     if (sellBtn && !sellBtn.textContent.includes("Selling")) {
@@ -1540,24 +1836,21 @@
     const businessOpen = getOpenPanel() === "business";
     if (businessOpen) renderLedger(state);
 
-    if (reportEl) {
-      const text = formatDayReport(state.lastDayReport);
-      reportEl.textContent = text || MORNING_COPY;
+    if (reportEl && dayResultsHidden && !activeDayReport) {
+      reportEl.textContent = MORNING_COPY;
       reportEl.classList.remove("is-receipt");
-      syncBusinessDailySummary(text || null);
     }
   }
 
   function setReport(message, { flash, receipt, revealDaily } = {}) {
     const reportEl = document.getElementById("report-body");
-    const panel = document.getElementById("daily-summary") || document.querySelector(".report");
+    const panel = document.getElementById("day-results");
     if (reportEl) {
       reportEl.textContent = message;
       reportEl.classList.toggle("is-receipt", !!receipt);
     }
-    syncBusinessDailySummary(message);
     if (revealDaily || receipt) {
-      showDailySummary();
+      showDayResultsPanel();
     }
     if (flash && panel && !panel.hidden) {
       panel.classList.remove("is-fresh");
@@ -1678,20 +1971,17 @@
   }
 
   function startCustomerDay() {
-    const day = document.getElementById("customer-day");
     const stage = document.getElementById("customer-stage");
-    const summary = document.getElementById("customer-summary");
-    const progress = document.getElementById("customer-day-progress");
-    if (summary) summary.hidden = true;
-    if (day) day.hidden = false;
+    const tableWrap = document.getElementById("day-results-table-wrap");
+    if (tableWrap) tableWrap.hidden = true;
     if (stage) stage.innerHTML = "";
-    if (progress) progress.textContent = "Customers are arriving…";
+    bindDayResultsReport(null, null, cachedState, "live");
     setSellDayLocked(true);
   }
 
   function showCustomerEvent(event) {
     const stage = document.getElementById("customer-stage");
-    const progress = document.getElementById("customer-day-progress");
+    const progress = document.getElementById("day-results-progress");
     if (!stage) return;
 
     const chip = document.createElement("div");
@@ -1732,83 +2022,17 @@
   }
 
   function showCustomerSummary(summary, plan, state) {
-    const day = document.getElementById("customer-day");
-    const summaryEl = document.getElementById("customer-summary");
-    const body = document.getElementById("customer-summary-body");
-    const progress = document.getElementById("customer-day-progress");
-    if (progress) progress.textContent = "Day complete";
-    if (summaryEl) summaryEl.hidden = false;
-    if (body) {
-      body.innerHTML = "";
-      const byProduct = (summary && summary.byProduct) || {};
-      const products = global.GameState.PRODUCTS || [
-        "juice",
-        "cocoa",
-        "burger",
-        "soup",
-      ];
-      const totals = {
-        happy: 0,
-        likes: 0,
-        dislikes: 0,
-        leftStock: 0,
-        leftPrice: 0,
-        leftWeather: 0,
-      };
-
-      function addRow(name, row, isTotal) {
-        const tr = document.createElement("tr");
-        const cells = [
-          name,
-          row.happy | 0,
-          row.likes | 0,
-          row.dislikes | 0,
-          row.leftStock | 0,
-          row.leftPrice | 0,
-          row.leftWeather | 0,
-        ];
-        cells.forEach(function (value, index) {
-          const cell = document.createElement(index === 0 || isTotal ? "th" : "td");
-          if (index === 0) cell.setAttribute("scope", "row");
-          cell.textContent = String(value);
-          tr.appendChild(cell);
-        });
-        body.appendChild(tr);
-      }
-
-      for (const product of products) {
-        const row = byProduct[product] || {
-          happy: 0,
-          likes: 0,
-          dislikes: 0,
-          leftStock: 0,
-          leftPrice: 0,
-          leftWeather: 0,
-        };
-        const hasActivity =
-          (row.happy | 0) +
-            (row.likes | 0) +
-            (row.dislikes | 0) +
-            (row.leftStock | 0) +
-            (row.leftPrice | 0) +
-            (row.leftWeather | 0) >
-          0;
-        if (!hasActivity) continue;
-        totals.happy += row.happy | 0;
-        totals.likes += row.likes | 0;
-        totals.dislikes += row.dislikes | 0;
-        totals.leftStock += row.leftStock | 0;
-        totals.leftPrice += row.leftPrice | 0;
-        totals.leftWeather += row.leftWeather | 0;
-        const label = global.GameCustomers
-          ? global.GameCustomers.productShortLabel(product)
-          : product;
-        addRow(label, row, false);
-      }
-
-      addRow("Total", totals, true);
-    }
-    if (day) day.hidden = false;
+    const report =
+      (state && state.lastDayReport) ||
+      Object.assign({}, plan || {}, {
+        message: plan && plan.message,
+        customers: summary,
+        recipes: plan && plan.recipes,
+      });
+    if (!report.customers) report.customers = summary;
+    bindDayResultsReport(report, summary, state, "live-complete");
+    const reportEl = document.getElementById("report-body");
+    if (reportEl) reportEl.hidden = false;
     setSellDayLocked(false, state);
     if (plan && plan.message) {
       setReport(plan.message, { flash: true, revealDaily: true });
@@ -1816,23 +2040,28 @@
   }
 
   function minimizeCustomerDay() {
-    const day = document.getElementById("customer-day");
-    if (day) day.hidden = true;
+    hideDayResultsPanel();
   }
 
   function hideCustomerDay(state) {
-    const day = document.getElementById("customer-day");
-    const summary = document.getElementById("customer-summary");
     const stage = document.getElementById("customer-stage");
-    if (day) day.hidden = true;
-    if (summary) summary.hidden = true;
     if (stage) stage.innerHTML = "";
+    hideDayResultsPanel();
     setSellDayLocked(false, state);
   }
 
   function hideCustomerSummary() {
-    const summary = document.getElementById("customer-summary");
-    if (summary) summary.hidden = true;
+    hideDayResultsPanel();
+  }
+
+  function toggleDayHints() {
+    setDayHintsVisible(!dayHintsVisible);
+  }
+
+  function onDayHistorySelectChange(state) {
+    const select = document.getElementById("day-history-select");
+    if (!select || !select.value) return;
+    showPreviousDay(state, select.value);
   }
 
   const recipeForm = document.getElementById("form-recipe");
@@ -1883,8 +2112,10 @@
     setInventoryHidden,
     setLocationsHidden,
     setBusinessTab,
-    setDailySummaryHidden,
-    showDailySummary,
+    hideDayResultsPanel,
+    showPreviousDay,
+    toggleDayHints,
+    onDayHistorySelectChange,
     setSellDayLocked,
     renderLedger,
     startCustomerDay,

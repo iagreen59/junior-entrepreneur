@@ -43,6 +43,16 @@
     return arr;
   }
 
+  function recipeForProduct(plan, state, product) {
+    if (plan.recipes && plan.recipes[product]) return plan.recipes[product];
+    if (state.recipes && state.recipes[product]) return state.recipes[product];
+    return global.GameState
+      ? global.GameState.activeRecipe(
+          Object.assign({}, state, { activeProduct: product })
+        )
+      : {};
+  }
+
   function buyReactionForProduct(plan, state, product, randomFn) {
     const weather = plan.weather || state.weather || "mild";
     const price =
@@ -55,12 +65,24 @@
     const ref = global.GameEconomy.REF_PRICE || 1.5;
     const goodPrice = Number.isFinite(price) && price <= ref * 1.25;
     const highPrice = Number.isFinite(price) && price > ref * 1.6;
+    const recipe = recipeForProduct(plan, state, product);
+    const tasteScore = global.GameRecipePrefs
+      ? global.GameRecipePrefs.recipeScore(product, recipe, weather)
+      : 0.75;
+    const greatTaste = tasteScore >= 0.85;
+    const poorTaste = tasteScore < 0.55;
 
-    if (favor === true && goodPrice) return "happy";
-    if (favor === false || highPrice) {
-      return rand(randomFn) < 0.65 ? "dislike" : "like";
+    if (favor === true && goodPrice && greatTaste) return "happy";
+    if (favor === false || highPrice || poorTaste) {
+      const dislikeChance = poorTaste ? 0.75 : highPrice ? 0.65 : 0.55;
+      return rand(randomFn) < dislikeChance ? "dislike" : "like";
     }
+    if (favor === true && greatTaste) {
+      return rand(randomFn) < 0.75 ? "happy" : "like";
+    }
+    if (favor === true && goodPrice) return "happy";
     if (favor === true) return rand(randomFn) < 0.7 ? "happy" : "like";
+    if (greatTaste) return rand(randomFn) < 0.6 ? "like" : "happy";
     return rand(randomFn) < 0.55 ? "like" : "happy";
   }
 

@@ -291,6 +291,8 @@
         soup: 3.5,
       },
       lastDayReport: null,
+      /** Completed Sell Day reports (newest last), for Previous Day view. */
+      dayHistory: [],
       /**
        * Phase 15 event modifiers — always recoverable (temporary / rehire).
        * supplyPriceMult: scales UNIT_PRICES while supplyPriceDaysLeft > 0.
@@ -1542,8 +1544,30 @@
     return out;
   }
 
+  function normalizeDayHistory(rawHistory, lastDayReport) {
+    const history = [];
+    if (Array.isArray(rawHistory)) {
+      for (const entry of rawHistory) {
+        if (!entry || typeof entry !== "object") continue;
+        history.push(entry);
+      }
+    }
+    if (
+      lastDayReport &&
+      typeof lastDayReport === "object" &&
+      !history.some(function (entry) {
+        return (
+          entry.completedDay === lastDayReport.completedDay &&
+          entry.message === lastDayReport.message
+        );
+      })
+    ) {
+      history.push(lastDayReport);
+    }
+    return history.slice(-40);
+  }
+
   /**
-   * Normalize any save blob (including pre–Phase 6 juice-only shapes).
    * Legacy: top-level `recipe` / `price` become recipes.juice / prices.juice.
    * Phase 11: dual-drink saves get burger/soup defaults + menuOffered.
    */
@@ -1779,6 +1803,7 @@
         raw.lastDayReport && typeof raw.lastDayReport === "object"
           ? raw.lastDayReport
           : null,
+      dayHistory: normalizeDayHistory(raw.dayHistory, raw.lastDayReport),
       supplyPriceMult,
       supplyPriceDaysLeft,
       demandMult,

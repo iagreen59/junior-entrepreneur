@@ -157,10 +157,30 @@
     GameUI.setBusinessTab("business");
     GameUI.setPanel("business");
     GameUI.renderLedger(state);
-    GameUI.setReport(
-      "Business ledger: running totals for revenue, costs, wages, rent, and profit. Tap (?) for what each metric means.",
-      { flash: true }
-    );
+  }
+
+  function onViewPreviousDay() {
+    if (selling) return;
+    const select = document.getElementById("business-day-select");
+    const day = select && select.value ? select.value : null;
+    const result = GameUI.showPreviousDay(state, day);
+    if (!result.ok) {
+      GameUI.setReport(result.message, { flash: true });
+    }
+  }
+
+  function onStatDayClick() {
+    if (selling) return;
+    const latest =
+      state.dayHistory && state.dayHistory.length
+        ? state.dayHistory[state.dayHistory.length - 1].completedDay
+        : state.day > 1
+          ? state.day - 1
+          : null;
+    const result = GameUI.showPreviousDay(state, latest);
+    if (!result.ok) {
+      GameUI.setReport(result.message, { flash: true });
+    }
   }
 
   function onPanelClose() {
@@ -300,12 +320,13 @@
     try {
       GameEconomy.applySellDay(state, plan);
       state.cash = plan.cashAfter;
+      const completedDay = state.day;
       state.day += 1;
       state.weather = GameWeather.roll();
       if (window.GameLedger && GameLedger.recordSellDay) {
         GameLedger.recordSellDay(state, plan);
       }
-      state.lastDayReport = {
+      const dayReport = {
         product: plan.product,
         products: plan.products,
         soldByProduct: plan.soldByProduct,
@@ -332,7 +353,15 @@
         soldOutProducts: plan.soldOutProducts || [],
         message: plan.message,
         customers: summary,
+        recipes: plan.recipes || null,
+        completedDay: completedDay,
       };
+      if (!Array.isArray(state.dayHistory)) state.dayHistory = [];
+      state.dayHistory.push(dayReport);
+      if (state.dayHistory.length > 40) {
+        state.dayHistory = state.dayHistory.slice(-40);
+      }
+      state.lastDayReport = dayReport;
 
       morningEvent = runMorningEvents();
       GameState.save(state);
@@ -727,16 +756,16 @@
     GameUI.setLocationsHidden(false);
   }
 
-  function onCloseDailySummary() {
-    GameUI.setDailySummaryHidden(true);
+  function onCloseDayResults() {
+    GameUI.hideDayResultsPanel();
   }
 
-  function onCloseCustomerSummary() {
-    GameUI.hideCustomerSummary();
+  function onToggleDayHints() {
+    GameUI.toggleDayHints();
   }
 
-  function onCloseCustomerDay() {
-    GameUI.minimizeCustomerDay();
+  function onDayHistorySelectChange() {
+    GameUI.onDayHistorySelectChange(state);
   }
 
   function onBusinessTabClick(event) {
@@ -848,17 +877,20 @@
     .getElementById("btn-show-locations")
     ?.addEventListener("click", onShowLocations);
   document
-    .getElementById("btn-close-daily-summary")
-    ?.addEventListener("click", onCloseDailySummary);
+    .getElementById("btn-close-day-results")
+    ?.addEventListener("click", onCloseDayResults);
   document
-    .getElementById("btn-close-daily-summary-tab")
-    ?.addEventListener("click", onCloseDailySummary);
+    .getElementById("btn-day-hints")
+    ?.addEventListener("click", onToggleDayHints);
   document
-    .getElementById("btn-close-customer-summary")
-    ?.addEventListener("click", onCloseCustomerSummary);
+    .getElementById("day-history-select")
+    ?.addEventListener("change", onDayHistorySelectChange);
   document
-    .getElementById("btn-close-customer-day")
-    ?.addEventListener("click", onCloseCustomerDay);
+    .getElementById("stat-day-btn")
+    ?.addEventListener("click", onStatDayClick);
+  document
+    .getElementById("btn-view-previous-day")
+    ?.addEventListener("click", onViewPreviousDay);
   document
     .getElementById("panel-business")
     ?.addEventListener("click", onBusinessTabClick);

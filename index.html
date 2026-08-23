@@ -13,7 +13,7 @@
       href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700&family=Nunito:wght@500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="css/styles.css?v=26" />
+    <link rel="stylesheet" href="css/styles.css?v=27" />
   </head>
   <body>
     <div class="sky" aria-hidden="true"></div>
@@ -44,9 +44,11 @@
       </aside>
 
       <section class="status" aria-label="Stand status">
-        <div class="stat">
+        <div class="stat stat-day-picker">
           <span class="stat-label">Day</span>
-          <span class="stat-value" id="stat-day">1</span>
+          <button type="button" class="stat-value stat-day-btn" id="stat-day-btn" aria-label="View previous day results">
+            <span id="stat-day">1</span>
+          </button>
         </div>
         <div class="stat">
           <span class="stat-label">Cash</span>
@@ -94,8 +96,9 @@
               <li>
                 Each day, choose which menu items to offer:
                 <strong>juice</strong>, <strong>cocoa</strong>, <strong>burger</strong>, and/or
-                <strong>soup</strong>. Weather matters — hot days favor juice &amp; burgers; cold
-                days favor cocoa &amp; soup.
+                <strong>soup</strong>. Weather has five levels — from
+                <strong>steaming hot</strong> to <strong>bitter cold</strong> — and shifts what
+                sells.
               </li>
             </ol>
           </section>
@@ -104,7 +107,7 @@
             <ol class="instructions-list">
               <li>Own a <strong>stand</strong> (buy one if you haven’t yet; add more when cash &gt; $100).</li>
               <li>With 2+ stands, <strong>staff</strong> every location (you +/or employees).</li>
-              <li>Check today’s <strong>Weather</strong> (hot / mild / cold).</li>
+              <li>Check today’s <strong>Weather</strong> (steaming hot / hot / mild / cold / bitter cold).</li>
               <li>Set <strong>Today’s menu</strong> toggles (at least one item on).</li>
               <li>
                 For each offered item: open <strong>Recipe</strong> or <strong>Price</strong> and
@@ -134,8 +137,9 @@
                 temporary and recoverable; never an instant game over.
               </li>
               <li>
-                Open <strong>Business</strong> for the ledger (Business summary) or today’s Day
-                report (Daily summary). Tap <strong>(?)</strong> on a metric for a short explanation.
+                Open <strong>Business</strong> for the ledger (Business summary) or a
+                <strong>Previous Day</strong> report (Daily summary — pick a completed day).
+                Tap <strong>(?)</strong> on a metric for a short explanation.
                 Use <strong>Inventory</strong> below Sell Day to peek at stock without cluttering the
                 screen.
               </li>
@@ -144,6 +148,37 @@
                 <strong>Hide</strong>; <strong>Show instructions</strong> brings them back.
               </li>
             </ol>
+          </section>
+          <section class="instructions-block" aria-labelledby="instr-customer-prefs">
+            <h3 class="instructions-heading" id="instr-customer-prefs">What customers like</h3>
+            <p class="instructions-lead">
+              Match your <strong>menu</strong> to the weather and tune each
+              <strong>recipe</strong> so buyers react with happy faces instead of walk-aways.
+            </p>
+            <ul class="instructions-prefs-list">
+              <li>
+                <strong>Juice</strong> — extra <strong>ice</strong> on steaming hot and hot days;
+                a fruit-forward blend on mild days.
+              </li>
+              <li>
+                <strong>Hot cocoa</strong> — rich, <strong>chocolaty</strong> flavor (more chocolate,
+                whipped cream, and sprinkles) on cold and bitter-cold days.
+              </li>
+              <li>
+                <strong>Burger</strong> — loaded with <strong>lettuce, tomato, and cheese</strong>
+                on hot and steaming days when grill food is in demand.
+              </li>
+              <li>
+                <strong>Soup</strong> — a <strong>hearty</strong> bowl with extra broth, noodles,
+                and veggies on cold and bitter-cold days.
+              </li>
+            </ul>
+            <p class="instructions-lead">
+              Weather guide: <strong>steaming hot &amp; hot</strong> favor juice and burgers;
+              <strong>cold &amp; bitter cold</strong> favor cocoa and soup;
+              <strong>mild</strong> days treat all four about the same. After Sell Day, tap
+              <strong>Show hints</strong> on the day-results panel for recipe tips from that day.
+            </p>
           </section>
           <section class="instructions-block" aria-labelledby="instr-restaurants">
             <h3 class="instructions-heading" id="instr-restaurants">Restaurants</h3>
@@ -315,7 +350,7 @@
           </label>
         </div>
         <p class="menu-hint" id="menu-hint">
-          Drinks start on; food starts off. Toggle to match the weather.
+          Drinks start on; food starts off. Match the menu and recipes to today’s weather.
         </p>
       </section>
 
@@ -351,37 +386,38 @@
         </button>
       </p>
 
-      <section class="customer-day" id="customer-day" hidden aria-live="polite">
+      <section class="day-results" id="day-results" hidden aria-live="polite" aria-label="Day results">
         <div class="panel-header">
-          <h2 class="section-title">Customers today</h2>
-          <div class="customer-day-header-actions">
-            <p class="customer-day-progress" id="customer-day-progress">Opening the stand…</p>
+          <h2 class="section-title" id="day-results-title">Day results</h2>
+          <div class="day-results-header-actions">
+            <label class="day-history-select-label" id="day-history-select-wrap" hidden>
+              Day
+              <select id="day-history-select" class="stand-select" aria-label="Select completed day"></select>
+            </label>
+            <button
+              type="button"
+              class="btn btn-quiet"
+              id="btn-day-hints"
+              hidden
+              aria-expanded="false"
+              aria-controls="day-results-hints"
+            >
+              Show hints
+            </button>
+            <p class="day-results-progress" id="day-results-progress"></p>
             <button
               type="button"
               class="btn btn-close"
-              id="btn-close-customer-day"
-              aria-label="Close customers today"
+              id="btn-close-day-results"
+              aria-label="Close day results"
             >
               Close
             </button>
           </div>
         </div>
         <div class="customer-stage" id="customer-stage" aria-label="Customer activity"></div>
-      </section>
-
-      <section class="customer-summary" id="customer-summary" hidden aria-label="Customer summary">
-        <div class="panel-header">
-          <h2 class="section-title">Customer summary</h2>
-          <button
-            type="button"
-            class="btn btn-close"
-            id="btn-close-customer-summary"
-            aria-label="Close customer summary"
-          >
-            Close
-          </button>
-        </div>
-        <div class="summary-table-wrap">
+        <div class="day-results-hints" id="day-results-hints" hidden role="region" aria-label="Recipe hints"></div>
+        <div class="summary-table-wrap" id="day-results-table-wrap" hidden>
           <table class="summary-table" id="customer-summary-table">
             <thead>
               <tr>
@@ -397,6 +433,9 @@
             <tbody id="customer-summary-body"></tbody>
           </table>
         </div>
+        <p class="report-body" id="report-body">
+          Good morning. Buy your stand ($20), set today’s menu, then Recipe → Buy → Price → Sell Day.
+        </p>
       </section>
 
       <section class="panel" id="panel-recipe" hidden aria-label="Recipe editor">
@@ -1162,50 +1201,33 @@
           hidden
         >
           <div class="panel-header daily-summary-header">
-            <h3 class="ledger-subtitle">Daily summary</h3>
-            <button
-              type="button"
-              class="btn btn-close"
-              id="btn-close-daily-summary-tab"
-              aria-label="Close daily summary"
-            >
-              Close
-            </button>
+            <h3 class="ledger-subtitle">Previous day</h3>
           </div>
-          <p class="panel-lead">Results from your most recent Sell Day.</p>
-          <p class="daily-summary-body" id="business-daily-summary-body">
-            No Sell Day yet. Run a day to see today’s report here.
+          <p class="panel-lead">
+            Pick a completed Sell Day to reopen the same day-results panel shown at day’s end.
           </p>
-        </div>
-      </section>
-
-      <section class="report" id="daily-summary" aria-live="polite">
-        <div class="panel-header">
-          <h2 class="section-title">Daily summary</h2>
-          <button
-            type="button"
-            class="btn btn-close"
-            id="btn-close-daily-summary"
-            aria-label="Close daily summary"
-          >
-            Close
+          <label class="day-history-select-label" for="business-day-select">
+            Completed day
+            <select id="business-day-select" class="stand-select" aria-label="Select completed day"></select>
+          </label>
+          <button type="button" class="btn btn-panel" id="btn-view-previous-day">
+            View previous day
           </button>
+          <p class="daily-summary-body" id="business-daily-summary-body" hidden></p>
         </div>
-        <p class="report-body" id="report-body">
-          Good morning. Buy your stand ($20), set today’s menu, then Recipe → Buy → Price → Sell Day.
-        </p>
       </section>
     </main>
 
-    <script src="js/weather.js?v=26"></script>
-    <script src="js/state.js?v=26"></script>
-    <script src="js/events.js?v=26"></script>
-    <script src="js/recipe.js?v=26"></script>
-    <script src="js/economy.js?v=26"></script>
-    <script src="js/customers.js?v=26"></script>
-    <script src="js/map.js?v=26"></script>
-    <script src="js/ledger.js?v=26"></script>
-    <script src="js/ui.js?v=26"></script>
-    <script src="js/main.js?v=26"></script>
+    <script src="js/weather.js?v=27"></script>
+    <script src="js/state.js?v=27"></script>
+    <script src="js/events.js?v=27"></script>
+    <script src="js/recipe.js?v=27"></script>
+    <script src="js/recipePreferences.js?v=27"></script>
+    <script src="js/economy.js?v=27"></script>
+    <script src="js/customers.js?v=27"></script>
+    <script src="js/map.js?v=27"></script>
+    <script src="js/ledger.js?v=27"></script>
+    <script src="js/ui.js?v=27"></script>
+    <script src="js/main.js?v=27"></script>
   </body>
 </html>
