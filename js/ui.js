@@ -13,12 +13,11 @@
  */
 (function (global) {
   const MORNING_COPY =
-    "Good morning. Buy your stand if needed, staff multi-stand locations, check the weather, set today’s menu, edit recipes & prices for offered items, Buy stock, then Sell Day.";
+    "Good morning. Buy your stand if needed, staff multi-stand locations, check the weather, set today’s menu, edit recipes & prices for offered items, order supplies, then Sell Day.";
 
   const PANEL_IDS = {
     recipe: "panel-recipe",
     buy: "panel-buy",
-    price: "panel-price",
     business: "panel-business",
   };
 
@@ -399,8 +398,51 @@
     return draft;
   }
 
+  function renderMenuSummary(state) {
+    const listEl = document.getElementById("recipe-menu-summary-list");
+    if (!listEl || !state) return;
+    listEl.innerHTML = "";
+    for (const product of global.GameState.PRODUCTS) {
+      const recipe =
+        (state.recipes && state.recipes[product]) ||
+        global.GameState.activeRecipe(
+          Object.assign({}, state, { activeProduct: product })
+        ) ||
+        {};
+      const price = Number(
+        state.prices && state.prices[product] != null
+          ? state.prices[product]
+          : 0
+      );
+      const cogs = global.GameEconomy.costOfGoodsPerServing(
+        state,
+        product,
+        recipe
+      );
+      const profit = +(price - cogs).toFixed(2);
+      const title = PRODUCT_TITLES[product] || product;
+      const li = document.createElement("li");
+      li.className = "recipe-menu-summary-item";
+      if (global.GameState.isMenuOffered(state, product)) {
+        li.classList.add("is-offered");
+      }
+      li.innerHTML =
+        "<span class=\"recipe-menu-summary-name\">" +
+        title +
+        "</span>" +
+        "<span class=\"recipe-menu-summary-detail\">Cost " +
+        formatMoney(cogs) +
+        " · Profit " +
+        formatMoney(profit) +
+        " (at " +
+        formatMoney(price) +
+        ")</span>";
+      listEl.appendChild(li);
+    }
+  }
+
   /**
-   * Show max sellable servings from current inventory + COGS per item
+   * Show max sellable servings from current inventory + cost/profit per serving
    * for the product being edited (uses draft form values when present).
    */
   function renderRecipeStats(state) {
@@ -424,10 +466,14 @@
       product,
       recipe
     );
+    const price = Number(readPriceForm());
+    const validPrice = Number.isFinite(price) && price >= 0 ? price : 0;
+    const profit = +(validPrice - cogs).toFixed(2);
     const item = global.GameState.productLabel(product);
 
     const yieldEl = document.getElementById("recipe-yield");
     const cogsEl = document.getElementById("recipe-cogs");
+    const profitEl = document.getElementById("recipe-profit");
     if (yieldEl) {
       yieldEl.textContent =
         "Can make " +
@@ -439,9 +485,21 @@
         " from current stock.";
     }
     if (cogsEl) {
-      cogsEl.textContent =
-        "COGS per " + item + ": " + formatMoney(cogs) + ".";
+      cogsEl.textContent = "Cost per " + item + ": " + formatMoney(cogs) + ".";
     }
+    if (profitEl) {
+      profitEl.textContent =
+        "Profit per " +
+        item +
+        ": " +
+        formatMoney(profit) +
+        " (at " +
+        formatMoney(validPrice) +
+        ").";
+      profitEl.classList.toggle("is-negative", profit < 0);
+    }
+
+    renderMenuSummary(source);
   }
 
   function readPriceForm() {
@@ -523,7 +581,77 @@
     };
   }
 
-  function renderBuyPrices(state) {
+  function ensureBuyListBuilt() {
+    const list = document.getElementById("buy-list");
+    if (!list || list.children.length > 0) return;
+    const labels = global.GameState.inventoryLabels();
+    for (const key of global.GameState.INVENTORY_KEYS) {
+      const li = document.createElement("li");
+      li.className = "buy-row";
+      li.dataset.ingredient = key;
+
+      const meta = document.createElement("div");
+      meta.className = "buy-meta";
+      const name = document.createElement("span");
+      name.className = "buy-name";
+      name.id = "buy-price-" + key;
+      name.textContent = labels[key];
+      meta.appendChild(name);
+
+      const onHandCell = document.createElement("div");
+      onHandCell.className = "buy-onhand-cell";
+      const onHandLabel = document.createElement("span");
+      onHandLabel.className = "buy-onhand-label";
+      onHandLabel.textContent = "On hand";
+      const onHandQty = document.createElement("span");
+      onHandQty.className = "buy-onhand-qty";
+      onHandQty.id = "onhand-qty-" + key;
+      onHandQty.textContent = "0";
+      onHandCell.append(onHandLabel, onHandQty);
+
+      const controls = document.createElement("div");
+      controls.className = "buy-controls";
+      const qtyLabel = document.createElement("label");
+      qtyLabel.className = "field field-inline";
+      const hidden = document.createElement("span");
+      hidden.className = "visually-hidden";
+      hidden.textContent = "Quantity of " + labels[key].toLowerCase();
+      const qtyInput = document.createElement("input");
+      qtyInput.type = "number";
+      qtyInput.id = "buy-qty-" + key;
+      qtyInput.min = "1";
+      qtyInput.step = "1";
+      qtyInput.value = "10";
+      qtyLabel.append(hidden, qtyInput);
+      const addBtn = document.createElement("button");
+      addBtn.type = "button";
+      addBtn.className = "btn btn-panel";
+      addBtn.setAttribute("data-add-cart", key);
+      addBtn.textContent = "Add to cart";
+      controls.append(qtyLabel, addBtn);
+
+      const cartCell = document.createElement("div");
+      cartCell.className = "buy-cart-cell";
+      const cartQty = document.createElement("span");
+      cartQty.className = "buy-cart-qty";
+      cartQty.id = "cart-qty-" + key;
+      cartQty.setAttribute("aria-live", "polite");
+      cartQty.textContent = "0";
+      const removeBtn = document.createElement("button");
+      removeBtn.type = "button";
+      removeBtn.className = "btn btn-quiet-inline";
+      removeBtn.setAttribute("data-remove-cart", key);
+      removeBtn.setAttribute("aria-label", "Remove " + labels[key].toLowerCase() + " from cart");
+      removeBtn.textContent = "Remove";
+      cartCell.append(cartQty, removeBtn);
+
+      li.append(meta, onHandCell, controls, cartCell);
+      list.appendChild(li);
+    }
+  }
+
+  function renderBuyList(state) {
+    ensureBuyListBuilt();
     const labels = global.GameState.inventoryLabels();
     for (const key of global.GameState.INVENTORY_KEYS) {
       const priceEl = document.getElementById("buy-price-" + key);
@@ -534,7 +662,16 @@
           formatMoney(global.GameState.unitPrice(key, state)) +
           " each";
       }
+      const onHandEl = document.getElementById("onhand-qty-" + key);
+      if (onHandEl) {
+        onHandEl.textContent = String(state.inventory[key] ?? 0);
+      }
     }
+    renderCart(state);
+  }
+
+  function renderBuyPrices(state) {
+    renderBuyList(state);
   }
 
   function renderCart(state) {
@@ -614,13 +751,8 @@
 
   function renderProductPicker(state) {
     const product = activeProduct(state);
-    const selects = [
-      document.getElementById("recipe-product-select"),
-      document.getElementById("price-product-select"),
-    ];
-    for (const select of selects) {
-      if (select && select.value !== product) select.value = product;
-    }
+    const select = document.getElementById("recipe-product-select");
+    if (select && select.value !== product) select.value = product;
 
     document.querySelectorAll("[data-recipe-product]").forEach(function (block) {
       block.hidden = block.getAttribute("data-recipe-product") !== product;
@@ -630,34 +762,22 @@
     const recipeLead = document.getElementById("recipe-panel-lead");
     const item = global.GameState.productLabel(product);
     const title = PRODUCT_TITLES[product] || "Item";
+    const unit =
+      product === "burger" || product === "soup" ? "serving" : "cup";
     if (recipeTitle) {
-      recipeTitle.textContent = title + " recipe";
+      recipeTitle.textContent = title + " recipe & price";
     }
     if (recipeLead) {
       recipeLead.textContent =
-        "Units of each ingredient used per serving of " +
-        item +
-        ". Switching items or closing without save discards edits.";
-    }
-
-    const priceTitle = document.getElementById("price-panel-title");
-    const priceLead = document.getElementById("price-panel-lead");
-    const priceLabel = document.getElementById("sell-price-label");
-    const unit =
-      product === "burger" || product === "soup" ? "serving" : "cup";
-    if (priceTitle) {
-      priceTitle.textContent = title + " price";
-    }
-    if (priceLead) {
-      priceLead.textContent =
-        "Set what you charge per " +
+        "Set ingredients and price per " +
         unit +
         " of " +
         item +
         ". Switching items or closing without save discards edits.";
     }
+    const priceLabel = document.getElementById("sell-price-label");
     if (priceLabel) {
-      priceLabel.textContent = "Dollars per " + unit;
+      priceLabel.textContent = "Sell price (per " + unit + ")";
     }
   }
 
@@ -1420,13 +1540,21 @@
     if (!owns || isRestaurant || !list) return;
 
     if (lead) {
+      const menuNote =
+        " Menu with 2+ items adds $" +
+        (Number(global.GameState.MENU_WAGE_SURCHARGE) || 0.5).toFixed(2) +
+        "/day per extra item.";
       lead.textContent = required
         ? "With 2 or more stands, every stand needs a worker. You may run one stand yourself; hire employees for the rest ($" +
           wage.toFixed(0) +
-          "/day each, paid on Sell Day). Or staff every stand with employees."
+          "/day each, paid on Sell Day)." +
+          menuNote +
+          " Or staff every stand with employees."
         : "One stand: you can run it alone (no hire required). Hire an employee if you like — wage is $" +
           wage.toFixed(0) +
-          "/day on Sell Day. Adding a second stand will require staffing every location.";
+          "/day on Sell Day." +
+          menuNote +
+          " Adding a second stand will require staffing every location.";
     }
 
     const check = global.GameState.staffingCheck(state);
@@ -1617,13 +1745,21 @@
 
     function withWageTip(text) {
       const employees = global.GameState.employeeCount(state);
-      if (employees <= 0) return text;
-      return (
-        text +
-        " Employee wages today: " +
-        formatMoney(global.GameState.dailyWageCost(state)) +
-        "."
-      );
+      const wages = global.GameState.dailyWageCost(state);
+      const surcharge =
+        global.GameState.menuWageSurcharge &&
+        global.GameState.menuWageSurcharge(state);
+      if (employees <= 0 && !(surcharge > 0)) return text;
+      let tip = text + " Wages today: " + formatMoney(wages) + ".";
+      if (surcharge > 0) {
+        tip +=
+          " (includes " +
+          formatMoney(surcharge) +
+          " menu surcharge for " +
+          global.GameState.menuOfferedCount(state) +
+          " items)";
+      }
+      return tip;
     }
 
     if (offered.length === 0) {
@@ -1668,7 +1804,7 @@
     if (unpriced.length === offered.length) {
       return withWageTip(
         withUnlockTip(
-          "Set a sell price above $0 for at least one offered item."
+          "Set a sell price above $0 for at least one offered item in Recipe."
         )
       );
     }
@@ -1786,26 +1922,10 @@
     cachedState = state;
     const dayEl = document.getElementById("stat-day");
     const cashEl = document.getElementById("stat-cash");
-    const listEl = document.getElementById("inventory-list");
     const reportEl = document.getElementById("report-body");
 
     if (dayEl) dayEl.textContent = String(state.day);
     if (cashEl) cashEl.textContent = formatMoney(state.cash);
-
-    if (listEl) {
-      const labels = global.GameState.inventoryLabels();
-      listEl.innerHTML = "";
-      for (const key of global.GameState.INVENTORY_KEYS) {
-        const li = document.createElement("li");
-        const name = document.createElement("span");
-        name.textContent = labels[key];
-        const qty = document.createElement("span");
-        qty.className = "qty";
-        qty.textContent = String(state.inventory[key] ?? 0);
-        li.append(name, qty);
-        listEl.appendChild(li);
-      }
-    }
 
     renderWeather(state);
     renderStand(state);
@@ -1816,10 +1936,8 @@
     renderProductPicker(state);
     fillRecipeForm(state);
     fillPriceForm(state);
-    renderBuyPrices(state);
-    renderCart(state);
+    renderBuyList(state);
     renderMorningHint(state);
-    renderInventoryVisibility();
     renderDayResultsVisibility();
     renderBusinessDaySelect(state);
     setBusinessTab(businessTab);
@@ -1959,10 +2077,8 @@
     const standbyIds = [
       "btn-recipe",
       "btn-buy",
-      "btn-price",
       "btn-business",
       "recipe-product-select",
-      "price-product-select",
     ];
     for (const id of standbyIds) {
       const btn = document.getElementById(id);
@@ -2071,6 +2187,13 @@
     });
   }
 
+  const sellPriceInput = document.getElementById("sell-price");
+  if (sellPriceInput) {
+    sellPriceInput.addEventListener("input", function () {
+      renderRecipeStats(cachedState);
+    });
+  }
+
   const ledgerPanel = document.getElementById("panel-business");
   if (ledgerPanel) {
     ledgerPanel.addEventListener("click", function (event) {
@@ -2101,6 +2224,7 @@
     removeFromCart,
     clearCart,
     renderCart,
+    renderBuyList,
     renderRecipeStats,
     renderMenuToggles,
     morningHint,

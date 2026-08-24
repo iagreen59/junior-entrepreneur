@@ -50,6 +50,8 @@
   const EXTRA_STAND_UNLOCK_CASH = 100;
   /** Phase 14: daily wage per stand employee (deducted on Sell Day). */
   const STAND_EMPLOYEE_WAGE = 5;
+  /** Extra daily wage per menu item beyond the first (broader menu = more work). */
+  const MENU_WAGE_SURCHARGE = 0.5;
   /** Phase 15: cash received when selling a stand (must keep ≥1). */
   const STAND_SELL_PRICE = 10;
   /** Staffing modes on a stand: player | employee | null (unstaffed). */
@@ -1213,12 +1215,43 @@
   }
 
   /**
+   * Count of products toggled on for today's menu.
+   */
+  function menuOfferedCount(state) {
+    if (!state.menuOffered || typeof state.menuOffered !== "object") {
+      return PRODUCTS.filter(function (p) {
+        return defaultMenuOffered()[p];
+      }).length;
+    }
+    let count = 0;
+    for (const product of PRODUCTS) {
+      if (state.menuOffered[product]) count += 1;
+    }
+    return count;
+  }
+
+  /**
+   * Daily wage surcharge when more than one item is on the menu.
+   * $0.50 per extra menu item (2 items → +$0.50, 4 items → +$1.50).
+   */
+  function menuWageSurcharge(state) {
+    const count = menuOfferedCount(state);
+    if (count <= 1) return 0;
+    return +((count - 1) * MENU_WAGE_SURCHARGE).toFixed(2);
+  }
+
+  /**
    * Daily wage bill. Stand mode: $5/employee. Restaurant mode: $8/employee
-   * (rent is separate via dailyRestaurantRent).
+   * (rent is separate via dailyRestaurantRent). Both modes add menu surcharge.
    */
   function dailyWageCost(state) {
-    if (isRestaurantMode(state)) return dailyRestaurantWageCost(state);
-    return +(employeeCount(state) * STAND_EMPLOYEE_WAGE).toFixed(2);
+    let base = 0;
+    if (isRestaurantMode(state)) {
+      base = dailyRestaurantWageCost(state);
+    } else {
+      base = +(employeeCount(state) * STAND_EMPLOYEE_WAGE).toFixed(2);
+    }
+    return +(base + menuWageSurcharge(state)).toFixed(2);
   }
 
   /**
@@ -2148,6 +2181,7 @@
     MAX_STANDS,
     EXTRA_STAND_UNLOCK_CASH,
     STAND_EMPLOYEE_WAGE,
+    MENU_WAGE_SURCHARGE,
     STAND_SELL_PRICE,
     STAFF_PLAYER,
     STAFF_EMPLOYEE,
@@ -2216,6 +2250,8 @@
     findStand,
     playerStandId,
     employeeCount,
+    menuOfferedCount,
+    menuWageSurcharge,
     dailyWageCost,
     staffingRequired,
     unstaffedStands,
