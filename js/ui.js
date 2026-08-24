@@ -371,6 +371,13 @@
     );
   }
 
+  function fillPriceForm(state) {
+    const input = document.getElementById("sell-price");
+    if (input) {
+      input.value = Number(global.GameState.activePrice(state)).toFixed(2);
+    }
+  }
+
   function fillRecipeForm(state) {
     const product = activeProduct(state);
     const recipe = global.GameState.activeRecipe(state) || {};
@@ -378,14 +385,9 @@
       const input = document.getElementById("recipe-" + key);
       if (input) input.value = String(recipe[key] ?? 0);
     }
+    // Sell price must load before stats — renderRecipeStats reads #sell-price.
+    fillPriceForm(state);
     renderRecipeStats(state);
-  }
-
-  function fillPriceForm(state) {
-    const input = document.getElementById("sell-price");
-    if (input) {
-      input.value = Number(global.GameState.activePrice(state)).toFixed(2);
-    }
   }
 
   function readRecipeForm(state) {
@@ -801,7 +803,6 @@
     setPanel(null);
     if (state) {
       fillRecipeForm(state);
-      fillPriceForm(state);
     }
     return wasOpen;
   }
@@ -1460,7 +1461,7 @@
             "</strong>" +
             "<span class=\"location-pnl-item-meta\">" +
             (loc.employeeCount || 0) +
-            " staff · ×" +
+            " staff · sales capacity ×" +
             Number(loc.capacityMult || 1).toFixed(2) +
             "</span>" +
             "<span class=\"location-pnl-item-row\">Sales " +
@@ -1935,7 +1936,6 @@
     renderMenuToggles(state);
     renderProductPicker(state);
     fillRecipeForm(state);
-    fillPriceForm(state);
     renderBuyList(state);
     renderMorningHint(state);
     renderDayResultsVisibility();
