@@ -616,11 +616,11 @@
           formatMoney(loc.rent) +
           ", profit " +
           formatMoney(loc.profit) +
-          " (×" +
-          Number(loc.capacityMult).toFixed(2) +
-          ", " +
+          " (" +
           loc.employeeCount +
-          " staff)"
+          " staff, sales capacity ×" +
+          Number(loc.capacityMult).toFixed(2) +
+          ")"
         );
       });
       locationNote =
