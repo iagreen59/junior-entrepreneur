@@ -1842,10 +1842,43 @@
     }
   }
 
+  /**
+   * Strip Sell Day / Previous Day chrome so a standalone message (e.g. buy
+   * receipt) is not stacked under an old customer summary table.
+   */
+  function clearDayResultsChrome(title) {
+    activeDayReport = null;
+    dayResultsMode = "message";
+    dayHintsVisible = false;
+
+    const titleEl = document.getElementById("day-results-title");
+    if (titleEl) titleEl.textContent = title || "Notice";
+
+    const historyWrap = document.getElementById("day-history-select-wrap");
+    if (historyWrap) historyWrap.hidden = true;
+
+    const progress = document.getElementById("day-results-progress");
+    if (progress) progress.textContent = "";
+
+    const stage = document.getElementById("customer-stage");
+    if (stage) stage.innerHTML = "";
+
+    const tableWrap = document.getElementById("day-results-table-wrap");
+    if (tableWrap) tableWrap.hidden = true;
+
+    const hintsBtn = document.getElementById("btn-day-hints");
+    if (hintsBtn) hintsBtn.hidden = true;
+    setDayHintsVisible(false);
+  }
+
   function setReport(message, { flash, receipt, revealDaily } = {}) {
     const reportEl = document.getElementById("report-body");
     const panel = document.getElementById("day-results");
+    if (receipt) {
+      clearDayResultsChrome("Purchase");
+    }
     if (reportEl) {
+      reportEl.hidden = false;
       reportEl.textContent = message;
       reportEl.classList.toggle("is-receipt", !!receipt);
     }
