@@ -570,13 +570,25 @@
       wages > 0
         ? ", wages " +
           formatMoney(wages) +
-          " (" +
-          employeeCount +
-          " employee" +
-          (employeeCount === 1 ? "" : "s") +
-          " × " +
-          formatMoney(wageRate) +
-          ")"
+          (function () {
+            const menuSurcharge =
+              global.GameState.menuWageSurcharge &&
+              global.GameState.menuWageSurcharge(state);
+            let detail =
+              " (" +
+              employeeCount +
+              " employee" +
+              (employeeCount === 1 ? "" : "s") +
+              " × " +
+              formatMoney(wageRate);
+            if (menuSurcharge > 0) {
+              detail +=
+                " + " +
+                formatMoney(menuSurcharge) +
+                " menu surcharge";
+            }
+            return detail + ")";
+          })()
         : "";
     const rentNote =
       rent > 0

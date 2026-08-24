@@ -110,10 +110,11 @@
               <li>Check today’s <strong>Weather</strong> (steaming hot / hot / mild / cold / bitter cold).</li>
               <li>Set <strong>Today’s menu</strong> toggles (at least one item on).</li>
               <li>
-                For each offered item: open <strong>Recipe</strong> or <strong>Price</strong> and
-                use the item dropdown to switch products (closing or switching without save discards
-                edits). <strong>Buy</strong> stock into the shared bag, then press
-                <strong>Sell Day</strong> — customers choose among offered items (~10s); wages are paid then.
+                For each offered item: open <strong>Recipe</strong> and use the item dropdown to
+                set ingredients and price (closing or switching without save discards edits).
+                Open <strong>Buy</strong> to see on-hand stock and add supplies to your cart, then
+                <strong>Place order</strong> at the bottom. Press <strong>Sell Day</strong> — customers
+                choose among offered items (~10s); wages are paid then.
               </li>
             </ol>
           </section>
@@ -128,8 +129,9 @@
               <li>
                 With <strong>2+ stands</strong>, staff every stand: you may run <strong>one</strong>
                 yourself; hire employees for the others (or run all with employees). Stand wage is
-                <strong>$5/day</strong> per employee, paid on Sell Day. Understaffed stands block
-                Sell Day. You may <strong>Sell a stand for $10</strong> (keep at least one).
+                <strong>$5/day</strong> per employee, plus <strong>$0.50/day</strong> for each menu
+                item beyond the first, paid on Sell Day. Understaffed stands block Sell Day. You may
+                <strong>Sell a stand for $10</strong> (keep at least one).
               </li>
               <li>
                 Rare morning <strong>events</strong> (less than about one per week) show a banner —
@@ -140,8 +142,7 @@
                 Open <strong>Business</strong> for the ledger (Business summary) or a
                 <strong>Previous Day</strong> report (Daily summary — pick a completed day).
                 Tap <strong>(?)</strong> on a metric for a short explanation.
-                Use <strong>Inventory</strong> below Sell Day to peek at stock without cluttering the
-                screen.
+                Open <strong>Buy</strong> anytime to check on-hand stock and order more supplies.
               </li>
               <li>
                 Use <strong>New Game</strong> anytime to reset. Hide these instructions with
@@ -189,7 +190,8 @@
                 stands and restaurants together). Hire <strong>2–4 employees</strong> per restaurant;
                 you cannot work a restaurant shift. Sell Day charges
                 <strong>rent $18/day</strong> per restaurant plus <strong>$8/day</strong> per
-                employee — overhead is a profitability challenge, so watch each location’s P&amp;L.
+                employee, plus <strong>$0.50/day</strong> for each menu item beyond the first —
+                overhead is a profitability challenge, so watch each location’s P&amp;L.
               </li>
               <li>
                 Cash over <strong>$1000</strong> unlocks more restaurants (max <strong>4</strong>),
@@ -328,8 +330,8 @@
       <section class="menu-today" id="menu-today" aria-label="Today's menu">
         <h2 class="section-title">Today’s menu</h2>
         <p class="menu-lead">
-          Choose which items are offered today. Open Recipe or Price and use the item dropdown
-          to edit each product (unsaved switches are discarded).
+          Choose which items are offered today. Open Recipe and use the item dropdown to edit each
+          product’s ingredients and price (unsaved switches are discarded).
         </p>
         <div class="menu-toggles" role="group" aria-label="Items on today's menu">
           <label class="menu-toggle">
@@ -359,32 +361,10 @@
       <section class="actions" aria-label="Day actions">
         <button type="button" class="btn" id="btn-recipe">Recipe</button>
         <button type="button" class="btn" id="btn-buy">Buy</button>
-        <button type="button" class="btn" id="btn-price">Price</button>
         <button type="button" class="btn" id="btn-business">Business</button>
         <button type="button" class="btn btn-primary" id="btn-sell">Sell Day</button>
         <button type="button" class="btn btn-quiet" id="btn-new-game">New Game</button>
       </section>
-
-      <section class="inventory" id="inventory-section" aria-label="Inventory">
-        <div class="panel-header">
-          <h2 class="section-title">Shared inventory</h2>
-          <button
-            type="button"
-            class="btn btn-close"
-            id="btn-hide-inventory"
-            aria-label="Hide inventory"
-          >
-            Hide
-          </button>
-        </div>
-        <p class="inventory-lead">One supply bag for every stand and restaurant.</p>
-        <ul class="inventory-list" id="inventory-list"></ul>
-      </section>
-      <p class="inventory-reveal" id="inventory-reveal" hidden>
-        <button type="button" class="btn btn-quiet" id="btn-show-inventory">
-          Show inventory
-        </button>
-      </p>
 
       <section class="day-results" id="day-results" hidden aria-live="polite" aria-label="Day results">
         <div class="panel-header">
@@ -434,7 +414,7 @@
           </table>
         </div>
         <p class="report-body" id="report-body">
-          Good morning. Buy your stand ($20), set today’s menu, then Recipe → Buy → Price → Sell Day.
+          Good morning. Buy your stand ($20), set today’s menu, then Recipe → Buy → Sell Day.
         </p>
       </section>
 
@@ -459,7 +439,7 @@
           </select>
         </label>
         <p class="panel-lead" id="recipe-panel-lead">
-          Units of each ingredient used per serving. Switching items or closing without save discards edits.
+          Set ingredients and price per serving. Switching items or closing without save discards edits.
         </p>
         <form id="form-recipe" class="panel-form">
           <div class="recipe-fields" data-recipe-product="juice">
@@ -558,568 +538,8 @@
               <input type="number" id="recipe-herbs" name="herbs" min="0" step="1" />
             </label>
           </div>
-          <div class="recipe-stats" id="recipe-stats" aria-live="polite">
-            <p class="recipe-stat" id="recipe-yield">Can make 0 servings from current stock.</p>
-            <p class="recipe-stat" id="recipe-cogs">COGS per item: $0.00.</p>
-          </div>
-          <button type="submit" class="btn btn-panel">Save recipe</button>
-        </form>
-      </section>
-
-      <section class="panel" id="panel-buy" hidden aria-label="Buy ingredients">
-        <div class="panel-header">
-          <h2 class="section-title">Buy ingredients</h2>
-          <button type="button" class="btn btn-close" data-close-panel aria-label="Close buy panel">
-            Close
-          </button>
-        </div>
-        <p class="panel-lead">
-          Add supplies to your cart, then Buy once at the bottom. Your cart stays
-          while you switch menus. Cold cups are for juice; hot cups are for cocoa.
-          Burger and soup use their own ingredients.
-        </p>
-        <div class="buy-head" aria-hidden="true">
-          <span class="buy-head-item">Item</span>
-          <span class="buy-head-qty">Qty</span>
-          <span class="buy-head-cart">In cart</span>
-        </div>
-        <ul class="buy-list" id="buy-list">
-          <li class="buy-row">
-            <div class="buy-meta">
-              <span class="buy-name" id="buy-price-fruit">Fruit</span>
-            </div>
-            <div class="buy-controls">
-              <label class="field field-inline">
-                <span class="visually-hidden">Quantity of fruit</span>
-                <input type="number" id="buy-qty-fruit" min="1" step="1" value="10" />
-              </label>
-              <button type="button" class="btn btn-panel" data-add-cart="fruit">
-                Add to cart
-              </button>
-            </div>
-            <div class="buy-cart-cell">
-              <span class="buy-cart-qty" id="cart-qty-fruit" aria-live="polite">0</span>
-              <button
-                type="button"
-                class="btn btn-quiet-inline"
-                data-remove-cart="fruit"
-                aria-label="Remove fruit from cart"
-              >
-                Remove
-              </button>
-            </div>
-          </li>
-          <li class="buy-row">
-            <div class="buy-meta">
-              <span class="buy-name" id="buy-price-sugar">Sugar</span>
-            </div>
-            <div class="buy-controls">
-              <label class="field field-inline">
-                <span class="visually-hidden">Quantity of sugar</span>
-                <input type="number" id="buy-qty-sugar" min="1" step="1" value="10" />
-              </label>
-              <button type="button" class="btn btn-panel" data-add-cart="sugar">
-                Add to cart
-              </button>
-            </div>
-            <div class="buy-cart-cell">
-              <span class="buy-cart-qty" id="cart-qty-sugar" aria-live="polite">0</span>
-              <button
-                type="button"
-                class="btn btn-quiet-inline"
-                data-remove-cart="sugar"
-                aria-label="Remove sugar from cart"
-              >
-                Remove
-              </button>
-            </div>
-          </li>
-          <li class="buy-row">
-            <div class="buy-meta">
-              <span class="buy-name" id="buy-price-ice">Ice</span>
-            </div>
-            <div class="buy-controls">
-              <label class="field field-inline">
-                <span class="visually-hidden">Quantity of ice</span>
-                <input type="number" id="buy-qty-ice" min="1" step="1" value="10" />
-              </label>
-              <button type="button" class="btn btn-panel" data-add-cart="ice">
-                Add to cart
-              </button>
-            </div>
-            <div class="buy-cart-cell">
-              <span class="buy-cart-qty" id="cart-qty-ice" aria-live="polite">0</span>
-              <button
-                type="button"
-                class="btn btn-quiet-inline"
-                data-remove-cart="ice"
-                aria-label="Remove ice from cart"
-              >
-                Remove
-              </button>
-            </div>
-          </li>
-          <li class="buy-row">
-            <div class="buy-meta">
-              <span class="buy-name" id="buy-price-chocolate">Chocolate</span>
-            </div>
-            <div class="buy-controls">
-              <label class="field field-inline">
-                <span class="visually-hidden">Quantity of chocolate</span>
-                <input type="number" id="buy-qty-chocolate" min="1" step="1" value="10" />
-              </label>
-              <button type="button" class="btn btn-panel" data-add-cart="chocolate">
-                Add to cart
-              </button>
-            </div>
-            <div class="buy-cart-cell">
-              <span class="buy-cart-qty" id="cart-qty-chocolate" aria-live="polite">0</span>
-              <button
-                type="button"
-                class="btn btn-quiet-inline"
-                data-remove-cart="chocolate"
-                aria-label="Remove chocolate from cart"
-              >
-                Remove
-              </button>
-            </div>
-          </li>
-          <li class="buy-row">
-            <div class="buy-meta">
-              <span class="buy-name" id="buy-price-milk">Milk</span>
-            </div>
-            <div class="buy-controls">
-              <label class="field field-inline">
-                <span class="visually-hidden">Quantity of milk</span>
-                <input type="number" id="buy-qty-milk" min="1" step="1" value="10" />
-              </label>
-              <button type="button" class="btn btn-panel" data-add-cart="milk">
-                Add to cart
-              </button>
-            </div>
-            <div class="buy-cart-cell">
-              <span class="buy-cart-qty" id="cart-qty-milk" aria-live="polite">0</span>
-              <button
-                type="button"
-                class="btn btn-quiet-inline"
-                data-remove-cart="milk"
-                aria-label="Remove milk from cart"
-              >
-                Remove
-              </button>
-            </div>
-          </li>
-          <li class="buy-row">
-            <div class="buy-meta">
-              <span class="buy-name" id="buy-price-whippedCream">Whipped cream</span>
-            </div>
-            <div class="buy-controls">
-              <label class="field field-inline">
-                <span class="visually-hidden">Quantity of whipped cream</span>
-                <input
-                  type="number"
-                  id="buy-qty-whippedCream"
-                  min="1"
-                  step="1"
-                  value="10"
-                />
-              </label>
-              <button type="button" class="btn btn-panel" data-add-cart="whippedCream">
-                Add to cart
-              </button>
-            </div>
-            <div class="buy-cart-cell">
-              <span class="buy-cart-qty" id="cart-qty-whippedCream" aria-live="polite">0</span>
-              <button
-                type="button"
-                class="btn btn-quiet-inline"
-                data-remove-cart="whippedCream"
-                aria-label="Remove whipped cream from cart"
-              >
-                Remove
-              </button>
-            </div>
-          </li>
-          <li class="buy-row">
-            <div class="buy-meta">
-              <span class="buy-name" id="buy-price-chocolateSprinkles">Chocolate sprinkles</span>
-            </div>
-            <div class="buy-controls">
-              <label class="field field-inline">
-                <span class="visually-hidden">Quantity of chocolate sprinkles</span>
-                <input
-                  type="number"
-                  id="buy-qty-chocolateSprinkles"
-                  min="1"
-                  step="1"
-                  value="10"
-                />
-              </label>
-              <button
-                type="button"
-                class="btn btn-panel"
-                data-add-cart="chocolateSprinkles"
-              >
-                Add to cart
-              </button>
-            </div>
-            <div class="buy-cart-cell">
-              <span
-                class="buy-cart-qty"
-                id="cart-qty-chocolateSprinkles"
-                aria-live="polite"
-              >0</span>
-              <button
-                type="button"
-                class="btn btn-quiet-inline"
-                data-remove-cart="chocolateSprinkles"
-                aria-label="Remove chocolate sprinkles from cart"
-              >
-                Remove
-              </button>
-            </div>
-          </li>
-          <li class="buy-row">
-            <div class="buy-meta">
-              <span class="buy-name" id="buy-price-coldCups">Cold cups</span>
-            </div>
-            <div class="buy-controls">
-              <label class="field field-inline">
-                <span class="visually-hidden">Quantity of cold cups</span>
-                <input type="number" id="buy-qty-coldCups" min="1" step="1" value="10" />
-              </label>
-              <button type="button" class="btn btn-panel" data-add-cart="coldCups">
-                Add to cart
-              </button>
-            </div>
-            <div class="buy-cart-cell">
-              <span class="buy-cart-qty" id="cart-qty-coldCups" aria-live="polite">0</span>
-              <button
-                type="button"
-                class="btn btn-quiet-inline"
-                data-remove-cart="coldCups"
-                aria-label="Remove cold cups from cart"
-              >
-                Remove
-              </button>
-            </div>
-          </li>
-          <li class="buy-row">
-            <div class="buy-meta">
-              <span class="buy-name" id="buy-price-hotCups">Hot cups</span>
-            </div>
-            <div class="buy-controls">
-              <label class="field field-inline">
-                <span class="visually-hidden">Quantity of hot cups</span>
-                <input type="number" id="buy-qty-hotCups" min="1" step="1" value="10" />
-              </label>
-              <button type="button" class="btn btn-panel" data-add-cart="hotCups">
-                Add to cart
-              </button>
-            </div>
-            <div class="buy-cart-cell">
-              <span class="buy-cart-qty" id="cart-qty-hotCups" aria-live="polite">0</span>
-              <button
-                type="button"
-                class="btn btn-quiet-inline"
-                data-remove-cart="hotCups"
-                aria-label="Remove hot cups from cart"
-              >
-                Remove
-              </button>
-            </div>
-          </li>
-          <li class="buy-row">
-            <div class="buy-meta">
-              <span class="buy-name" id="buy-price-bun">Bun</span>
-            </div>
-            <div class="buy-controls">
-              <label class="field field-inline">
-                <span class="visually-hidden">Quantity of bun</span>
-                <input type="number" id="buy-qty-bun" min="1" step="1" value="10" />
-              </label>
-              <button type="button" class="btn btn-panel" data-add-cart="bun">
-                Add to cart
-              </button>
-            </div>
-            <div class="buy-cart-cell">
-              <span class="buy-cart-qty" id="cart-qty-bun" aria-live="polite">0</span>
-              <button
-                type="button"
-                class="btn btn-quiet-inline"
-                data-remove-cart="bun"
-                aria-label="Remove bun from cart"
-              >
-                Remove
-              </button>
-            </div>
-          </li>
-          <li class="buy-row">
-            <div class="buy-meta">
-              <span class="buy-name" id="buy-price-beefPatty">Beef patty</span>
-            </div>
-            <div class="buy-controls">
-              <label class="field field-inline">
-                <span class="visually-hidden">Quantity of beef patty</span>
-                <input type="number" id="buy-qty-beefPatty" min="1" step="1" value="10" />
-              </label>
-              <button type="button" class="btn btn-panel" data-add-cart="beefPatty">
-                Add to cart
-              </button>
-            </div>
-            <div class="buy-cart-cell">
-              <span class="buy-cart-qty" id="cart-qty-beefPatty" aria-live="polite">0</span>
-              <button
-                type="button"
-                class="btn btn-quiet-inline"
-                data-remove-cart="beefPatty"
-                aria-label="Remove beef patty from cart"
-              >
-                Remove
-              </button>
-            </div>
-          </li>
-          <li class="buy-row">
-            <div class="buy-meta">
-              <span class="buy-name" id="buy-price-cheese">Cheese</span>
-            </div>
-            <div class="buy-controls">
-              <label class="field field-inline">
-                <span class="visually-hidden">Quantity of cheese</span>
-                <input type="number" id="buy-qty-cheese" min="1" step="1" value="10" />
-              </label>
-              <button type="button" class="btn btn-panel" data-add-cart="cheese">
-                Add to cart
-              </button>
-            </div>
-            <div class="buy-cart-cell">
-              <span class="buy-cart-qty" id="cart-qty-cheese" aria-live="polite">0</span>
-              <button
-                type="button"
-                class="btn btn-quiet-inline"
-                data-remove-cart="cheese"
-                aria-label="Remove cheese from cart"
-              >
-                Remove
-              </button>
-            </div>
-          </li>
-          <li class="buy-row">
-            <div class="buy-meta">
-              <span class="buy-name" id="buy-price-lettuce">Lettuce</span>
-            </div>
-            <div class="buy-controls">
-              <label class="field field-inline">
-                <span class="visually-hidden">Quantity of lettuce</span>
-                <input type="number" id="buy-qty-lettuce" min="1" step="1" value="10" />
-              </label>
-              <button type="button" class="btn btn-panel" data-add-cart="lettuce">
-                Add to cart
-              </button>
-            </div>
-            <div class="buy-cart-cell">
-              <span class="buy-cart-qty" id="cart-qty-lettuce" aria-live="polite">0</span>
-              <button
-                type="button"
-                class="btn btn-quiet-inline"
-                data-remove-cart="lettuce"
-                aria-label="Remove lettuce from cart"
-              >
-                Remove
-              </button>
-            </div>
-          </li>
-          <li class="buy-row">
-            <div class="buy-meta">
-              <span class="buy-name" id="buy-price-tomato">Tomato</span>
-            </div>
-            <div class="buy-controls">
-              <label class="field field-inline">
-                <span class="visually-hidden">Quantity of tomato</span>
-                <input type="number" id="buy-qty-tomato" min="1" step="1" value="10" />
-              </label>
-              <button type="button" class="btn btn-panel" data-add-cart="tomato">
-                Add to cart
-              </button>
-            </div>
-            <div class="buy-cart-cell">
-              <span class="buy-cart-qty" id="cart-qty-tomato" aria-live="polite">0</span>
-              <button
-                type="button"
-                class="btn btn-quiet-inline"
-                data-remove-cart="tomato"
-                aria-label="Remove tomato from cart"
-              >
-                Remove
-              </button>
-            </div>
-          </li>
-          <li class="buy-row">
-            <div class="buy-meta">
-              <span class="buy-name" id="buy-price-broth">Broth</span>
-            </div>
-            <div class="buy-controls">
-              <label class="field field-inline">
-                <span class="visually-hidden">Quantity of broth</span>
-                <input type="number" id="buy-qty-broth" min="1" step="1" value="10" />
-              </label>
-              <button type="button" class="btn btn-panel" data-add-cart="broth">
-                Add to cart
-              </button>
-            </div>
-            <div class="buy-cart-cell">
-              <span class="buy-cart-qty" id="cart-qty-broth" aria-live="polite">0</span>
-              <button
-                type="button"
-                class="btn btn-quiet-inline"
-                data-remove-cart="broth"
-                aria-label="Remove broth from cart"
-              >
-                Remove
-              </button>
-            </div>
-          </li>
-          <li class="buy-row">
-            <div class="buy-meta">
-              <span class="buy-name" id="buy-price-noodles">Noodles</span>
-            </div>
-            <div class="buy-controls">
-              <label class="field field-inline">
-                <span class="visually-hidden">Quantity of noodles</span>
-                <input type="number" id="buy-qty-noodles" min="1" step="1" value="10" />
-              </label>
-              <button type="button" class="btn btn-panel" data-add-cart="noodles">
-                Add to cart
-              </button>
-            </div>
-            <div class="buy-cart-cell">
-              <span class="buy-cart-qty" id="cart-qty-noodles" aria-live="polite">0</span>
-              <button
-                type="button"
-                class="btn btn-quiet-inline"
-                data-remove-cart="noodles"
-                aria-label="Remove noodles from cart"
-              >
-                Remove
-              </button>
-            </div>
-          </li>
-          <li class="buy-row">
-            <div class="buy-meta">
-              <span class="buy-name" id="buy-price-carrot">Carrot</span>
-            </div>
-            <div class="buy-controls">
-              <label class="field field-inline">
-                <span class="visually-hidden">Quantity of carrot</span>
-                <input type="number" id="buy-qty-carrot" min="1" step="1" value="10" />
-              </label>
-              <button type="button" class="btn btn-panel" data-add-cart="carrot">
-                Add to cart
-              </button>
-            </div>
-            <div class="buy-cart-cell">
-              <span class="buy-cart-qty" id="cart-qty-carrot" aria-live="polite">0</span>
-              <button
-                type="button"
-                class="btn btn-quiet-inline"
-                data-remove-cart="carrot"
-                aria-label="Remove carrot from cart"
-              >
-                Remove
-              </button>
-            </div>
-          </li>
-          <li class="buy-row">
-            <div class="buy-meta">
-              <span class="buy-name" id="buy-price-celery">Celery</span>
-            </div>
-            <div class="buy-controls">
-              <label class="field field-inline">
-                <span class="visually-hidden">Quantity of celery</span>
-                <input type="number" id="buy-qty-celery" min="1" step="1" value="10" />
-              </label>
-              <button type="button" class="btn btn-panel" data-add-cart="celery">
-                Add to cart
-              </button>
-            </div>
-            <div class="buy-cart-cell">
-              <span class="buy-cart-qty" id="cart-qty-celery" aria-live="polite">0</span>
-              <button
-                type="button"
-                class="btn btn-quiet-inline"
-                data-remove-cart="celery"
-                aria-label="Remove celery from cart"
-              >
-                Remove
-              </button>
-            </div>
-          </li>
-          <li class="buy-row">
-            <div class="buy-meta">
-              <span class="buy-name" id="buy-price-herbs">Herbs</span>
-            </div>
-            <div class="buy-controls">
-              <label class="field field-inline">
-                <span class="visually-hidden">Quantity of herbs</span>
-                <input type="number" id="buy-qty-herbs" min="1" step="1" value="10" />
-              </label>
-              <button type="button" class="btn btn-panel" data-add-cart="herbs">
-                Add to cart
-              </button>
-            </div>
-            <div class="buy-cart-cell">
-              <span class="buy-cart-qty" id="cart-qty-herbs" aria-live="polite">0</span>
-              <button
-                type="button"
-                class="btn btn-quiet-inline"
-                data-remove-cart="herbs"
-                aria-label="Remove herbs from cart"
-              >
-                Remove
-              </button>
-            </div>
-          </li>
-        </ul>
-        <div class="buy-checkout">
-          <button type="button" class="btn btn-quiet-inline" id="btn-clear-cart">
-            Clear cart
-          </button>
-          <div class="buy-total-row">
-            <span class="buy-total-label">Cart total</span>
-            <span class="buy-total-value" id="cart-total">$0.00</span>
-          </div>
-          <button type="button" class="btn btn-panel btn-checkout" id="btn-cart-buy">
-            Buy
-          </button>
-        </div>
-      </section>
-
-      <section class="panel" id="panel-price" hidden aria-label="Set sell price">
-        <div class="panel-header">
-          <h2 class="section-title" id="price-panel-title">Price</h2>
-          <button type="button" class="btn btn-close" data-close-panel aria-label="Close price panel">
-            Close
-          </button>
-        </div>
-        <label class="panel-product-select" for="price-product-select">
-          Item
-          <select
-            id="price-product-select"
-            class="stand-select"
-            aria-label="Switch price item"
-          >
-            <option value="juice">Juice</option>
-            <option value="cocoa">Hot cocoa</option>
-            <option value="burger">Burger</option>
-            <option value="soup">Soup</option>
-          </select>
-        </label>
-        <p class="panel-lead" id="price-panel-lead">
-          Set what you charge per serving. Switching items or closing without save discards edits.
-        </p>
-        <form id="form-price" class="panel-form panel-form-price">
-          <label class="field">
-            <span class="field-label" id="sell-price-label">Dollars per serving</span>
+          <label class="field recipe-price-field">
+            <span class="field-label" id="sell-price-label">Sell price</span>
             <input
               type="number"
               id="sell-price"
@@ -1130,8 +550,49 @@
               required
             />
           </label>
-          <button type="submit" class="btn btn-panel">Save price</button>
+          <div class="recipe-stats" id="recipe-stats" aria-live="polite">
+            <p class="recipe-stat" id="recipe-yield">Can make 0 servings from current stock.</p>
+            <p class="recipe-stat" id="recipe-cogs">Cost per serving: $0.00.</p>
+            <p class="recipe-stat" id="recipe-profit">Profit per serving: $0.00.</p>
+          </div>
+          <div class="recipe-menu-summary" id="recipe-menu-summary" aria-live="polite">
+            <h3 class="recipe-menu-summary-title">Menu summary</h3>
+            <ul class="recipe-menu-summary-list" id="recipe-menu-summary-list"></ul>
+          </div>
+          <button type="submit" class="btn btn-panel">Save recipe &amp; price</button>
         </form>
+      </section>
+
+      <section class="panel" id="panel-buy" hidden aria-label="Inventory and supplies">
+        <div class="panel-header">
+          <h2 class="section-title">Inventory &amp; supplies</h2>
+          <button type="button" class="btn btn-close" data-close-panel aria-label="Close buy panel">
+            Close
+          </button>
+        </div>
+        <p class="panel-lead">
+          On-hand counts are shared across all stands and restaurants. Add supplies to your cart,
+          then place one order at the bottom. Your cart stays while you switch menus.
+        </p>
+        <div class="buy-head" aria-hidden="true">
+          <span class="buy-head-item">Item</span>
+          <span class="buy-head-onhand">On hand</span>
+          <span class="buy-head-order">Order</span>
+          <span class="buy-head-cart">In cart</span>
+        </div>
+        <ul class="buy-list" id="buy-list"></ul>
+        <div class="buy-checkout">
+          <button type="button" class="btn btn-quiet-inline" id="btn-clear-cart">
+            Clear cart
+          </button>
+          <div class="buy-total-row">
+            <span class="buy-total-label">Cart total</span>
+            <span class="buy-total-value" id="cart-total">$0.00</span>
+          </div>
+          <button type="button" class="btn btn-panel btn-checkout" id="btn-cart-buy">
+            Place order
+          </button>
+        </div>
       </section>
 
       <section class="panel" id="panel-business" hidden aria-label="Business ledger">
@@ -1218,16 +679,16 @@
       </section>
     </main>
 
-    <script src="js/weather.js?v=27"></script>
-    <script src="js/state.js?v=27"></script>
-    <script src="js/events.js?v=27"></script>
-    <script src="js/recipe.js?v=27"></script>
-    <script src="js/recipePreferences.js?v=27"></script>
-    <script src="js/economy.js?v=27"></script>
-    <script src="js/customers.js?v=27"></script>
-    <script src="js/map.js?v=27"></script>
-    <script src="js/ledger.js?v=27"></script>
+    <script src="js/weather.js?v=28"></script>
+    <script src="js/state.js?v=28"></script>
+    <script src="js/events.js?v=28"></script>
+    <script src="js/recipe.js?v=28"></script>
+    <script src="js/recipePreferences.js?v=28"></script>
+    <script src="js/economy.js?v=28"></script>
+    <script src="js/customers.js?v=28"></script>
+    <script src="js/map.js?v=28"></script>
+    <script src="js/ledger.js?v=28"></script>
     <script src="js/ui.js?v=28"></script>
-    <script src="js/main.js?v=27"></script>
+    <script src="js/main.js?v=28"></script>
   </body>
 </html>

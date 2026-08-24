@@ -1179,16 +1179,107 @@ body {
 }
 
 .buy-head {
-  display: none;
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) 4.5rem minmax(0, 1fr) 4.5rem;
+  gap: 0.45rem 0.75rem;
+  margin-bottom: 0.35rem;
+  padding: 0 0.15rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
 }
 
 .buy-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1.4fr) 4.5rem minmax(0, 1fr) 4.5rem;
   gap: 0.45rem 0.75rem;
   align-items: center;
   padding-bottom: 0.55rem;
   border-bottom: 1px dashed rgba(47, 125, 74, 0.2);
+}
+
+.buy-onhand-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+}
+
+.buy-onhand-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.buy-onhand-qty {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--leaf-deep);
+}
+
+.recipe-price-field {
+  grid-column: 1 / -1;
+}
+
+.recipe-menu-summary {
+  grid-column: 1 / -1;
+  margin: 0.15rem 0 0.25rem;
+  padding: 0.75rem 0.9rem;
+  border-radius: 0.85rem;
+  border: 1px solid var(--stroke);
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.recipe-menu-summary-title {
+  margin: 0 0 0.5rem;
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--leaf-deep);
+}
+
+.recipe-menu-summary-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.recipe-menu-summary-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0.45rem 0.55rem;
+  border-radius: 0.65rem;
+  background: rgba(255, 255, 255, 0.65);
+  border: 1px solid rgba(47, 125, 74, 0.12);
+}
+
+.recipe-menu-summary-item.is-offered {
+  border-color: rgba(47, 125, 74, 0.35);
+  background: rgba(110, 198, 160, 0.12);
+}
+
+.recipe-menu-summary-name {
+  font-weight: 700;
+  color: var(--leaf-deep);
+  font-size: 0.92rem;
+}
+
+.recipe-menu-summary-detail {
+  font-size: 0.88rem;
+  color: var(--ink-soft);
+}
+
+.recipe-stat.is-negative {
+  color: #b42318;
+  font-weight: 700;
 }
 
 .buy-row:last-child {
@@ -1198,7 +1289,22 @@ body {
 
 .buy-meta {
   min-width: 0;
-  grid-column: 1 / -1;
+}
+
+.buy-head-item {
+  grid-column: 1;
+}
+
+.buy-head-onhand {
+  text-align: center;
+}
+
+.buy-head-order {
+  text-align: left;
+}
+
+.buy-head-cart {
+  text-align: center;
 }
 
 .buy-name {
@@ -1612,9 +1718,20 @@ body {
     grid-template-columns: 1fr;
   }
 
+  .buy-head {
+    display: none;
+  }
+
   .buy-row {
     grid-template-columns: 1fr;
     align-items: stretch;
+  }
+
+  .buy-onhand-cell {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.15rem 0;
   }
 
   .buy-controls {

@@ -90,16 +90,7 @@
       GameUI.setReport(
         "Editing " +
           GameState.productLabel(state.activeProduct) +
-          " recipe. Unsaved edits were discarded.",
-        { flash: true }
-      );
-    } else if (open === "price") {
-      GameUI.setReport(
-        "Editing " +
-          GameState.productLabel(state.activeProduct) +
-          " price. Unsaved edits were discarded. Current: " +
-          GameUI.formatMoney(GameState.activePrice(state)) +
-          ".",
+          " recipe & price. Unsaved edits were discarded.",
         { flash: true }
       );
     }
@@ -124,7 +115,7 @@
     GameUI.setReport(
       "Edit the " +
         GameState.productLabel(state.activeProduct) +
-        " recipe, then save.",
+        " recipe and price, then save.",
       { flash: true }
     );
   }
@@ -132,22 +123,9 @@
   function onBuyOpen() {
     if (selling) return;
     GameUI.setPanel("buy");
-    GameUI.renderCart(state);
+    GameUI.renderBuyList(state);
     GameUI.setReport(
-      "Add supplies to your cart, then Buy at the bottom. Cart stays if you switch menus.",
-      { flash: true }
-    );
-  }
-
-  function onPriceOpen() {
-    if (selling) return;
-    GameUI.setPanel("price");
-    GameUI.setReport(
-      "Set " +
-        GameState.productLabel(state.activeProduct) +
-        " price. Current: " +
-        GameUI.formatMoney(GameState.activePrice(state)) +
-        ".",
+      "Check on-hand stock, add supplies to your cart, then Place order at the bottom.",
       { flash: true }
     );
   }
@@ -193,29 +171,23 @@
   function onRecipeSave(event) {
     event.preventDefault();
     if (selling) return;
-    const result = GameRecipe.apply(state, GameUI.readRecipeForm(state));
-    if (!result.ok) {
-      GameUI.setReport(result.message, { flash: true });
+    const recipeResult = GameRecipe.apply(state, GameUI.readRecipeForm(state));
+    if (!recipeResult.ok) {
+      GameUI.setReport(recipeResult.message, { flash: true });
+      return;
+    }
+    const priceResult = GameEconomy.applyPrice(state, GameUI.readPriceForm());
+    if (!priceResult.ok) {
+      GameUI.setReport(priceResult.message, { flash: true });
       return;
     }
     GameState.save(state);
     refresh();
     GameUI.closePanel(state);
-    GameUI.setReport(result.message, { flash: true });
-  }
-
-  function onPriceSave(event) {
-    event.preventDefault();
-    if (selling) return;
-    const result = GameEconomy.applyPrice(state, GameUI.readPriceForm());
-    if (!result.ok) {
-      GameUI.setReport(result.message, { flash: true });
-      return;
-    }
-    GameState.save(state);
-    refresh();
-    GameUI.closePanel(state);
-    GameUI.setReport(result.message, { flash: true });
+    GameUI.setReport(
+      recipeResult.message + " " + priceResult.message,
+      { flash: true }
+    );
   }
 
   function onAddToCart(key) {
@@ -740,14 +712,6 @@
     GameUI.setInstructionsHidden(false);
   }
 
-  function onHideInventory() {
-    GameUI.setInventoryHidden(true);
-  }
-
-  function onShowInventory() {
-    GameUI.setInventoryHidden(false);
-  }
-
   function onHideLocations() {
     GameUI.setLocationsHidden(true);
   }
@@ -817,9 +781,6 @@
   document
     .getElementById("recipe-product-select")
     ?.addEventListener("change", onPanelProductChange);
-  document
-    .getElementById("price-product-select")
-    ?.addEventListener("change", onPanelProductChange);
 
   document.querySelectorAll("[data-menu-product]").forEach(function (input) {
     input.addEventListener("change", function () {
@@ -829,7 +790,6 @@
 
   document.getElementById("btn-recipe")?.addEventListener("click", onRecipeOpen);
   document.getElementById("btn-buy")?.addEventListener("click", onBuyOpen);
-  document.getElementById("btn-price")?.addEventListener("click", onPriceOpen);
   document.getElementById("btn-business")?.addEventListener("click", onBusinessOpen);
   document.getElementById("btn-sell")?.addEventListener("click", onSellDay);
   document.getElementById("btn-new-game")?.addEventListener("click", onNewGame);
@@ -865,12 +825,6 @@
     .getElementById("btn-show-instructions")
     ?.addEventListener("click", onShowInstructions);
   document
-    .getElementById("btn-hide-inventory")
-    ?.addEventListener("click", onHideInventory);
-  document
-    .getElementById("btn-show-inventory")
-    ?.addEventListener("click", onShowInventory);
-  document
     .getElementById("btn-hide-locations")
     ?.addEventListener("click", onHideLocations);
   document
@@ -898,10 +852,6 @@
   document
     .getElementById("form-recipe")
     ?.addEventListener("submit", onRecipeSave);
-
-  document
-    .getElementById("form-price")
-    ?.addEventListener("submit", onPriceSave);
 
   document.getElementById("panel-buy")?.addEventListener("click", (event) => {
     const addBtn = event.target.closest("[data-add-cart]");
