@@ -1382,6 +1382,10 @@ body {
   color: var(--ink-soft);
 }
 
+.day-history-select-label[hidden] {
+  display: none !important;
+}
+
 .day-results-hints {
   margin: 0.75rem 0;
   padding: 0.75rem 0.85rem;
