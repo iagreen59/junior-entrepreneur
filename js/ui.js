@@ -28,6 +28,18 @@
     soup: "Soup",
   };
 
+  /** P&L trend chart: duration (5 | 30) and metric key. */
+  let pnlChartDuration = 5;
+  let pnlChartMetric = "profit";
+
+  const PNL_CHART_METRICS = [
+    { key: "revenue", label: "Revenue" },
+    { key: "cogs", label: "COGS" },
+    { key: "wages", label: "Wages" },
+    { key: "rent", label: "Rent" },
+    { key: "profit", label: "Profit" },
+  ];
+
   /** Latest state from render() — used for live recipe yield/COGS updates. */
   let cachedState = null;
   /** Business panel tab: "business" (default) | "daily". */
@@ -256,14 +268,11 @@
     activeDayReport = report || null;
     dayResultsMode = mode || "live";
     const historyWrap = document.getElementById("day-history-select-wrap");
-    const historySelect = document.getElementById("day-history-select");
-    if (historyWrap) historyWrap.hidden = mode !== "history";
-    if (historySelect && mode === "history" && state) {
-      populateDayHistorySelect(
-        historySelect,
-        state,
-        report && report.completedDay
-      );
+    if (historyWrap) historyWrap.hidden = true;
+
+    const backBtn = document.getElementById("btn-back-to-business");
+    if (backBtn) {
+      backBtn.hidden = mode !== "history" && mode !== "live-complete";
     }
 
     setDayResultsTitle(
@@ -298,14 +307,16 @@
     if (stage && mode === "history") stage.innerHTML = "";
 
     const reportEl = document.getElementById("report-body");
-    const text = formatDayReport(report);
+    const text = formatDayReportStructured(report);
     if (reportEl) {
       if (mode === "live") {
         reportEl.textContent = "";
         reportEl.hidden = true;
+        reportEl.classList.remove("is-pnl");
       } else {
         reportEl.hidden = false;
         reportEl.textContent = text || MORNING_COPY;
+        reportEl.classList.toggle("is-pnl", !!text);
       }
       reportEl.classList.remove("is-receipt");
     }
@@ -323,8 +334,7 @@
   }
 
   function showPreviousDay(state, completedDay) {
-    const report =
-      reportForCompletedDay(state, completedDay) || latestCompletedReport(state);
+    const report = latestCompletedReport(state);
     if (!report) {
       return {
         ok: false,
@@ -347,16 +357,31 @@
     return { ok: true, report: report };
   }
 
-  function renderBusinessDaySelect(state) {
-    populateDayHistorySelect(
-      document.getElementById("business-day-select"),
-      state,
-      latestCompletedReport(state) &&
-        latestCompletedReport(state).completedDay
-    );
+  function renderPreviousDayPreview(state) {
+    const labelEl = document.getElementById("previous-day-label");
     const viewBtn = document.getElementById("btn-view-previous-day");
-    const history = dayHistoryList(state);
-    if (viewBtn) viewBtn.disabled = history.length === 0;
+    const report = latestCompletedReport(state);
+    if (viewBtn) viewBtn.disabled = !report;
+    if (!labelEl) return;
+    if (!report) {
+      labelEl.textContent = "No completed Sell Day yet.";
+      return;
+    }
+    const dayNum = Number(report.completedDay) || "—";
+    const weatherLabel =
+      report.weather && global.GameWeather
+        ? global.GameWeather.label(report.weather)
+        : "";
+    labelEl.textContent =
+      "Latest: Day " +
+      dayNum +
+      (weatherLabel ? " · " + weatherLabel : "") +
+      " — profit " +
+      formatMoney(report.profit ?? 0);
+  }
+
+  function renderBusinessDaySelect(state) {
+    renderPreviousDayPreview(state);
   }
 
   function formatMoney(amount) {
@@ -816,6 +841,178 @@
     return formatMoney(metric.value);
   }
 
+  function renderPnlTrendChart(state) {
+    const section = document.getElementById("pnl-trend-section");
+    const chartEl = document.getElementById("pnl-trend-chart");
+    const durationSelect = document.getElementById("pnl-chart-duration");
+    const metricSelect = document.getElementById("pnl-chart-metric");
+    if (!section || !chartEl) return;
+
+    const history = dayHistoryList(state);
+    section.hidden = history.length === 0;
+
+    if (durationSelect && durationSelect.value !== String(pnlChartDuration)) {
+      durationSelect.value = String(pnlChartDuration);
+    }
+    if (metricSelect && metricSelect.value !== pnlChartMetric) {
+      metricSelect.value = pnlChartMetric;
+    }
+
+    const days = pnlChartDuration === 30 ? 30 : 5;
+    const slice = history.slice(-days);
+
+    if (slice.length < 2) {
+      chartEl.innerHTML =
+        '<p class="pnl-chart-empty">Complete at least 2 Sell Days to see a trend line.</p>';
+      return;
+    }
+
+    const metricDef =
+      PNL_CHART_METRICS.find(function (m) {
+        return m.key === pnlChartMetric;
+      }) || PNL_CHART_METRICS[4];
+    const values = slice.map(function (entry) {
+      return Number(entry[metricDef.key]) || 0;
+    });
+    const labels = slice.map(function (entry) {
+      return "D" + (Number(entry.completedDay) || "?");
+    });
+
+    const width = 320;
+    const height = 140;
+    const padL = 44;
+    const padR = 12;
+    const padT = 12;
+    const padB = 28;
+    const plotW = width - padL - padR;
+    const plotH = height - padT - padB;
+
+    let minVal = Math.min.apply(null, values);
+    let maxVal = Math.max.apply(null, values);
+    if (minVal === maxVal) {
+      minVal -= 1;
+      maxVal += 1;
+    }
+    const range = maxVal - minVal || 1;
+
+    function xAt(i) {
+      if (values.length === 1) return padL + plotW / 2;
+      return padL + (i / (values.length - 1)) * plotW;
+    }
+    function yAt(v) {
+      return padT + plotH - ((v - minVal) / range) * plotH;
+    }
+
+    const points = values
+      .map(function (v, i) {
+        return xAt(i).toFixed(1) + "," + yAt(v).toFixed(1);
+      })
+      .join(" ");
+
+    const zeroInRange = minVal <= 0 && maxVal >= 0;
+    const zeroY = zeroInRange ? yAt(0) : null;
+
+    let gridLines = "";
+    for (let t = 0; t <= 4; t++) {
+      const v = minVal + (range * t) / 4;
+      const y = yAt(v).toFixed(1);
+      gridLines +=
+        '<line class="pnl-chart-grid" x1="' +
+        padL +
+        '" y1="' +
+        y +
+        '" x2="' +
+        (width - padR) +
+        '" y2="' +
+        y +
+        '"/>';
+      gridLines +=
+        '<text class="pnl-chart-axis" x="' +
+        (padL - 6) +
+        '" y="' +
+        y +
+        '" text-anchor="end" dominant-baseline="middle">' +
+        formatMoney(v) +
+        "</text>";
+    }
+
+    let xLabels = "";
+    const labelStep = values.length <= 6 ? 1 : Math.ceil(values.length / 5);
+    for (let i = 0; i < labels.length; i += labelStep) {
+      xLabels +=
+        '<text class="pnl-chart-axis" x="' +
+        xAt(i).toFixed(1) +
+        '" y="' +
+        (height - 6) +
+        '" text-anchor="middle">' +
+        labels[i] +
+        "</text>";
+    }
+
+    chartEl.innerHTML =
+      '<p class="pnl-chart-caption">' +
+      metricDef.label +
+      " · last " +
+      slice.length +
+      " day" +
+      (slice.length === 1 ? "" : "s") +
+      "</p>" +
+      '<svg class="pnl-chart-svg" viewBox="0 0 ' +
+      width +
+      " " +
+      height +
+      '" role="img" aria-label="' +
+      metricDef.label +
+      " trend over " +
+      slice.length +
+      ' days">' +
+      gridLines +
+      (zeroY != null
+        ? '<line class="pnl-chart-zero" x1="' +
+          padL +
+          '" y1="' +
+          zeroY.toFixed(1) +
+          '" x2="' +
+          (width - padR) +
+          '" y2="' +
+          zeroY.toFixed(1) +
+          '"/>'
+        : "") +
+      '<polyline class="pnl-chart-line" points="' +
+      points +
+      '"/>' +
+      values
+        .map(function (v, i) {
+          return (
+            '<circle class="pnl-chart-dot" cx="' +
+            xAt(i).toFixed(1) +
+            '" cy="' +
+            yAt(v).toFixed(1) +
+            '" r="3"><title>Day ' +
+            labels[i].slice(1) +
+            ": " +
+            formatMoney(v) +
+            "</title></circle>"
+          );
+        })
+        .join("") +
+      xLabels +
+      "</svg>";
+  }
+
+  function setPnlChartDuration(days) {
+    pnlChartDuration = days === 30 ? 30 : 5;
+    if (cachedState) renderPnlTrendChart(cachedState);
+  }
+
+  function setPnlChartMetric(key) {
+    const found = PNL_CHART_METRICS.some(function (m) {
+      return m.key === key;
+    });
+    pnlChartMetric = found ? key : "profit";
+    if (cachedState) renderPnlTrendChart(cachedState);
+  }
+
   function renderLedger(state) {
     const listEl = document.getElementById("ledger-metrics");
     const restSection = document.getElementById("ledger-restaurants");
@@ -922,6 +1119,8 @@
         }
       }
     }
+
+    renderPnlTrendChart(state);
   }
 
   function toggleLedgerInfo(key) {
@@ -929,27 +1128,175 @@
     if (cachedState) renderLedger(cachedState);
   }
 
-  function formatDayReport(report) {
-    if (!report) return null;
-    if (report.message) return report.message;
+  function servingWord(product, count) {
+    if (product === "burger" || product === "soup") {
+      return count === 1 ? "serving" : "servings";
+    }
+    return count === 1 ? "cup" : "cups";
+  }
 
-    const cups = report.cupsSold ?? 0;
+  function soldBreakdownLines(report) {
+    if (!report || !report.soldByProduct) return [];
+    const prices = report.prices || {};
+    const products = global.GameState.PRODUCTS || [
+      "juice",
+      "cocoa",
+      "burger",
+      "soup",
+    ];
+    const lines = [];
+    for (const product of products) {
+      const n = report.soldByProduct[product] | 0;
+      if (n <= 0) continue;
+      const label = global.GameState.productLabel(product);
+      const price = prices[product];
+      lines.push(
+        "  " +
+          n +
+          " " +
+          label +
+          " " +
+          servingWord(product, n) +
+          " @ " +
+          formatMoney(price)
+      );
+    }
+    return lines;
+  }
+
+  function weatherNoteFromReport(report) {
+    if (!report || !report.weather) return "";
+    const offered =
+      report.products && report.products.length
+        ? report.products
+        : report.product
+          ? [report.product]
+          : [];
+    if (!offered.length) return "";
+    const weather = report.weather;
+    const favors = offered.filter(function (product) {
+      return global.GameWeather
+        ? global.GameWeather.favorsProduct(weather, product) === true
+        : false;
+    });
+    const mismatches = offered.filter(function (product) {
+      return global.GameWeather
+        ? global.GameWeather.favorsProduct(weather, product) === false
+        : false;
+    });
+    if (favors.length) {
+      return (
+        global.GameWeather.label(weather) +
+        " weather helped " +
+        favors
+          .map(function (p) {
+            return global.GameState.productLabel(p);
+          })
+          .join(" / ") +
+        "."
+      );
+    }
+    if (mismatches.length === offered.length) {
+      return (
+        global.GameWeather.label(weather) +
+        " weather cooled interest in today's menu."
+      );
+    }
+    return "";
+  }
+
+  function formatDayReportStructured(report) {
+    if (!report) return null;
+
+    const lines = [];
     const revenue = report.revenue ?? 0;
-    const costs = report.cogs ?? report.costs ?? 0;
+    const cogs = report.cogs ?? report.costs ?? 0;
+    const wages = report.wages ?? 0;
+    const rent = report.rent ?? 0;
     const profit = report.profit ?? 0;
-    return (
-      "Sold " +
-      cups +
-      " serving" +
-      (cups === 1 ? "" : "s") +
-      ". Revenue " +
-      formatMoney(revenue) +
-      ", costs " +
-      formatMoney(costs) +
-      ", profit " +
-      formatMoney(profit) +
-      "."
-    );
+    const breakdown = soldBreakdownLines(report);
+    const weatherNote = weatherNoteFromReport(report);
+
+    if (report.isRestaurant && report.locations && report.locations.length) {
+      lines.push(
+        report.locations.length === 1
+          ? "Restaurant P&L"
+          : "Per-restaurant P&L"
+      );
+      lines.push("");
+      for (const loc of report.locations) {
+        if (report.locations.length > 1) {
+          lines.push(loc.restaurantName || "Restaurant");
+        }
+        lines.push("  Sales     " + formatMoney(loc.revenue));
+        lines.push("  Wages     " + formatMoney(loc.wages));
+        lines.push("  Rent      " + formatMoney(loc.rent));
+        lines.push("  Profit    " + formatMoney(loc.profit));
+        lines.push("");
+        lines.push(
+          "  " +
+            loc.employeeCount +
+            " staff · capacity ×" +
+            Number(loc.capacityMult).toFixed(2)
+        );
+        lines.push("");
+      }
+    } else {
+      lines.push("Day P&L");
+      lines.push("");
+      lines.push("  Revenue   " + formatMoney(revenue));
+      if (wages > 0) {
+        lines.push("  Wages     " + formatMoney(wages));
+      }
+      if (rent > 0) {
+        lines.push("  Rent      " + formatMoney(rent));
+      }
+      lines.push("  COGS      " + formatMoney(cogs));
+      lines.push("  Profit    " + formatMoney(profit));
+      lines.push("");
+    }
+
+    if (breakdown.length) {
+      lines.push("Sales");
+      lines.push.apply(lines, breakdown);
+      lines.push("");
+      lines.push("  COGS      " + formatMoney(cogs));
+      lines.push("");
+    } else if (report.cupsSold === 0 || breakdown.length === 0) {
+      if (report.products && report.products.length === 0) {
+        lines.push("No items on today's menu — sold 0 servings.");
+        lines.push("");
+      } else if ((report.stockCups | 0) === 0) {
+        lines.push("No stock for today's offered menu — sold 0 servings.");
+        lines.push("");
+      } else if ((report.cupsSold | 0) === 0) {
+        lines.push("Sold 0 servings from today's menu.");
+        lines.push("");
+      }
+    }
+
+    if (report.soldOut && report.soldOutProducts && report.soldOutProducts.length) {
+      lines.push(
+        "Sold out: " +
+          report.soldOutProducts
+            .map(function (p) {
+              return global.GameState.productLabel(p);
+            })
+            .join(", ") +
+          "."
+      );
+      lines.push("");
+    }
+
+    if (weatherNote) {
+      lines.push(weatherNote);
+    }
+
+    return lines.join("\n").trim();
+  }
+
+  function formatDayReport(report) {
+    return formatDayReportStructured(report) || (report && report.message) || null;
   }
 
   function renderStand(state) {
@@ -1544,7 +1891,7 @@
       const menuNote =
         " Menu with 2+ items adds $" +
         (Number(global.GameState.MENU_WAGE_SURCHARGE) || 0.5).toFixed(2) +
-        "/day per extra item.";
+        "/day per employee per extra item.";
       lead.textContent = required
         ? "With 2 or more stands, every stand needs a worker. You may run one stand yourself; hire employees for the rest ($" +
           wage.toFixed(0) +
@@ -1753,12 +2100,15 @@
       if (employees <= 0 && !(surcharge > 0)) return text;
       let tip = text + " Wages today: " + formatMoney(wages) + ".";
       if (surcharge > 0) {
+        const perEmployee =
+          global.GameState.menuWageSurchargePerEmployee &&
+          global.GameState.menuWageSurchargePerEmployee(state);
         tip +=
           " (includes " +
           formatMoney(surcharge) +
-          " menu surcharge for " +
-          global.GameState.menuOfferedCount(state) +
-          " items)";
+          " menu surcharge — " +
+          formatMoney(perEmployee) +
+          "/employee per extra item)";
       }
       return tip;
     }
@@ -2181,10 +2531,18 @@
     if (!report.customers) report.customers = summary;
     bindDayResultsReport(report, summary, state, "live-complete");
     const reportEl = document.getElementById("report-body");
-    if (reportEl) reportEl.hidden = false;
+    if (reportEl) {
+      reportEl.hidden = false;
+      const text = formatDayReportStructured(report);
+      reportEl.textContent = text || "";
+      reportEl.classList.toggle("is-pnl", !!text);
+    }
     setSellDayLocked(false, state);
-    if (plan && plan.message) {
-      setReport(plan.message, { flash: true, revealDaily: true });
+    const panel = document.getElementById("day-results");
+    if (panel) {
+      panel.classList.remove("is-fresh");
+      void panel.offsetWidth;
+      panel.classList.add("is-fresh");
     }
   }
 
@@ -2207,10 +2565,15 @@
     setDayHintsVisible(!dayHintsVisible);
   }
 
+  function openBusinessOverview(state) {
+    hideDayResultsPanel();
+    setBusinessTab("business");
+    setPanel("business");
+    if (state) renderLedger(state);
+  }
+
   function onDayHistorySelectChange(state) {
-    const select = document.getElementById("day-history-select");
-    if (!select || !select.value) return;
-    showPreviousDay(state, select.value);
+    showPreviousDay(state);
   }
 
   const recipeForm = document.getElementById("form-recipe");
@@ -2269,6 +2632,9 @@
     setInventoryHidden,
     setLocationsHidden,
     setBusinessTab,
+    openBusinessOverview,
+    setPnlChartDuration,
+    setPnlChartMetric,
     hideDayResultsPanel,
     showPreviousDay,
     toggleDayHints,
