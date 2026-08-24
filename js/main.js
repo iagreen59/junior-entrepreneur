@@ -139,12 +139,33 @@
 
   function onViewPreviousDay() {
     if (selling) return;
-    const select = document.getElementById("business-day-select");
-    const day = select && select.value ? select.value : null;
-    const result = GameUI.showPreviousDay(state, day);
+    const result = GameUI.showPreviousDay(state);
     if (!result.ok) {
       GameUI.setReport(result.message, { flash: true });
     }
+  }
+
+  function onBackToBusiness() {
+    if (selling) return;
+    GameUI.openBusinessOverview(state);
+  }
+
+  function onDailyBackToSummary() {
+    if (selling) return;
+    GameUI.setBusinessTab("business");
+    GameUI.renderLedger(state);
+  }
+
+  function onPnlChartDurationChange(event) {
+    if (selling) return;
+    const value = event.target && event.target.value;
+    GameUI.setPnlChartDuration(value === "30" ? 30 : 5);
+  }
+
+  function onPnlChartMetricChange(event) {
+    if (selling) return;
+    const value = event.target && event.target.value;
+    if (value) GameUI.setPnlChartMetric(value);
   }
 
   function onStatDayClick() {
@@ -303,6 +324,7 @@
         products: plan.products,
         soldByProduct: plan.soldByProduct,
         demandByProduct: plan.demandByProduct,
+        prices: plan.prices || null,
         weather: plan.weather,
         preference: plan.preference,
         preferences: plan.preferences,
@@ -728,10 +750,6 @@
     GameUI.toggleDayHints();
   }
 
-  function onDayHistorySelectChange() {
-    GameUI.onDayHistorySelectChange(state);
-  }
-
   function onBusinessTabClick(event) {
     const btn = event.target.closest("[data-business-tab]");
     if (!btn) return;
@@ -837,8 +855,17 @@
     .getElementById("btn-day-hints")
     ?.addEventListener("click", onToggleDayHints);
   document
-    .getElementById("day-history-select")
-    ?.addEventListener("change", onDayHistorySelectChange);
+    .getElementById("btn-back-to-business")
+    ?.addEventListener("click", onBackToBusiness);
+  document
+    .getElementById("btn-daily-back-to-summary")
+    ?.addEventListener("click", onDailyBackToSummary);
+  document
+    .getElementById("pnl-chart-duration")
+    ?.addEventListener("change", onPnlChartDurationChange);
+  document
+    .getElementById("pnl-chart-metric")
+    ?.addEventListener("change", onPnlChartMetricChange);
   document
     .getElementById("stat-day-btn")
     ?.addEventListener("click", onStatDayClick);

@@ -129,7 +129,7 @@
               <li>
                 With <strong>2+ stands</strong>, staff every stand: you may run <strong>one</strong>
                 yourself; hire employees for the others (or run all with employees). Stand wage is
-                <strong>$5/day</strong> per employee, plus <strong>$0.50/day</strong> for each menu
+                <strong>$5/day</strong> per employee, plus <strong>$0.50/day per employee</strong> for each menu
                 item beyond the first, paid on Sell Day. Understaffed stands block Sell Day. You may
                 <strong>Sell a stand for $10</strong> (keep at least one).
               </li>
@@ -139,8 +139,8 @@
                 temporary and recoverable; never an instant game over.
               </li>
               <li>
-                Open <strong>Business</strong> for the ledger (Business summary) or a
-                <strong>Previous Day</strong> report (Daily summary — pick a completed day).
+                Open <strong>Business</strong> for the ledger (Business summary), P&amp;L trend charts,
+                or your most recent <strong>Previous Day</strong> report (Daily summary).
                 Tap <strong>(?)</strong> on a metric for a short explanation.
                 Open <strong>Buy</strong> anytime to check on-hand stock and order more supplies.
               </li>
@@ -190,7 +190,7 @@
                 stands and restaurants together). Hire <strong>2–4 employees</strong> per restaurant;
                 you cannot work a restaurant shift. Sell Day charges
                 <strong>rent $18/day</strong> per restaurant plus <strong>$8/day</strong> per
-                employee, plus <strong>$0.50/day</strong> for each menu item beyond the first —
+                employee, plus <strong>$0.50/day per employee</strong> for each menu item beyond the first —
                 overhead is a profitability challenge, so watch each location’s P&amp;L.
               </li>
               <li>
@@ -370,10 +370,14 @@
         <div class="panel-header">
           <h2 class="section-title" id="day-results-title">Day results</h2>
           <div class="day-results-header-actions">
-            <label class="day-history-select-label" id="day-history-select-wrap" hidden>
-              Day
-              <select id="day-history-select" class="stand-select" aria-label="Select completed day"></select>
-            </label>
+            <button
+              type="button"
+              class="btn btn-quiet"
+              id="btn-back-to-business"
+              hidden
+            >
+              ← Business overview
+            </button>
             <button
               type="button"
               class="btn btn-quiet"
@@ -634,6 +638,31 @@
             Running totals across Sell Days. Tap <strong>?</strong> next to a metric to learn what it means.
           </p>
           <div class="ledger-metrics" id="ledger-metrics" role="list"></div>
+          <section class="pnl-trend-section" id="pnl-trend-section" hidden aria-label="P and L trends">
+            <div class="ledger-subtitle-row">
+              <h3 class="ledger-subtitle">P&amp;L trends</h3>
+            </div>
+            <div class="pnl-chart-controls">
+              <label class="pnl-chart-control" for="pnl-chart-duration">
+                Duration
+                <select id="pnl-chart-duration" class="stand-select" aria-label="Trend duration">
+                  <option value="5">Last 5 days</option>
+                  <option value="30">Last 30 days</option>
+                </select>
+              </label>
+              <label class="pnl-chart-control" for="pnl-chart-metric">
+                Metric
+                <select id="pnl-chart-metric" class="stand-select" aria-label="Trend metric">
+                  <option value="revenue">Revenue</option>
+                  <option value="cogs">COGS</option>
+                  <option value="wages">Wages</option>
+                  <option value="rent">Rent</option>
+                  <option value="profit" selected>Profit</option>
+                </select>
+              </label>
+            </div>
+            <div class="pnl-trend-chart" id="pnl-trend-chart"></div>
+          </section>
           <div class="ledger-restaurants" id="ledger-restaurants" hidden>
             <div class="ledger-subtitle-row">
               <h3 class="ledger-subtitle">Per restaurant</h3>
@@ -665,30 +694,30 @@
             <h3 class="ledger-subtitle">Previous day</h3>
           </div>
           <p class="panel-lead">
-            Pick a completed Sell Day to reopen the same day-results panel shown at day’s end.
+            Reopen your most recent completed Sell Day — the same day-results panel shown at day’s end.
           </p>
-          <label class="day-history-select-label" for="business-day-select">
-            Completed day
-            <select id="business-day-select" class="stand-select" aria-label="Select completed day"></select>
-          </label>
+          <p class="previous-day-label" id="previous-day-label">No completed Sell Day yet.</p>
           <button type="button" class="btn btn-panel" id="btn-view-previous-day">
             View previous day
+          </button>
+          <button type="button" class="btn btn-quiet" id="btn-daily-back-to-summary">
+            ← Business overview
           </button>
           <p class="daily-summary-body" id="business-daily-summary-body" hidden></p>
         </div>
       </section>
     </main>
 
-    <script src="js/weather.js?v=29"></script>
-    <script src="js/state.js?v=29"></script>
-    <script src="js/events.js?v=29"></script>
-    <script src="js/recipe.js?v=29"></script>
-    <script src="js/recipePreferences.js?v=29"></script>
-    <script src="js/economy.js?v=29"></script>
-    <script src="js/customers.js?v=29"></script>
-    <script src="js/map.js?v=29"></script>
-    <script src="js/ledger.js?v=29"></script>
-    <script src="js/ui.js?v=29"></script>
-    <script src="js/main.js?v=29"></script>
+    <script src="js/weather.js?v=30"></script>
+    <script src="js/state.js?v=30"></script>
+    <script src="js/events.js?v=30"></script>
+    <script src="js/recipe.js?v=30"></script>
+    <script src="js/recipePreferences.js?v=30"></script>
+    <script src="js/economy.js?v=30"></script>
+    <script src="js/customers.js?v=30"></script>
+    <script src="js/map.js?v=30"></script>
+    <script src="js/ledger.js?v=30"></script>
+    <script src="js/ui.js?v=30"></script>
+    <script src="js/main.js?v=30"></script>
   </body>
 </html>

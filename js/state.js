@@ -1231,13 +1231,22 @@
   }
 
   /**
-   * Daily wage surcharge when more than one item is on the menu.
-   * $0.50 per extra menu item (2 items → +$0.50, 4 items → +$1.50).
+   * Daily menu surcharge per employee when more than one item is on the menu.
+   * $0.50 per extra menu item per employee (2 items → +$0.50/employee).
    */
-  function menuWageSurcharge(state) {
+  function menuWageSurchargePerEmployee(state) {
     const count = menuOfferedCount(state);
     if (count <= 1) return 0;
     return +((count - 1) * MENU_WAGE_SURCHARGE).toFixed(2);
+  }
+
+  /**
+   * Total daily menu wage surcharge across all employees.
+   */
+  function menuWageSurcharge(state) {
+    const perEmployee = menuWageSurchargePerEmployee(state);
+    if (perEmployee <= 0) return 0;
+    return +(perEmployee * employeeCount(state)).toFixed(2);
   }
 
   /**
@@ -2251,6 +2260,7 @@
     playerStandId,
     employeeCount,
     menuOfferedCount,
+    menuWageSurchargePerEmployee,
     menuWageSurcharge,
     dailyWageCost,
     staffingRequired,

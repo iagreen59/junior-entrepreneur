@@ -336,6 +336,11 @@
       : +(0.7 + 0.2 * staff).toFixed(2);
     const wageRate = Number(global.GameState.RESTAURANT_WAGE) || 8;
     const rentEach = Number(global.GameState.RESTAURANT_RENT) || 18;
+    const menuSurchargePerEmployee =
+      global.GameState.menuWageSurchargePerEmployee &&
+      global.GameState.menuWageSurchargePerEmployee(state)
+        ? global.GameState.menuWageSurchargePerEmployee(state)
+        : 0;
     const soldByProduct = emptySoldMap();
     const demandByProduct = emptySoldMap();
     let cupsSold = 0;
@@ -369,7 +374,9 @@
 
     revenue = +revenue.toFixed(2);
     cogs = +cogs.toFixed(2);
-    const wages = +(staff * wageRate).toFixed(2);
+    const wages = +(
+      staff * (wageRate + menuSurchargePerEmployee)
+    ).toFixed(2);
     const rent = +rentEach.toFixed(2);
     const profit = +(revenue - cogs - wages - rent).toFixed(2);
 
@@ -571,9 +578,15 @@
         ? ", wages " +
           formatMoney(wages) +
           (function () {
+            const menuSurchargePerEmployee =
+              global.GameState.menuWageSurchargePerEmployee &&
+              global.GameState.menuWageSurchargePerEmployee(state);
             const menuSurcharge =
               global.GameState.menuWageSurcharge &&
               global.GameState.menuWageSurcharge(state);
+            const menuCount =
+              global.GameState.menuOfferedCount &&
+              global.GameState.menuOfferedCount(state);
             let detail =
               " (" +
               employeeCount +
@@ -584,8 +597,14 @@
             if (menuSurcharge > 0) {
               detail +=
                 " + " +
-                formatMoney(menuSurcharge) +
-                " menu surcharge";
+                formatMoney(menuSurchargePerEmployee) +
+                "/item × " +
+                Math.max(0, menuCount - 1) +
+                " extra item" +
+                (menuCount - 1 === 1 ? "" : "s") +
+                " × " +
+                employeeCount +
+                " staff";
             }
             return detail + ")";
           })()
