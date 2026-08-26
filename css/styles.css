@@ -1604,14 +1604,16 @@ body {
   animation: customer-pop 0.35s ease-out both;
 }
 
-.customer-chip.is-buy {
-  border-color: rgba(47, 125, 74, 0.35);
+.customer-chip.is-positive {
+  border-color: rgba(47, 125, 74, 0.4);
+  background: rgba(47, 125, 74, 0.16);
   color: var(--leaf-deep);
 }
 
-.customer-chip.is-leave {
-  border-color: rgba(160, 70, 40, 0.28);
-  color: #7a3b22;
+.customer-chip.is-negative {
+  border-color: rgba(176, 48, 48, 0.4);
+  background: rgba(196, 72, 72, 0.18);
+  color: #8a2222;
 }
 
 @keyframes customer-pop {

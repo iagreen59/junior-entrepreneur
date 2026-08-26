@@ -1233,12 +1233,7 @@
         lines.push("  Rent      " + formatMoney(loc.rent));
         lines.push("  Profit    " + formatMoney(loc.profit));
         lines.push("");
-        lines.push(
-          "  " +
-            loc.employeeCount +
-            " staff · capacity ×" +
-            Number(loc.capacityMult).toFixed(2)
-        );
+        lines.push("  " + loc.employeeCount + " staff");
         lines.push("");
       }
     } else {
@@ -1584,16 +1579,12 @@
     const cost = Number(global.GameState.RESTAURANT_COST) || 400;
     const unlockCash = Number(global.GameState.RESTAURANT_UNLOCK_CASH) || 1000;
     const n = restaurant ? Number(restaurant.employeeCount) || 0 : 0;
-    const cap =
-      global.GameState.restaurantCapacityMultFor && restaurant
-        ? global.GameState.restaurantCapacityMultFor(restaurant)
-        : global.GameState.restaurantCapacityMult
-          ? global.GameState.restaurantCapacityMult(state)
-          : 0.7 + 0.2 * n;
     const wages =
-      global.GameState.dailyRestaurantWageCost
-        ? global.GameState.dailyRestaurantWageCost(state)
-        : n * wage;
+      global.GameState.dailyWageCost
+        ? global.GameState.dailyWageCost(state)
+        : global.GameState.dailyRestaurantWageCost
+          ? global.GameState.dailyRestaurantWageCost(state)
+          : n * wage;
     const rentTotal =
       global.GameState.dailyRestaurantRent
         ? global.GameState.dailyRestaurantRent(state)
@@ -1626,9 +1617,7 @@
         wage.toFixed(0) +
         "/day each + rent $" +
         rentEach.toFixed(0) +
-        "/day per restaurant. Active capacity ×" +
-        Number(cap).toFixed(2) +
-        " (0.7 + 0.2 × staff).";
+        "/day per restaurant.";
     }
 
     if (select) {
@@ -1713,9 +1702,7 @@
           formatMoney(rentEach) +
           ") = " +
           formatMoney(Number(wages) + Number(rentTotal)) +
-          "/day. Active capacity ×" +
-          Number(cap).toFixed(2) +
-          ".";
+          "/day.";
         statusEl.classList.remove("is-warn");
         statusEl.classList.add("is-ok");
       } else {
@@ -1746,20 +1733,26 @@
     const listEl = document.getElementById("location-pnl-list");
     const restaurants = Array.isArray(state.restaurants) ? state.restaurants : [];
     const count = restaurants.length;
+    const projectedWages =
+      global.GameState.dailyWageCost
+        ? global.GameState.dailyWageCost(state)
+        : global.GameState.dailyRestaurantWageCost
+          ? global.GameState.dailyRestaurantWageCost(state)
+          : 0;
+    const projectedRent =
+      global.GameState.dailyRestaurantRent
+        ? global.GameState.dailyRestaurantRent(state)
+        : (Number(global.GameState.RESTAURANT_RENT) || 18) * count;
 
     if (lead) {
       lead.textContent =
-        count > 1
-          ? "Compare sales and profitability across " +
-            count +
-            " restaurants (staffing and rent effects)."
-          : "Sales, wages, rent, and profit for your restaurant (updates after each Sell Day).";
+        "Sales and profit update after each Sell Day. Wages update when you change staff or today’s menu.";
     }
 
     if (!report || !report.isRestaurant) {
       if (salesEl) salesEl.textContent = "—";
-      if (wagesEl) wagesEl.textContent = "—";
-      if (rentEl) rentEl.textContent = "—";
+      if (wagesEl) wagesEl.textContent = formatMoney(projectedWages);
+      if (rentEl) rentEl.textContent = formatMoney(projectedRent);
       if (profitEl) profitEl.textContent = "—";
       if (listEl) {
         listEl.hidden = true;
@@ -1768,30 +1761,20 @@
       if (noteEl) {
         const lines = restaurants.map(function (r) {
           const n = Number(r.employeeCount) || 0;
-          const cap = global.GameState.restaurantCapacityMultFor
-            ? global.GameState.restaurantCapacityMultFor(r)
-            : 0.7 + 0.2 * n;
-          return (
-            r.name +
-            ": " +
-            n +
-            " staff → capacity ×" +
-            Number(cap).toFixed(2)
-          );
+          return r.name + ": " + n + " staff";
         });
         noteEl.textContent =
           "No Sell Day yet in restaurant mode. " +
-          (lines.length
-            ? lines.join(" · ") + ". "
-            : "") +
+          (lines.length ? lines.join(" · ") + ". " : "") +
           "More staff can raise sales but also wages against fixed rent per location.";
       }
       return;
     }
 
     if (salesEl) salesEl.textContent = formatMoney(report.revenue);
-    if (wagesEl) wagesEl.textContent = formatMoney(report.wages);
-    if (rentEl) rentEl.textContent = formatMoney(report.rent || 0);
+    // Live wage bill so menu / staffing changes show immediately.
+    if (wagesEl) wagesEl.textContent = formatMoney(projectedWages);
+    if (rentEl) rentEl.textContent = formatMoney(projectedRent);
     if (profitEl) profitEl.textContent = formatMoney(report.profit);
 
     const locations = Array.isArray(report.locations) ? report.locations : [];
@@ -1808,9 +1791,7 @@
             "</strong>" +
             "<span class=\"location-pnl-item-meta\">" +
             (loc.employeeCount || 0) +
-            " staff · sales capacity ×" +
-            Number(loc.capacityMult || 1).toFixed(2) +
-            "</span>" +
+            " staff</span>" +
             "<span class=\"location-pnl-item-row\">Sales " +
             formatMoney(loc.revenue) +
             " · Wages " +
@@ -1831,7 +1812,7 @@
     if (noteEl) {
       if (locations.length > 1) {
         noteEl.textContent =
-          "Totals above · per-restaurant lines show how employee count changes sales vs wages against $" +
+          "Totals: sales/profit from last Sell Day · wages & rent reflect today’s staffing and menu vs $" +
           (Number(global.GameState.RESTAURANT_RENT) || 18).toFixed(0) +
           " rent each.";
       } else {
@@ -1839,9 +1820,7 @@
           (report.restaurantName || "Restaurant") +
           " · " +
           (report.employeeCount || 0) +
-          " employees · capacity ×" +
-          Number(report.capacityMult || 1).toFixed(2) +
-          ". Changing staff changes sales capacity and wage cost vs fixed rent.";
+          " employees. Changing staff or today’s menu changes wage cost vs fixed rent.";
       }
     }
   }
@@ -2045,23 +2024,20 @@
       const n = global.GameState.restaurantEmployeeCount
         ? global.GameState.restaurantEmployeeCount(state)
         : 0;
-      const cap = global.GameState.restaurantCapacityMult
-        ? global.GameState.restaurantCapacityMult(state)
-        : 1;
       const rent = global.GameState.dailyRestaurantRent
         ? global.GameState.dailyRestaurantRent(state)
         : Number(global.GameState.RESTAURANT_RENT) || 18;
-      const wages = global.GameState.dailyRestaurantWageCost
-        ? global.GameState.dailyRestaurantWageCost(state)
-        : 0;
+      const wages = global.GameState.dailyWageCost
+        ? global.GameState.dailyWageCost(state)
+        : global.GameState.dailyRestaurantWageCost
+          ? global.GameState.dailyRestaurantWageCost(state)
+          : 0;
       return (
         "Restaurant open with " +
         n +
         " employee" +
         (n === 1 ? "" : "s") +
-        " (capacity ×" +
-        Number(cap).toFixed(2) +
-        "). Overhead today: wages " +
+        ". Overhead today: wages " +
         formatMoney(wages) +
         " + rent " +
         formatMoney(rent) +
@@ -2478,14 +2454,24 @@
     setSellDayLocked(true);
   }
 
+  function customerFeedbackSentiment(event) {
+    if (!event || event.outcome === "leave") return "negative";
+    if (event.reaction === "dislike") return "negative";
+    return "positive";
+  }
+
   function showCustomerEvent(event) {
     const stage = document.getElementById("customer-stage");
     const progress = document.getElementById("day-results-progress");
     if (!stage) return;
 
+    const sentiment = customerFeedbackSentiment(event);
     const chip = document.createElement("div");
     chip.className =
-      "customer-chip " + (event.outcome === "buy" ? "is-buy" : "is-leave");
+      "customer-chip " +
+      (event.outcome === "buy" ? "is-buy" : "is-leave") +
+      " " +
+      (sentiment === "positive" ? "is-positive" : "is-negative");
 
     let label = "Bought";
     if (event.outcome === "leave") {
@@ -2520,7 +2506,41 @@
     }
   }
 
+  /**
+   * Clear live feedback chips, show a brief closing-books beat, then continue.
+   * Icons are only for active Sell Day simulation time.
+   */
+  function beginClosingBooks(onReady) {
+    const stage = document.getElementById("customer-stage");
+    if (stage) stage.innerHTML = "";
+
+    const progress = document.getElementById("day-results-progress");
+    if (progress) progress.textContent = "Closing the day’s books…";
+
+    const titleEl = document.getElementById("day-results-title");
+    if (titleEl) titleEl.textContent = "Closing books";
+
+    const reportEl = document.getElementById("report-body");
+    if (reportEl) {
+      reportEl.hidden = false;
+      reportEl.textContent = "Closing the day’s books…";
+      reportEl.classList.remove("is-pnl", "is-receipt");
+    }
+
+    const tableWrap = document.getElementById("day-results-table-wrap");
+    if (tableWrap) tableWrap.hidden = true;
+
+    showDayResultsPanel();
+
+    const delayMs = 900;
+    setTimeout(function () {
+      if (typeof onReady === "function") onReady();
+    }, delayMs);
+  }
+
   function showCustomerSummary(summary, plan, state) {
+    const stage = document.getElementById("customer-stage");
+    if (stage) stage.innerHTML = "";
     const report =
       (state && state.lastDayReport) ||
       Object.assign({}, plan || {}, {
@@ -2643,6 +2663,7 @@
     renderLedger,
     startCustomerDay,
     showCustomerEvent,
+    beginClosingBooks,
     showCustomerSummary,
     hideCustomerSummary,
     hideCustomerDay,

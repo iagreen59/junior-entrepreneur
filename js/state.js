@@ -742,12 +742,10 @@
     return +(restaurantCount(state) * RESTAURANT_RENT).toFixed(2);
   }
 
-  /** Wages + rent for restaurant mode (0 in stand mode). */
+  /** Wages + rent for restaurant mode (0 in stand mode). Includes menu surcharge. */
   function dailyRestaurantOverhead(state) {
     if (!ownsRestaurant(state)) return 0;
-    return +(dailyRestaurantWageCost(state) + dailyRestaurantRent(state)).toFixed(
-      2
-    );
+    return +(dailyWageCost(state) + dailyRestaurantRent(state)).toFixed(2);
   }
 
   /**
@@ -820,18 +818,18 @@
    */
   function restaurantOverheadCheck(state) {
     const staff = restaurantStaffingCheck(state);
+    const wages = dailyWageCost(state);
+    const rent = dailyRestaurantRent(state);
+    const overhead = +(wages + rent).toFixed(2);
     if (!staff.ok) {
       return {
         ok: false,
         message: staff.message,
-        overhead: dailyRestaurantOverhead(state),
-        wages: dailyRestaurantWageCost(state),
-        rent: dailyRestaurantRent(state),
+        overhead: overhead,
+        wages: wages,
+        rent: rent,
       };
     }
-    const wages = dailyRestaurantWageCost(state);
-    const rent = dailyRestaurantRent(state);
-    const overhead = +(wages + rent).toFixed(2);
     const count = restaurantCount(state);
     if (Number(state.cash) + 1e-9 < overhead) {
       return {
