@@ -2532,7 +2532,7 @@
 
     showDayResultsPanel();
 
-    const delayMs = 900;
+    const delayMs = 1400;
     setTimeout(function () {
       if (typeof onReady === "function") onReady();
     }, delayMs);
