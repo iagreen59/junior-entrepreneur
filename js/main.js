@@ -469,7 +469,10 @@
         GameUI.showCustomerEvent(event);
       },
       onDone: function (summary, donePlan) {
-        finishSellDay(summary, donePlan);
+        // Clear live feedback chips, brief closing beat, then daily summary.
+        GameUI.beginClosingBooks(function () {
+          finishSellDay(summary, donePlan);
+        });
       },
     });
   }

@@ -637,9 +637,7 @@
           formatMoney(loc.profit) +
           " (" +
           loc.employeeCount +
-          " staff, sales capacity ×" +
-          Number(loc.capacityMult).toFixed(2) +
-          ")"
+          " staff)"
         );
       });
       locationNote =
