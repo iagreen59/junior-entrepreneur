@@ -137,23 +137,13 @@
     GameUI.renderLedger(state);
   }
 
-  function onViewPreviousDay() {
-    if (selling) return;
-    const result = GameUI.showPreviousDay(state);
-    if (!result.ok) {
-      GameUI.setReport(result.message, { flash: true });
-    }
-  }
-
   function onBackToBusiness() {
     if (selling) return;
     GameUI.openBusinessOverview(state);
   }
 
-  function onDailyBackToSummary() {
-    if (selling) return;
-    GameUI.setBusinessTab("business");
-    GameUI.renderLedger(state);
+  function onToggleMenuInfo() {
+    GameUI.toggleMenuInfo();
   }
 
   function onPnlChartDurationChange(event) {
@@ -757,10 +747,17 @@
     const btn = event.target.closest("[data-business-tab]");
     if (!btn) return;
     const tab = btn.getAttribute("data-business-tab");
-    GameUI.setBusinessTab(tab);
-    if (tab === "business") {
-      GameUI.renderLedger(state);
+    if (tab === "daily") {
+      const result = GameUI.openPreviousDayFromBusiness(state);
+      if (!result.ok) {
+        GameUI.setReport(result.message, { flash: true });
+      }
+      return;
     }
+    GameUI.hideDayResultsPanel();
+    GameUI.setBusinessTab("business");
+    GameUI.setPanel("business");
+    GameUI.renderLedger(state);
   }
 
   function onNewGame() {
@@ -861,8 +858,8 @@
     .getElementById("btn-back-to-business")
     ?.addEventListener("click", onBackToBusiness);
   document
-    .getElementById("btn-daily-back-to-summary")
-    ?.addEventListener("click", onDailyBackToSummary);
+    .getElementById("btn-menu-info")
+    ?.addEventListener("click", onToggleMenuInfo);
   document
     .getElementById("pnl-chart-duration")
     ?.addEventListener("change", onPnlChartDurationChange);
@@ -872,9 +869,6 @@
   document
     .getElementById("stat-day-btn")
     ?.addEventListener("click", onStatDayClick);
-  document
-    .getElementById("btn-view-previous-day")
-    ?.addEventListener("click", onViewPreviousDay);
   document
     .getElementById("panel-business")
     ?.addEventListener("click", onBusinessTabClick);

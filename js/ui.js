@@ -359,12 +359,10 @@
 
   function renderPreviousDayPreview(state) {
     const labelEl = document.getElementById("previous-day-label");
-    const viewBtn = document.getElementById("btn-view-previous-day");
     const report = latestCompletedReport(state);
-    if (viewBtn) viewBtn.disabled = !report;
     if (!labelEl) return;
     if (!report) {
-      labelEl.textContent = "No completed Sell Day yet.";
+      labelEl.textContent = "No completed Sell Day yet — run Sell Day to see results here.";
       return;
     }
     const dayNum = Number(report.completedDay) || "—";
@@ -768,10 +766,7 @@
         hint.textContent =
           "No items on today’s menu — toggle at least one before Sell Day.";
       } else {
-        hint.textContent =
-          "Offered today: " +
-          on.join(", ") +
-          ". Sell Day serves every offered item; customers choose among them.";
+        hint.textContent = "Offered today: " + on.join(", ") + ".";
       }
     }
   }
@@ -1461,7 +1456,6 @@
     }
 
     renderRestaurant(state);
-    renderLocationPnl(state);
     renderStaff(state);
     renderLocationsSummary(state);
   }
@@ -1553,16 +1547,10 @@
     const addBtn = document.getElementById("btn-add-restaurant");
     const sellBtn = document.getElementById("btn-sell-restaurant");
     const extraBanner = document.getElementById("extra-restaurant-unlock-banner");
-    const mapLead = document.getElementById("stand-map-lead");
     const isRestaurant =
       global.GameState.isRestaurantMode &&
       global.GameState.isRestaurantMode(state);
     if (panel) panel.hidden = !isRestaurant;
-    if (mapLead) {
-      mapLead.textContent = isRestaurant
-        ? "Your restaurants on the city map. Shared supply bag continues."
-        : "City map of your corner. Owned stands light up; empty pads wait for Add stand.";
-    }
     if (!isRestaurant) return;
 
     const restaurants = Array.isArray(state.restaurants) ? state.restaurants : [];
@@ -2223,7 +2211,7 @@
     const businessPanel = document.getElementById("business-tab-business");
     const dailyPanel = document.getElementById("business-tab-daily");
     const businessBtn = document.getElementById("tab-business-summary");
-    const dailyBtn = document.getElementById("tab-daily-summary");
+    const dailyBtn = document.getElementById("tab-previous-day");
     if (businessPanel) businessPanel.hidden = businessTab !== "business";
     if (dailyPanel) dailyPanel.hidden = businessTab !== "daily";
     if (businessBtn) {
@@ -2243,6 +2231,38 @@
     if (businessTab === "daily" && cachedState) {
       renderBusinessDaySelect(cachedState);
     }
+  }
+
+  function openPreviousDayFromBusiness(state) {
+    const result = showPreviousDay(state);
+    if (result && result.ok) {
+      businessTab = "daily";
+      return result;
+    }
+    setBusinessTab("daily");
+    setPanel("business");
+    renderBusinessDaySelect(state);
+    return result || {
+      ok: false,
+      message: "No completed Sell Day yet — run Sell Day to see results here.",
+    };
+  }
+
+  let menuInfoVisible = false;
+
+  function setMenuInfoVisible(visible) {
+    menuInfoVisible = !!visible;
+    const info = document.getElementById("menu-info");
+    const btn = document.getElementById("btn-menu-info");
+    if (info) info.hidden = !menuInfoVisible;
+    if (btn) {
+      btn.setAttribute("aria-expanded", menuInfoVisible ? "true" : "false");
+      btn.textContent = menuInfoVisible ? "Hide info" : "Info";
+    }
+  }
+
+  function toggleMenuInfo() {
+    setMenuInfoVisible(!menuInfoVisible);
   }
 
   function render(state) {
@@ -2622,6 +2642,7 @@
 
   // Default business tab on load.
   setBusinessTab("business");
+  setMenuInfoVisible(false);
 
   global.GameUI = {
     MORNING_COPY,
@@ -2653,6 +2674,9 @@
     setLocationsHidden,
     setBusinessTab,
     openBusinessOverview,
+    openPreviousDayFromBusiness,
+    toggleMenuInfo,
+    setMenuInfoVisible,
     setPnlChartDuration,
     setPnlChartMetric,
     hideDayResultsPanel,

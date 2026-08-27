@@ -13,7 +13,7 @@
       href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700&family=Nunito:wght@500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="css/styles.css?v=31" />
+    <link rel="stylesheet" href="css/styles.css?v=32" />
   </head>
   <body>
     <div class="sky" aria-hidden="true"></div>
@@ -22,7 +22,6 @@
       <header class="brand">
         <p class="brand-kicker">Corner stand</p>
         <h1 class="brand-name">Junior Entrepreneur</h1>
-        <p class="brand-tag">Mix a drink. Set a price. Make the day pay.</p>
       </header>
 
       <aside
@@ -68,9 +67,6 @@
           </div>
           <div class="stand-map" id="stand-map"></div>
         </div>
-        <p class="stand-map-lead" id="stand-map-lead">
-          City map of your corner. Owned stands light up; empty pads wait for Add stand.
-        </p>
       </section>
 
       <section class="instructions" id="instructions" aria-label="How to play">
@@ -112,7 +108,7 @@
               <li>
                 For each offered item: open <strong>Recipe</strong> and use the item dropdown to
                 set ingredients and price (closing or switching without save discards edits).
-                Open <strong>Buy</strong> to see on-hand stock and add supplies to your cart, then
+                Open <strong>Supplies</strong> to see on-hand stock and add supplies to your cart, then
                 <strong>Place order</strong> at the bottom. Press <strong>Sell Day</strong> — customers
                 choose among offered items (~10s); wages are paid then.
               </li>
@@ -140,9 +136,9 @@
               </li>
               <li>
                 Open <strong>Business</strong> for the ledger (Business summary), P&amp;L trend charts,
-                or your most recent <strong>Previous Day</strong> report (Daily summary).
+                or your most recent <strong>Previous day</strong> report.
                 Tap <strong>(?)</strong> on a metric for a short explanation.
-                Open <strong>Buy</strong> anytime to check on-hand stock and order more supplies.
+                Open <strong>Supplies</strong> anytime to check on-hand stock and order more.
               </li>
               <li>
                 Use <strong>New Game</strong> anytime to reset. Hide these instructions with
@@ -310,29 +306,28 @@
         </button>
       </p>
 
-      <section class="location-pnl" id="location-pnl" hidden aria-label="Location profit and loss">
-        <h2 class="section-title">Location P&amp;L</h2>
-        <p class="location-pnl-lead" id="location-pnl-lead">
-          Sales and profit update after each Sell Day. Wages update when you change staff or today’s menu.
-        </p>
-        <div class="location-pnl-totals" id="location-pnl-totals">
-          <dl class="location-pnl-grid" id="location-pnl-grid">
-            <div><dt>Sales</dt><dd id="pnl-sales">—</dd></div>
-            <div><dt>Wages</dt><dd id="pnl-wages">—</dd></div>
-            <div><dt>Rent</dt><dd id="pnl-rent">—</dd></div>
-            <div><dt>Profit</dt><dd id="pnl-profit">—</dd></div>
-          </dl>
-        </div>
-        <ul class="location-pnl-list" id="location-pnl-list" hidden></ul>
-        <p class="location-pnl-note" id="location-pnl-note"></p>
-      </section>
-
       <section class="menu-today" id="menu-today" aria-label="Today's menu">
-        <h2 class="section-title">Today’s menu</h2>
-        <p class="menu-lead">
-          Choose which items are offered today. Open Recipe and use the item dropdown to edit each
-          product’s ingredients and price (unsaved switches are discarded).
-        </p>
+        <div class="menu-today-header">
+          <h2 class="section-title">Today’s menu</h2>
+          <button
+            type="button"
+            class="btn btn-quiet"
+            id="btn-menu-info"
+            aria-expanded="false"
+            aria-controls="menu-info"
+          >
+            Info
+          </button>
+        </div>
+        <div class="menu-info" id="menu-info" hidden>
+          <p class="menu-lead">
+            Choose which items are offered today. Open Recipe and use the item dropdown to edit each
+            product’s ingredients and price (unsaved switches are discarded).
+          </p>
+          <p class="menu-lead menu-lead-follow">
+            Sell Day serves every offered item; customers choose among them.
+          </p>
+        </div>
         <div class="menu-toggles" role="group" aria-label="Items on today's menu">
           <label class="menu-toggle">
             <input type="checkbox" id="menu-offer-juice" data-menu-product="juice" />
@@ -360,7 +355,7 @@
 
       <section class="actions" aria-label="Day actions">
         <button type="button" class="btn" id="btn-recipe">Recipe</button>
-        <button type="button" class="btn" id="btn-buy">Buy</button>
+        <button type="button" class="btn" id="btn-buy">Supplies</button>
         <button type="button" class="btn" id="btn-business">Business</button>
         <button type="button" class="btn btn-primary" id="btn-sell">Sell Day</button>
         <button type="button" class="btn btn-quiet" id="btn-new-game">New Game</button>
@@ -418,7 +413,7 @@
           </table>
         </div>
         <p class="report-body" id="report-body">
-          Good morning. Buy your stand ($20), set today’s menu, then Recipe → Buy → Sell Day.
+          Good morning. Buy your stand ($20), set today’s menu, then Recipe → Supplies → Sell Day.
         </p>
       </section>
 
@@ -620,12 +615,12 @@
           <button
             type="button"
             class="btn business-tab"
-            id="tab-daily-summary"
+            id="tab-previous-day"
             role="tab"
             aria-selected="false"
             data-business-tab="daily"
           >
-            Daily summary
+            Previous day
           </button>
         </div>
         <div
@@ -687,37 +682,24 @@
           class="business-tab-panel"
           id="business-tab-daily"
           role="tabpanel"
-          aria-labelledby="tab-daily-summary"
+          aria-labelledby="tab-previous-day"
           hidden
         >
-          <div class="panel-header daily-summary-header">
-            <h3 class="ledger-subtitle">Previous day</h3>
-          </div>
-          <p class="panel-lead">
-            Reopen your most recent completed Sell Day — the same day-results panel shown at day’s end.
-          </p>
           <p class="previous-day-label" id="previous-day-label">No completed Sell Day yet.</p>
-          <button type="button" class="btn btn-panel" id="btn-view-previous-day">
-            View previous day
-          </button>
-          <button type="button" class="btn btn-quiet" id="btn-daily-back-to-summary">
-            ← Business overview
-          </button>
-          <p class="daily-summary-body" id="business-daily-summary-body" hidden></p>
         </div>
       </section>
     </main>
 
-    <script src="js/weather.js?v=31"></script>
-    <script src="js/state.js?v=31"></script>
-    <script src="js/events.js?v=31"></script>
-    <script src="js/recipe.js?v=31"></script>
-    <script src="js/recipePreferences.js?v=31"></script>
-    <script src="js/economy.js?v=31"></script>
-    <script src="js/customers.js?v=31"></script>
-    <script src="js/map.js?v=31"></script>
-    <script src="js/ledger.js?v=31"></script>
-    <script src="js/ui.js?v=31"></script>
-    <script src="js/main.js?v=31"></script>
+    <script src="js/weather.js?v=32"></script>
+    <script src="js/state.js?v=32"></script>
+    <script src="js/events.js?v=32"></script>
+    <script src="js/recipe.js?v=32"></script>
+    <script src="js/recipePreferences.js?v=32"></script>
+    <script src="js/economy.js?v=32"></script>
+    <script src="js/customers.js?v=32"></script>
+    <script src="js/map.js?v=32"></script>
+    <script src="js/ledger.js?v=32"></script>
+    <script src="js/ui.js?v=32"></script>
+    <script src="js/main.js?v=32"></script>
   </body>
 </html>

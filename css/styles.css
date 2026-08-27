@@ -100,6 +100,36 @@ body {
   font-size: 1rem;
 }
 
+.menu-today-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.65rem;
+}
+
+.menu-today-header .section-title {
+  margin: 0;
+}
+
+.menu-today-header .btn {
+  flex-shrink: 0;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.85rem;
+}
+
+.menu-info {
+  margin: 0 0 0.75rem;
+}
+
+.menu-info[hidden] {
+  display: none !important;
+}
+
+.menu-lead-follow {
+  margin-top: 0.45rem;
+}
+
 .status {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -600,13 +630,6 @@ body {
   margin-bottom: 1.25rem;
 }
 
-.stand-map-lead {
-  margin: 0 0 0.65rem;
-  color: var(--ink-soft);
-  font-size: 0.92rem;
-  line-height: 1.4;
-}
-
 .stand-map {
   border-radius: 1.1rem;
   border: 1px solid var(--stroke);
@@ -838,7 +861,7 @@ body {
 }
 
 .menu-lead {
-  margin: 0 0 0.75rem;
+  margin: 0;
   color: var(--ink-soft);
   font-size: 0.92rem;
   line-height: 1.4;
