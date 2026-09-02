@@ -397,10 +397,19 @@
 
     if (reportExtra) {
       GameState.save(state);
-      GameUI.setReport(
-        (plan && plan.message ? plan.message + "\n\n" : "") + reportExtra,
-        { flash: true }
-      );
+      // Keep the segmented P&L layout; only append unlock / morning notes.
+      if (GameUI.appendDayReportNote) {
+        GameUI.appendDayReportNote(reportExtra, state.lastDayReport);
+      } else {
+        const structured =
+          state.lastDayReport && GameUI.formatDayReport
+            ? GameUI.formatDayReport(state.lastDayReport)
+            : null;
+        GameUI.setReport(
+          ((structured || (plan && plan.message) || "") + "\n\n" + reportExtra).trim(),
+          { flash: true, revealDaily: true, pnl: !!structured }
+        );
+      }
       try {
         refresh();
       } catch {

@@ -743,139 +743,114 @@
       }
     }
 
-    const wageNote =
-      wages > 0
-        ? ", wages " +
-          formatMoney(wages) +
-          (function () {
-            const menuSurchargePerEmployee =
-              global.GameState.menuWageSurchargePerEmployee &&
-              global.GameState.menuWageSurchargePerEmployee(state);
-            const menuSurcharge =
-              global.GameState.menuWageSurcharge &&
-              global.GameState.menuWageSurcharge(state);
-            const menuCount =
-              global.GameState.menuOfferedCount &&
-              global.GameState.menuOfferedCount(state);
-            let detail =
-              " (" +
-              employeeCount +
-              " employee" +
-              (employeeCount === 1 ? "" : "s") +
-              " × " +
-              formatMoney(wageRate);
-            if (menuSurcharge > 0) {
-              detail +=
-                " + " +
-                formatMoney(menuSurchargePerEmployee) +
-                "/item × " +
-                Math.max(0, menuCount - 1) +
-                " extra item" +
-                (menuCount - 1 === 1 ? "" : "s") +
-                " × " +
-                employeeCount +
-                " staff";
-            }
-            return detail + ")";
-          })()
-        : "";
-    const rentNote =
-      rent > 0
-        ? ", rent " +
-          formatMoney(rent) +
-          (isRestaurant && locations.length > 1
-            ? " (" +
-              locations.length +
-              " × " +
-              formatMoney(Number(global.GameState.RESTAURANT_RENT) || 18) +
-              ")"
-            : "")
-        : "";
-
     let locationNote = null;
     if (isRestaurant && locations.length > 0) {
       const parts = locations.map(function (loc) {
         return (
-          loc.restaurantName +
-          ": sales " +
+          (loc.restaurantName || "Restaurant") +
+          "\n  Sales     " +
           formatMoney(loc.revenue) +
-          ", wages " +
+          "\n  Wages     " +
           formatMoney(loc.wages) +
-          ", rent " +
+          "\n  Rent      " +
           formatMoney(loc.rent) +
-          ", profit " +
+          "\n  Profit    " +
           formatMoney(loc.profit) +
-          " (" +
+          "\n  Staff     " +
           loc.employeeCount +
-          " staff)"
+          " employee" +
+          (loc.employeeCount === 1 ? "" : "s")
         );
       });
+      const operating = +(revenue - profit).toFixed(2);
       locationNote =
-        (locations.length === 1 ? "Restaurant P&L — " : "Per-restaurant P&L — ") +
-        parts.join("; ") +
-        ".";
+        (locations.length === 1 ? "Restaurant P&L" : "Per-restaurant P&L") +
+        "\n\n" +
+        parts.join("\n\n") +
+        "\n\nBusiness totals" +
+        "\n  Sales     " +
+        formatMoney(revenue) +
+        "\n  Wages     " +
+        formatMoney(wages) +
+        "\n  Rent      " +
+        formatMoney(rent) +
+        "\n  COGS      " +
+        formatMoney(cogs) +
+        "\n  Operating " +
+        formatMoney(operating) +
+        "\n  Profit    " +
+        formatMoney(profit);
     }
 
     let message;
     if (locationNote) {
       if (offered.length === 0) {
         message =
-          locationNote + " No items on today's menu — sold 0 servings.";
+          locationNote + "\n\nNo items on today's menu — sold 0 servings.";
       } else if (stockCups === 0) {
         message =
-          locationNote + " No stock for today's offered menu — sold 0 servings.";
+          locationNote +
+          "\n\nNo stock for today's offered menu — sold 0 servings.";
       } else if (breakdown.length === 0) {
         message =
           locationNote +
-          " Sold 0 servings from today's menu." +
-          weatherNote;
+          "\n\nSold 0 servings from today's menu." +
+          (weatherNote ? "\n" + weatherNote.trim() : "");
       } else {
         message =
           locationNote +
-          " Sold " +
-          breakdown.join("; ") +
-          ", COGS " +
-          formatMoney(cogs) +
-          ".";
-        if (soldOut) message += formatSoldOutNote(soldOutProducts);
-        else message += weatherNote;
+          "\n\nSold\n  " +
+          breakdown.join("\n  ");
+        if (soldOut) message += "\n" + formatSoldOutNote(soldOutProducts).trim();
+        else if (weatherNote) message += "\n" + weatherNote.trim();
       }
     } else if (offered.length === 0) {
       message =
-        "No items on today's menu — sold 0 servings. Revenue $0.00, costs $0.00" +
-        wageNote +
-        ", profit " +
-        formatMoney(profit) +
-        ".";
+        "No items on today's menu — sold 0 servings.\n" +
+        "Sales     $0.00\n" +
+        "Costs     $0.00" +
+        (wages > 0 ? "\nWages     " + formatMoney(wages) : "") +
+        (rent > 0 ? "\nRent      " + formatMoney(rent) : "") +
+        "\nProfit    " +
+        formatMoney(profit);
     } else if (stockCups === 0) {
       message =
-        "No stock for today's offered menu — sold 0 servings. Revenue $0.00, costs $0.00" +
-        wageNote +
-        ", profit " +
-        formatMoney(profit) +
-        ".";
+        "No stock for today's offered menu — sold 0 servings.\n" +
+        "Sales     $0.00\n" +
+        "Costs     $0.00" +
+        (wages > 0 ? "\nWages     " + formatMoney(wages) : "") +
+        (rent > 0 ? "\nRent      " + formatMoney(rent) : "") +
+        "\nProfit    " +
+        formatMoney(profit);
     } else if (breakdown.length === 0) {
       message =
-        "Sold 0 servings from today's menu. Revenue $0.00, costs $0.00" +
-        wageNote +
-        ", profit " +
+        "Sold 0 servings from today's menu.\n" +
+        "Sales     $0.00\n" +
+        "Costs     $0.00" +
+        (wages > 0 ? "\nWages     " + formatMoney(wages) : "") +
+        (rent > 0 ? "\nRent      " + formatMoney(rent) : "") +
+        "\nProfit    " +
         formatMoney(profit) +
-        "." +
-        weatherNote;
+        (weatherNote ? "\n" + weatherNote.trim() : "");
     } else {
+      const operating = +(cogs + wages + rent).toFixed(2);
       message =
-        "Sold " +
-        breakdown.join("; ") +
-        ". Revenue " +
+        "Sold\n  " +
+        breakdown.join("\n  ") +
+        "\n\n" +
+        "Sales     " +
         formatMoney(revenue) +
-        ", costs " +
+        "\nCOGS      " +
         formatMoney(cogs) +
-        wageNote +
-        ", profit " +
-        formatMoney(profit) +
-        ".";
-      if (soldOut) message += formatSoldOutNote(soldOutProducts);
-      else message += weatherNote;
+        (wages > 0 ? "\nWages     " + formatMoney(wages) : "") +
+        (rent > 0 ? "\nRent      " + formatMoney(rent) : "") +
+        (wages > 0 || rent > 0
+          ? "\nOperating " + formatMoney(operating)
+          : "") +
+        "\nProfit    " +
+        formatMoney(profit);
+      if (soldOut) message += "\n" + formatSoldOutNote(soldOutProducts).trim();
+      else if (weatherNote) message += "\n" + weatherNote.trim();
     }
 
     // Primary product field kept for older UI paths; multi-item uses soldByProduct.
