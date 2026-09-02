@@ -21,9 +21,9 @@
  * Demand formula (Phase 12 multi-item, Phase 16–17 capacity):
  *   offered   = products with menuOffered[p] === true
  *   weight[p] = GameWeather.preferenceFactor(weather, p)
- *               * (REF_PRICE / price[p]) ^ ELASTICITY
- *               (preference: match 1.35, mismatch 0.65, mild 1.00 —
- *                hot favors juice+burger; cold favors cocoa+soup)
+ *               * (demandRefPrice(weather,p) / price[p]) ^ ELASTICITY
+ *               (demandRefPrice uses per-product anchors; extreme-weather
+ *                matches boost the ref so cocoa/soup margins match juice)
  *   capacityMult = 1 in stand mode;
  *                = 0.7 + 0.2 * restaurant.employeeCount PER restaurant
  *                  (2 staff → 1.1, 3 → 1.3, 4 → 1.5)
@@ -53,10 +53,179 @@
    * with solid pricing/stock, while multi-restaurant overhead still bites.
    */
   const BASE_INTEREST = 22;
-  /** Price where BASE_INTEREST customers show up before weather preference. */
+  /** Drink anchor for legacy callers; per-product refs drive demand and reactions. */
   const REF_PRICE = 1.5;
   /** How sharply demand falls as price rises (1 = inverse to price). */
   const ELASTICITY = 1.05;
+
+  /**
+   * Default sell-price anchors per product (also used for happy / high-price bands).
+   * Kids can charge more on extreme-weather perfect-match days — see favoredPriceMults.
+   */
+  const PRODUCT_REF_PRICES = {
+    juice: 1.5,
+    cocoa: 2.0,
+    burger: 4.0,
+    soup: 3.5,
+  };
+
+  /** Baseline happy band: price ≤ ref × this when weather-matched. */
+  const HAPPY_MULT_BASE = 1.25;
+  /** Above ref × this, buyers often dislike (unless extreme-weather match widens the band). */
+  const HIGH_MULT_BASE = 1.6;
+
+  /**
+   * Extreme / strong weather: customers happily pay more for the right item.
+   * demandRefBoost shifts the demand curve so margins stay fair vs hot-day juice.
+   */
+  const FAVORED_HAPPY_MULT = {
+    steaming: { juice: 1.5, burger: 1.3 },
+    hot: { juice: 1.35, burger: 1.25 },
+    cold: { cocoa: 1.35, soup: 1.3 },
+    bitter: { cocoa: 1.75, soup: 1.3 },
+  };
+  const FAVORED_HIGH_MULT = {
+    steaming: { juice: 2.0, burger: 1.75 },
+    hot: { juice: 1.6, burger: 1.6 },
+    cold: { cocoa: 1.7, soup: 1.65 },
+    bitter: { cocoa: 2.25, soup: 1.75 },
+  };
+  const FAVORED_DEMAND_REF_BOOST = {
+    steaming: { juice: 1.5, burger: 1.1 },
+    hot: { juice: 1.2, burger: 1.05 },
+    cold: { cocoa: 1.2, soup: 1.1 },
+    bitter: { cocoa: 1.75, soup: 1.15 },
+  };
+
+  function productRefPrice(product) {
+    const key =
+      product === "cocoa" ||
+      product === "burger" ||
+      product === "soup"
+        ? product
+        : "juice";
+    return Number(PRODUCT_REF_PRICES[key]) || REF_PRICE;
+  }
+
+  /** Happy / high / demand multipliers when weather favors this product. */
+  function favoredPriceMults(weather, product) {
+    const favor =
+      global.GameWeather && global.GameWeather.favorsProduct
+        ? global.GameWeather.favorsProduct(weather, product)
+        : null;
+    if (favor !== true) {
+      return {
+        happyMult: HAPPY_MULT_BASE,
+        highMult: HIGH_MULT_BASE,
+        demandRefBoost: 1,
+      };
+    }
+    const happyMap = FAVORED_HAPPY_MULT[weather] || {};
+    const highMap = FAVORED_HIGH_MULT[weather] || {};
+    const demandMap = FAVORED_DEMAND_REF_BOOST[weather] || {};
+    return {
+      happyMult: happyMap[product] != null ? happyMap[product] : HAPPY_MULT_BASE,
+      highMult: highMap[product] != null ? highMap[product] : HIGH_MULT_BASE,
+      demandRefBoost:
+        demandMap[product] != null ? demandMap[product] : 1,
+    };
+  }
+
+  /** Max price that still earns a happy reaction (weather-favored + great recipe). */
+  function happyPriceMax(weather, product) {
+    const ref = productRefPrice(product);
+    const mults = favoredPriceMults(weather, product);
+    return +(ref * mults.happyMult).toFixed(2);
+  }
+
+  /** Price above this tends to trigger dislike / price walk-aways. */
+  function highPriceThreshold(weather, product) {
+    const ref = productRefPrice(product);
+    const mults = favoredPriceMults(weather, product);
+    return +(ref * mults.highMult).toFixed(2);
+  }
+
+  /**
+   * Effective reference price in the demand formula for this product today.
+   * Boosted on extreme-weather matches so cold-day cocoa can profit like hot-day juice.
+   */
+  function demandRefPrice(weather, product) {
+    const ref = productRefPrice(product);
+    const mults = favoredPriceMults(weather, product);
+    return +(ref * mults.demandRefBoost).toFixed(3);
+  }
+
+  /** Kid-friendly tip for the recipe panel when today's weather favors this item. */
+  function priceComfortTip(weather, product) {
+    if (
+      !global.GameWeather ||
+      !global.GameWeather.favorsProduct ||
+      global.GameWeather.favorsProduct(weather, product) !== true
+    ) {
+      return "";
+    }
+    const label = global.GameWeather.label(weather);
+    const happy = happyPriceMax(weather, product);
+    const item =
+      global.GameState && global.GameState.productLabel
+        ? global.GameState.productLabel(product)
+        : product;
+    if (weather === "steaming" && product === "juice") {
+      return (
+        label +
+        " — shoppers will happily pay up to " +
+        formatMoney(happy) +
+        " for icy " +
+        item +
+        "!"
+      );
+    }
+    if (weather === "bitter" && product === "cocoa") {
+      return (
+        label +
+        " — raise " +
+        item +
+        " toward " +
+        formatMoney(happy) +
+        "; rich cocoa sells well!"
+      );
+    }
+    if (weather === "steaming" || weather === "hot") {
+      if (product === "burger") {
+        return (
+          label +
+          " favors " +
+          item +
+          " — happy faces up to about " +
+          formatMoney(happy) +
+          "."
+        );
+      }
+      if (product === "juice") {
+        return (
+          label +
+          " favors " +
+          item +
+          " — you can charge up to about " +
+          formatMoney(happy) +
+          "."
+        );
+      }
+    }
+    if (weather === "cold" || weather === "bitter") {
+      if (product === "soup" || product === "cocoa") {
+        return (
+          label +
+          " favors " +
+          item +
+          " — happy faces up to about " +
+          formatMoney(happy) +
+          "."
+        );
+      }
+    }
+    return "";
+  }
 
   function activeProduct(state) {
     return global.GameState.normalizeProduct(state.activeProduct, "juice");
@@ -168,9 +337,10 @@
       return Math.floor(BASE_INTEREST * 4 * preference * taste);
     }
 
+    const refForDemand = demandRefPrice(weather, product);
     const interest =
       BASE_INTEREST *
-      Math.pow(REF_PRICE / sellPrice, ELASTICITY) *
+      Math.pow(refForDemand / sellPrice, ELASTICITY) *
       preference *
       taste;
     return Math.max(0, Math.floor(interest));
@@ -828,6 +998,15 @@
     BASE_INTEREST,
     REF_PRICE,
     ELASTICITY,
+    PRODUCT_REF_PRICES,
+    HAPPY_MULT_BASE,
+    HIGH_MULT_BASE,
+    productRefPrice,
+    favoredPriceMults,
+    happyPriceMax,
+    highPriceThreshold,
+    demandRefPrice,
+    priceComfortTip,
     offeredProducts,
     maxCupsFromStock,
     costOfGoodsPerServing,

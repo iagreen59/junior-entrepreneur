@@ -524,6 +524,22 @@
       profitEl.classList.toggle("is-negative", profit < 0);
     }
 
+    const hintEl = document.getElementById("recipe-price-hint");
+    if (hintEl) {
+      const weather = source.weather || "mild";
+      const tip =
+        global.GameEconomy && global.GameEconomy.priceComfortTip
+          ? global.GameEconomy.priceComfortTip(weather, product)
+          : "";
+      if (tip) {
+        hintEl.textContent = tip;
+        hintEl.hidden = false;
+      } else {
+        hintEl.textContent = "";
+        hintEl.hidden = true;
+      }
+    }
+
     renderMenuSummary(source);
   }
 

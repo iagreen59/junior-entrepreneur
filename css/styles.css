@@ -958,6 +958,11 @@ body {
   color: var(--ink-soft);
 }
 
+.recipe-stat.recipe-price-hint {
+  color: var(--accent-strong, #0b6e4f);
+  font-weight: 600;
+}
+
 .stat {
   padding: 0.85rem 1rem;
   background: var(--cream-juice);

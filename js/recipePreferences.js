@@ -119,13 +119,13 @@
     if (global.GameWeather && global.GameWeather.isExtremeHot(weather)) {
       return (
         label +
-        " weather favors juice (icy) and loaded burgers; cocoa and soup are a tough sell."
+        " weather favors juice (icy) and loaded burgers; cocoa and soup are a tough sell. Raise juice prices — shoppers pay more when it's scorching!"
       );
     }
     if (global.GameWeather && global.GameWeather.isExtremeCold(weather)) {
       return (
         label +
-        " weather favors rich cocoa and hearty soup; juice and burgers cool off."
+        " weather favors rich cocoa and hearty soup; juice and burgers cool off. Raise cocoa prices — people pay more when it's freezing!"
       );
     }
     if (weather === "hot") {
@@ -152,6 +152,28 @@
       weatherMenuSummary(weather) +
         " Match your menu toggles and recipes to the day."
     );
+
+    if (global.GameEconomy && global.GameEconomy.priceComfortTip) {
+      const priceTips = [];
+      const products =
+        global.GameState && global.GameState.PRODUCTS
+          ? global.GameState.PRODUCTS
+          : ["juice", "cocoa", "burger", "soup"];
+      for (const product of products) {
+        if (
+          state &&
+          global.GameState.isMenuOffered &&
+          !global.GameState.isMenuOffered(state, product)
+        ) {
+          continue;
+        }
+        const tip = global.GameEconomy.priceComfortTip(weather, product);
+        if (tip) priceTips.push(tip);
+      }
+      if (priceTips.length) {
+        hints.push(priceTips[0]);
+      }
+    }
 
     const products =
       report.products && report.products.length

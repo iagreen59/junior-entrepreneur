@@ -62,9 +62,16 @@
     const favor = global.GameWeather
       ? global.GameWeather.favorsProduct(weather, product)
       : null;
-    const ref = global.GameEconomy.REF_PRICE || 1.5;
-    const goodPrice = Number.isFinite(price) && price <= ref * 1.25;
-    const highPrice = Number.isFinite(price) && price > ref * 1.6;
+    const happyMax =
+      global.GameEconomy && global.GameEconomy.happyPriceMax
+        ? global.GameEconomy.happyPriceMax(weather, product)
+        : (global.GameEconomy.REF_PRICE || 1.5) * 1.25;
+    const highThreshold =
+      global.GameEconomy && global.GameEconomy.highPriceThreshold
+        ? global.GameEconomy.highPriceThreshold(weather, product)
+        : (global.GameEconomy.REF_PRICE || 1.5) * 1.6;
+    const goodPrice = Number.isFinite(price) && price <= happyMax;
+    const highPrice = Number.isFinite(price) && price > highThreshold;
     const recipe = recipeForProduct(plan, state, product);
     const tasteScore = global.GameRecipePrefs
       ? global.GameRecipePrefs.recipeScore(product, recipe, weather)
@@ -146,7 +153,6 @@
 
     const weatherProducts = [];
     const priceProducts = [];
-    const ref = global.GameEconomy.REF_PRICE || 1.5;
 
     let mismatchCount = 0;
     let matchCount = 0;
@@ -175,6 +181,12 @@
         plan.prices && Number.isFinite(Number(plan.prices[product]))
           ? Number(plan.prices[product])
           : Number(plan.price);
+      const ref =
+        global.GameEconomy && global.GameEconomy.demandRefPrice
+          ? global.GameEconomy.demandRefPrice(weather, product)
+          : global.GameEconomy && global.GameEconomy.productRefPrice
+            ? global.GameEconomy.productRefPrice(product)
+            : global.GameEconomy.REF_PRICE || 1.5;
       if (Number.isFinite(price) && price > ref) {
         highPriceCount += 1;
         maxPriceRatio = Math.max(maxPriceRatio, price / ref);
