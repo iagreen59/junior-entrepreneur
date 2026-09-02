@@ -1112,18 +1112,17 @@
 
           const row = document.createElement("div");
           row.className = "ledger-restaurant-row";
-          row.innerHTML =
-            "Sales <em>" +
+          row.textContent =
+            "Sales " +
             formatMoney(loc.revenue) +
-            "</em> · COGS <em>" +
+            "\nCOGS " +
             formatMoney(loc.cogs) +
-            "</em> · wages <em>" +
+            "\nWages " +
             formatMoney(loc.wages) +
-            "</em> · rent <em>" +
+            "\nRent " +
             formatMoney(loc.rent) +
-            "</em> · profit <em>" +
-            formatMoney(loc.profit) +
-            "</em>";
+            "\nProfit " +
+            formatMoney(loc.profit);
 
           li.append(title, row);
           restList.appendChild(li);
@@ -1225,17 +1224,23 @@
     const wages = report.wages ?? 0;
     const rent = report.rent ?? 0;
     const profit = report.profit ?? 0;
+    const operating = +(Number(cogs) + Number(wages) + Number(rent)).toFixed(2);
     const breakdown = soldBreakdownLines(report);
     const weatherNote = weatherNoteFromReport(report);
+    const multiLocation =
+      report.isRestaurant &&
+      report.locations &&
+      report.locations.length > 0;
 
-    if (report.isRestaurant && report.locations && report.locations.length) {
+    if (multiLocation) {
       lines.push(
         report.locations.length === 1
           ? "Restaurant P&L"
           : "Per-restaurant P&L"
       );
       lines.push("");
-      for (const loc of report.locations) {
+      for (let i = 0; i < report.locations.length; i++) {
+        const loc = report.locations[i];
         if (report.locations.length > 1) {
           lines.push(loc.restaurantName || "Restaurant");
         }
@@ -1243,14 +1248,27 @@
         lines.push("  Wages     " + formatMoney(loc.wages));
         lines.push("  Rent      " + formatMoney(loc.rent));
         lines.push("  Profit    " + formatMoney(loc.profit));
-        lines.push("");
-        lines.push("  " + loc.employeeCount + " staff");
+        lines.push(
+          "  Staff     " +
+            (loc.employeeCount | 0) +
+            " employee" +
+            ((loc.employeeCount | 0) === 1 ? "" : "s")
+        );
         lines.push("");
       }
+
+      lines.push("Business totals");
+      lines.push("  Sales     " + formatMoney(revenue));
+      lines.push("  Wages     " + formatMoney(wages));
+      lines.push("  Rent      " + formatMoney(rent));
+      lines.push("  COGS      " + formatMoney(cogs));
+      lines.push("  Operating " + formatMoney(operating));
+      lines.push("  Profit    " + formatMoney(profit));
+      lines.push("");
     } else {
       lines.push("Day P&L");
       lines.push("");
-      lines.push("  Revenue   " + formatMoney(revenue));
+      lines.push("  Sales     " + formatMoney(revenue));
       if (wages > 0) {
         lines.push("  Wages     " + formatMoney(wages));
       }
@@ -1258,15 +1276,16 @@
         lines.push("  Rent      " + formatMoney(rent));
       }
       lines.push("  COGS      " + formatMoney(cogs));
+      if (wages > 0 || rent > 0) {
+        lines.push("  Operating " + formatMoney(operating));
+      }
       lines.push("  Profit    " + formatMoney(profit));
       lines.push("");
     }
 
     if (breakdown.length) {
-      lines.push("Sales");
+      lines.push("Sold");
       lines.push.apply(lines, breakdown);
-      lines.push("");
-      lines.push("  COGS      " + formatMoney(cogs));
       lines.push("");
     } else if (report.cupsSold === 0 || breakdown.length === 0) {
       if (report.products && report.products.length === 0) {
@@ -1798,13 +1817,13 @@
             " staff</span>" +
             "<span class=\"location-pnl-item-row\">Sales " +
             formatMoney(loc.revenue) +
-            " · Wages " +
+            "\nWages " +
             formatMoney(loc.wages) +
-            " · Rent " +
+            "\nRent " +
             formatMoney(loc.rent) +
-            " · <em>Profit " +
+            "\nProfit " +
             formatMoney(loc.profit) +
-            "</em></span>";
+            "</span>";
           listEl.appendChild(li);
         }
       } else {
@@ -2351,7 +2370,7 @@
     setDayHintsVisible(false);
   }
 
-  function setReport(message, { flash, receipt, revealDaily } = {}) {
+  function setReport(message, { flash, receipt, revealDaily, pnl } = {}) {
     const reportEl = document.getElementById("report-body");
     const panel = document.getElementById("day-results");
     if (receipt) {
@@ -2361,11 +2380,37 @@
       reportEl.hidden = false;
       reportEl.textContent = message;
       reportEl.classList.toggle("is-receipt", !!receipt);
+      if (pnl) reportEl.classList.add("is-pnl");
+      else if (receipt) reportEl.classList.remove("is-pnl");
     }
     if (revealDaily || receipt) {
       showDayResultsPanel();
     }
     if (flash && panel && !panel.hidden) {
+      panel.classList.remove("is-fresh");
+      void panel.offsetWidth;
+      panel.classList.add("is-fresh");
+    }
+  }
+
+  /**
+   * Append a morning/unlock note under the structured day P&L without
+   * replacing it with the dense one-line plan.message paragraph.
+   */
+  function appendDayReportNote(note, report) {
+    if (!note) return;
+    const reportEl = document.getElementById("report-body");
+    if (!reportEl) return;
+    const source = report || activeDayReport;
+    const structured = source ? formatDayReportStructured(source) : null;
+    const base = (structured || reportEl.textContent || "").trimEnd();
+    reportEl.hidden = false;
+    reportEl.textContent = base ? base + "\n\n" + note : note;
+    reportEl.classList.toggle("is-pnl", !!structured || reportEl.classList.contains("is-pnl"));
+    reportEl.classList.remove("is-receipt");
+    showDayResultsPanel();
+    const panel = document.getElementById("day-results");
+    if (panel && !panel.hidden) {
       panel.classList.remove("is-fresh");
       void panel.offsetWidth;
       panel.classList.add("is-fresh");
@@ -2663,8 +2708,11 @@
   global.GameUI = {
     MORNING_COPY,
     formatMoney,
+    formatDayReport,
+    formatDayReportStructured,
     render,
     setReport,
+    appendDayReportNote,
     setPanel,
     getOpenPanel,
     closePanel,

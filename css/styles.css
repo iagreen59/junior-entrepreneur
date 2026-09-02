@@ -1894,6 +1894,7 @@ body {
 .location-pnl-item-row {
   font-size: 0.88rem;
   font-variant-numeric: tabular-nums;
+  white-space: pre-line;
 }
 .location-pnl-item-row em {
   font-style: normal;
@@ -2040,7 +2041,8 @@ body {
   font-size: 0.86rem;
   font-variant-numeric: tabular-nums;
   color: var(--ink-soft);
-  line-height: 1.4;
+  line-height: 1.45;
+  white-space: pre-line;
 }
 
 .report-body.is-pnl {
