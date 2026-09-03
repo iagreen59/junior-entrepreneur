@@ -19,6 +19,7 @@
     recipe: "panel-recipe",
     buy: "panel-buy",
     business: "panel-business",
+    location: "location-picker",
   };
 
   const PRODUCT_TITLES = {
@@ -38,6 +39,7 @@
     { key: "wages", label: "Wages" },
     { key: "rent", label: "Rent" },
     { key: "profit", label: "Profit" },
+    { key: "ros", label: "ROS %" },
   ];
 
   /** Latest state from render() — used for live recipe yield/COGS updates. */
@@ -113,9 +115,14 @@
     }
   }
 
-  function renderCustomerSummaryTable(summary) {
-    const body = document.getElementById("customer-summary-body");
-    const wrap = document.getElementById("day-results-table-wrap");
+  function renderCustomerSummaryTable(summary, options) {
+    const opts = options || {};
+    const body = document.getElementById(
+      opts.bodyId || "customer-summary-body"
+    );
+    const wrap = document.getElementById(
+      opts.wrapId || "day-results-table-wrap"
+    );
     if (!body) return;
     body.innerHTML = "";
     const byProduct = (summary && summary.byProduct) || {};
@@ -359,10 +366,19 @@
 
   function renderPreviousDayPreview(state) {
     const labelEl = document.getElementById("previous-day-label");
+    const contentEl = document.getElementById("previous-day-content");
+    const reportEl = document.getElementById("previous-day-report");
     const report = latestCompletedReport(state);
     if (!labelEl) return;
     if (!report) {
-      labelEl.textContent = "No completed Sell Day yet — run Sell Day to see results here.";
+      labelEl.textContent =
+        "No completed Sell Day yet — run Sell Day to see results here.";
+      if (contentEl) contentEl.hidden = true;
+      if (reportEl) reportEl.textContent = "";
+      renderCustomerSummaryTable(null, {
+        bodyId: "previous-day-summary-body",
+        wrapId: "previous-day-table-wrap",
+      });
       return;
     }
     const dayNum = Number(report.completedDay) || "—";
@@ -370,12 +386,25 @@
       report.weather && global.GameWeather
         ? global.GameWeather.label(report.weather)
         : "";
+    const customers = report.customers || null;
+    const bought = customers ? customers.bought | 0 : 0;
+    const left = customers ? customers.left | 0 : 0;
     labelEl.textContent =
-      "Latest: Day " +
+      "Previous day · Day " +
       dayNum +
       (weatherLabel ? " · " + weatherLabel : "") +
+      (customers ? " · " + bought + " bought · " + left + " left" : "") +
       " — profit " +
       formatMoney(report.profit ?? 0);
+    if (contentEl) contentEl.hidden = false;
+    renderCustomerSummaryTable(customers, {
+      bodyId: "previous-day-summary-body",
+      wrapId: "previous-day-table-wrap",
+    });
+    if (reportEl) {
+      reportEl.textContent = formatDayReportStructured(report) || "";
+      reportEl.classList.toggle("is-pnl", !!reportEl.textContent);
+    }
   }
 
   function renderBusinessDaySelect(state) {
@@ -837,10 +866,101 @@
   function closePanel(state) {
     const wasOpen = getOpenPanel();
     setPanel(null);
+    locationPickHandler = null;
     if (state) {
       fillRecipeForm(state);
     }
     return wasOpen;
+  }
+
+  /** Callback while the map-location picker is open: fn(slotIndex) or null. */
+  let locationPickHandler = null;
+
+  /**
+   * Open numbered location picker matching the neighborhood map (1–4).
+   * onPick(slotIndex) is called when the player chooses an open spot.
+   */
+  function openLocationPicker(state, options) {
+    const opts = options || {};
+    const kind = opts.kind === "restaurant" ? "restaurant" : "stand";
+    const title =
+      opts.title ||
+      (kind === "restaurant" ? "Choose restaurant spot" : "Choose stand spot");
+    const lead =
+      opts.lead ||
+      "Pick a numbered spot that matches the neighborhood map (1–4).";
+    const available =
+      typeof opts.availableSlots === "function"
+        ? opts.availableSlots()
+        : global.GameState.availableSlotsForPurchase
+          ? global.GameState.availableSlotsForPurchase(state, kind)
+          : global.GameState.freeSlots
+            ? global.GameState.freeSlots(state)
+            : [0, 1, 2, 3];
+
+    if (!available || !available.length) {
+      return {
+        ok: false,
+        message: "No open map locations left.",
+      };
+    }
+
+    // Single open spot — skip the picker.
+    if (available.length === 1 && opts.skipIfSingle !== false) {
+      if (typeof opts.onPick === "function") opts.onPick(available[0]);
+      return { ok: true, auto: true, slot: available[0] };
+    }
+
+    const titleEl = document.getElementById("location-picker-title");
+    const leadEl = document.getElementById("location-picker-lead");
+    const grid = document.getElementById("location-picker-grid");
+    if (!grid) {
+      if (typeof opts.onPick === "function") opts.onPick(available[0]);
+      return { ok: true, auto: true, slot: available[0] };
+    }
+
+    if (titleEl) titleEl.textContent = title;
+    if (leadEl) leadEl.textContent = lead;
+    grid.innerHTML = "";
+
+    const max =
+      (global.GameState && global.GameState.MAX_STANDS) || 4;
+    const openSet = {};
+    for (const s of available) openSet[s] = true;
+
+    for (let i = 0; i < max; i++) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className =
+        "btn location-picker-btn" + (openSet[i] ? " is-open" : "");
+      btn.textContent = "Location " + (i + 1);
+      btn.disabled = !openSet[i];
+      btn.setAttribute("data-map-slot", String(i));
+      btn.setAttribute(
+        "aria-label",
+        openSet[i]
+          ? "Choose map location " + (i + 1)
+          : "Location " + (i + 1) + " is taken"
+      );
+      grid.appendChild(btn);
+    }
+
+    locationPickHandler =
+      typeof opts.onPick === "function" ? opts.onPick : null;
+    setPanel("location");
+    return { ok: true, auto: false };
+  }
+
+  function cancelLocationPicker() {
+    locationPickHandler = null;
+    setPanel(null);
+  }
+
+  function handleLocationPick(slot) {
+    const handler = locationPickHandler;
+    locationPickHandler = null;
+    setPanel(null);
+    if (typeof handler === "function") handler(slot);
   }
 
   /** Which ledger metric info blurb is expanded (key or null). */
@@ -849,7 +969,22 @@
   function formatLedgerValue(metric) {
     if (!metric) return "—";
     if (metric.kind === "count") return String(metric.value | 0);
+    if (metric.kind === "percent") {
+      if (metric.value == null || !Number.isFinite(Number(metric.value))) {
+        return "—";
+      }
+      return Number(metric.value).toFixed(1) + "%";
+    }
     return formatMoney(metric.value);
+  }
+
+  function formatRosPercent(profit, revenue) {
+    const ros =
+      global.GameLedger && global.GameLedger.rosPercent
+        ? global.GameLedger.rosPercent(profit, revenue)
+        : null;
+    if (ros == null || !Number.isFinite(ros)) return "—";
+    return ros.toFixed(1) + "%";
   }
 
   function renderPnlTrendChart(state) {
@@ -883,11 +1018,23 @@
         return m.key === pnlChartMetric;
       }) || PNL_CHART_METRICS[4];
     const values = slice.map(function (entry) {
+      if (metricDef.key === "ros") {
+        const ros =
+          global.GameLedger && global.GameLedger.rosPercent
+            ? global.GameLedger.rosPercent(entry.profit, entry.revenue)
+            : null;
+        return ros == null ? 0 : ros;
+      }
       return Number(entry[metricDef.key]) || 0;
     });
     const labels = slice.map(function (entry) {
       return "D" + (Number(entry.completedDay) || "?");
     });
+    const axisIsPercent = metricDef.key === "ros";
+    function formatAxisValue(v) {
+      if (axisIsPercent) return Number(v).toFixed(0) + "%";
+      return formatMoney(v);
+    }
 
     const width = 320;
     const height = 140;
@@ -943,7 +1090,7 @@
         '" y="' +
         y +
         '" text-anchor="end" dominant-baseline="middle">' +
-        formatMoney(v) +
+        formatAxisValue(v) +
         "</text>";
     }
 
@@ -1122,7 +1269,9 @@
             "\nRent " +
             formatMoney(loc.rent) +
             "\nProfit " +
-            formatMoney(loc.profit);
+            formatMoney(loc.profit) +
+            "\nROS % " +
+            formatRosPercent(loc.profit, loc.revenue);
 
           li.append(title, row);
           restList.appendChild(li);
@@ -1248,6 +1397,7 @@
         lines.push("  Wages     " + formatMoney(loc.wages));
         lines.push("  Rent      " + formatMoney(loc.rent));
         lines.push("  Profit    " + formatMoney(loc.profit));
+        lines.push("  ROS %     " + formatRosPercent(loc.profit, loc.revenue));
         lines.push(
           "  Staff     " +
             (loc.employeeCount | 0) +
@@ -1264,6 +1414,7 @@
       lines.push("  COGS      " + formatMoney(cogs));
       lines.push("  Operating " + formatMoney(operating));
       lines.push("  Profit    " + formatMoney(profit));
+      lines.push("  ROS %     " + formatRosPercent(profit, revenue));
       lines.push("");
     } else {
       lines.push("Day P&L");
@@ -1280,6 +1431,7 @@
         lines.push("  Operating " + formatMoney(operating));
       }
       lines.push("  Profit    " + formatMoney(profit));
+      lines.push("  ROS %     " + formatRosPercent(profit, revenue));
       lines.push("");
     }
 
@@ -1823,6 +1975,8 @@
             formatMoney(loc.rent) +
             "\nProfit " +
             formatMoney(loc.profit) +
+            "\nROS % " +
+            formatRosPercent(loc.profit, loc.revenue) +
             "</span>";
           listEl.appendChild(li);
         }
@@ -2269,18 +2423,18 @@
   }
 
   function openPreviousDayFromBusiness(state) {
-    const result = showPreviousDay(state);
-    if (result && result.ok) {
-      businessTab = "daily";
-      return result;
-    }
-    setBusinessTab("daily");
+    const report = latestCompletedReport(state);
+    hideDayResultsPanel();
     setPanel("business");
+    setBusinessTab("daily");
     renderBusinessDaySelect(state);
-    return result || {
-      ok: false,
-      message: "No completed Sell Day yet — run Sell Day to see results here.",
-    };
+    if (!report) {
+      return {
+        ok: false,
+        message: "No completed Sell Day yet — run Sell Day to see results here.",
+      };
+    }
+    return { ok: true, report: report };
   }
 
   let menuInfoVisible = false;
@@ -2739,6 +2893,9 @@
     setBusinessTab,
     openBusinessOverview,
     openPreviousDayFromBusiness,
+    openLocationPicker,
+    cancelLocationPicker,
+    handleLocationPick,
     toggleMenuInfo,
     setMenuInfoVisible,
     setPnlChartDuration,

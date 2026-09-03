@@ -68,7 +68,7 @@
     return g;
   }
 
-  function emptySlotSvg(ns, x, y) {
+  function emptySlotSvg(ns, x, y, locationNumber) {
     const g = document.createElementNS(ns, "g");
     g.setAttribute("class", "map-slot-empty");
     g.setAttribute("transform", "translate(" + x + " " + y + ")");
@@ -86,9 +86,36 @@
     mark.setAttribute("y", "8");
     mark.setAttribute("text-anchor", "middle");
     mark.setAttribute("class", "map-slot-mark");
-    mark.textContent = "?";
+    mark.textContent = String(locationNumber);
     g.appendChild(mark);
 
+    const hint = document.createElementNS(ns, "text");
+    hint.setAttribute("x", "0");
+    hint.setAttribute("y", "36");
+    hint.setAttribute("text-anchor", "middle");
+    hint.setAttribute("class", "map-slot-hint");
+    hint.textContent = "open";
+    g.appendChild(hint);
+
+    return g;
+  }
+
+  function locationBadgeSvg(ns, locationNumber) {
+    const g = document.createElementNS(ns, "g");
+    g.setAttribute("class", "map-slot-badge");
+    const circle = document.createElementNS(ns, "circle");
+    circle.setAttribute("cx", "-22");
+    circle.setAttribute("cy", "-18");
+    circle.setAttribute("r", "9");
+    circle.setAttribute("class", "map-slot-badge-circle");
+    g.appendChild(circle);
+    const text = document.createElementNS(ns, "text");
+    text.setAttribute("x", "-22");
+    text.setAttribute("y", "-14");
+    text.setAttribute("text-anchor", "middle");
+    text.setAttribute("class", "map-slot-badge-text");
+    text.textContent = String(locationNumber);
+    g.appendChild(text);
     return g;
   }
 
@@ -266,6 +293,18 @@
     svg.appendChild(lane);
   }
 
+  function locationAtSlot(list, slotIndex) {
+    if (!Array.isArray(list)) return null;
+    for (let i = 0; i < list.length; i++) {
+      const item = list[i];
+      if (!item) continue;
+      const raw = Number(item.slot);
+      const slot = Number.isFinite(raw) ? Math.floor(raw) : i;
+      if (slot === slotIndex) return item;
+    }
+    return null;
+  }
+
   function render(state) {
     const host = document.getElementById("stand-map");
     if (!host) return;
@@ -300,18 +339,26 @@
         "Neighborhood map showing " +
           restaurants.length +
           " restaurant" +
-          (restaurants.length === 1 ? "" : "s")
+          (restaurants.length === 1 ? "" : "s") +
+          " on numbered locations"
       );
       drawBackground(ns, svg);
 
       for (let i = 0; i < max && i < SLOTS.length; i++) {
         const slot = SLOTS[i];
-        const restaurant = restaurants[i];
+        const restaurant = locationAtSlot(restaurants, i);
+        const locationNumber = i + 1;
         if (restaurant) {
           const active = restaurant.id === activeRestaurantId;
-          svg.appendChild(
-            restaurantBoothSvg(ns, slot.x, slot.y, restaurant, active)
+          const booth = restaurantBoothSvg(
+            ns,
+            slot.x,
+            slot.y,
+            restaurant,
+            active
           );
+          booth.appendChild(locationBadgeSvg(ns, locationNumber));
+          svg.appendChild(booth);
           const label = document.createElementNS(ns, "text");
           label.setAttribute("x", String(slot.labelX));
           label.setAttribute("y", String(slot.labelY));
@@ -322,6 +369,9 @@
           );
           const n = Number(restaurant.employeeCount) || 0;
           label.textContent =
+            "#" +
+            locationNumber +
+            " " +
             restaurant.name +
             (active ? " ★" : "") +
             " · " +
@@ -329,7 +379,7 @@
             " staff";
           svg.appendChild(label);
         } else {
-          svg.appendChild(emptySlotSvg(ns, slot.x, slot.y));
+          svg.appendChild(emptySlotSvg(ns, slot.x, slot.y, locationNumber));
         }
       }
 
@@ -342,26 +392,30 @@
         restaurants.length +
         " of " +
         max +
-        " restaurants · shared supply bag";
+        " restaurants · pick open numbered spots";
       svg.appendChild(caption);
     } else {
       svg.setAttribute(
         "aria-label",
         stands.length === 0
-          ? "Neighborhood map with no stands yet"
+          ? "Neighborhood map with numbered open locations for stands"
           : "Neighborhood map showing " +
               stands.length +
               " owned stand" +
-              (stands.length === 1 ? "" : "s")
+              (stands.length === 1 ? "" : "s") +
+              " on numbered locations"
       );
       drawBackground(ns, svg);
 
       for (let i = 0; i < max && i < SLOTS.length; i++) {
         const slot = SLOTS[i];
-        const stand = stands[i];
+        const stand = locationAtSlot(stands, i);
+        const locationNumber = i + 1;
         if (stand) {
           const active = stand.id === activeId;
-          svg.appendChild(standBoothSvg(ns, slot.x, slot.y, active));
+          const booth = standBoothSvg(ns, slot.x, slot.y, active);
+          booth.appendChild(locationBadgeSvg(ns, locationNumber));
+          svg.appendChild(booth);
           const label = document.createElementNS(ns, "text");
           label.setAttribute("x", String(slot.labelX));
           label.setAttribute("y", String(slot.labelY));
@@ -370,10 +424,11 @@
             "class",
             "map-booth-label" + (active ? " is-active" : "")
           );
-          label.textContent = stand.name + (active ? " ★" : "");
+          label.textContent =
+            "#" + locationNumber + " " + stand.name + (active ? " ★" : "");
           svg.appendChild(label);
         } else {
-          svg.appendChild(emptySlotSvg(ns, slot.x, slot.y));
+          svg.appendChild(emptySlotSvg(ns, slot.x, slot.y, locationNumber));
         }
       }
 
@@ -383,10 +438,13 @@
       caption.setAttribute("text-anchor", "middle");
       caption.setAttribute("class", "map-caption");
       if (stands.length === 0) {
-        caption.textContent = "Buy a stand to appear on the map";
+        caption.textContent = "Numbered spots 1–4 — choose one when you buy";
       } else {
         caption.textContent =
-          stands.length + " of " + max + " stands · shared supply bag";
+          stands.length +
+          " of " +
+          max +
+          " stands · pick open numbered spots";
       }
       svg.appendChild(caption);
     }
@@ -398,5 +456,6 @@
   global.GameMap = {
     render,
     SLOTS,
+    locationAtSlot,
   };
 })(window);

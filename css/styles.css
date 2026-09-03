@@ -778,9 +778,70 @@ body {
 
 .map-slot-mark {
   font-family: "Baloo 2", "Nunito", sans-serif;
-  font-size: 16px;
+  font-size: 18px;
+  font-weight: 800;
+  fill: #2f7d4a;
+}
+
+.map-slot-hint {
+  font-family: "Nunito", sans-serif;
+  font-size: 8px;
   font-weight: 700;
-  fill: rgba(42, 58, 46, 0.35);
+  fill: rgba(42, 58, 46, 0.45);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.map-slot-badge-circle {
+  fill: #2f7d4a;
+  stroke: #fff;
+  stroke-width: 1.5;
+}
+
+.map-slot-badge-text {
+  font-family: "Baloo 2", "Nunito", sans-serif;
+  font-size: 10px;
+  font-weight: 800;
+  fill: #fff;
+}
+
+.location-picker {
+  margin-bottom: 1rem;
+}
+
+.location-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.location-picker-btn {
+  min-height: 3rem;
+  border-radius: 0.85rem;
+  font-weight: 800;
+  font-size: 1.05rem;
+}
+
+.location-picker-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.location-picker-btn.is-open {
+  border-color: transparent;
+  background: linear-gradient(135deg, #6ec6a0 0%, var(--leaf) 100%);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(47, 125, 74, 0.22);
+}
+
+.previous-day-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.previous-day-content[hidden] {
+  display: none !important;
 }
 
 .map-caption {

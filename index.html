@@ -13,7 +13,7 @@
       href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700&family=Nunito:wght@500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="css/styles.css?v=34" />
+    <link rel="stylesheet" href="css/styles.css?v=35" />
   </head>
   <body>
     <div class="sky" aria-hidden="true"></div>
@@ -598,7 +598,28 @@
         </div>
       </section>
 
-      <section class="panel" id="panel-business" hidden aria-label="Business ledger">
+      <section
+        class="panel location-picker"
+        id="location-picker"
+        hidden
+        aria-label="Choose map location"
+      >
+        <div class="panel-header">
+          <h2 class="section-title" id="location-picker-title">Choose location</h2>
+          <button
+            type="button"
+            class="btn btn-close"
+            id="btn-cancel-location"
+            aria-label="Cancel location choice"
+          >
+            Cancel
+          </button>
+        </div>
+        <p class="panel-lead" id="location-picker-lead">
+          Pick a numbered spot that matches the neighborhood map (1–4).
+        </p>
+        <div class="location-picker-grid" id="location-picker-grid" role="group" aria-label="Map locations"></div>
+      </section>
         <div class="panel-header">
           <h2 class="section-title">Business</h2>
           <button type="button" class="btn btn-close" data-close-panel aria-label="Close business panel">
@@ -657,6 +678,7 @@
                   <option value="wages">Wages</option>
                   <option value="rent">Rent</option>
                   <option value="profit" selected>Profit</option>
+                  <option value="ros">ROS %</option>
                 </select>
               </label>
             </div>
@@ -690,20 +712,39 @@
           hidden
         >
           <p class="previous-day-label" id="previous-day-label">No completed Sell Day yet.</p>
+          <div class="previous-day-content" id="previous-day-content" hidden>
+            <div class="summary-table-wrap" id="previous-day-table-wrap" hidden>
+              <table class="summary-table" id="previous-day-summary-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Item</th>
+                    <th scope="col">Happy</th>
+                    <th scope="col">Liked</th>
+                    <th scope="col">Disliked</th>
+                    <th scope="col">Sold out</th>
+                    <th scope="col">Price</th>
+                    <th scope="col">Weather</th>
+                  </tr>
+                </thead>
+                <tbody id="previous-day-summary-body"></tbody>
+              </table>
+            </div>
+            <p class="report-body is-pnl" id="previous-day-report"></p>
+          </div>
         </div>
       </section>
     </main>
 
-    <script src="js/weather.js?v=34"></script>
-    <script src="js/state.js?v=34"></script>
-    <script src="js/events.js?v=34"></script>
-    <script src="js/recipe.js?v=34"></script>
-    <script src="js/recipePreferences.js?v=34"></script>
-    <script src="js/economy.js?v=34"></script>
-    <script src="js/customers.js?v=34"></script>
-    <script src="js/map.js?v=34"></script>
-    <script src="js/ledger.js?v=34"></script>
-    <script src="js/ui.js?v=34"></script>
-    <script src="js/main.js?v=34"></script>
+    <script src="js/weather.js?v=35"></script>
+    <script src="js/state.js?v=35"></script>
+    <script src="js/events.js?v=35"></script>
+    <script src="js/recipe.js?v=35"></script>
+    <script src="js/recipePreferences.js?v=35"></script>
+    <script src="js/economy.js?v=35"></script>
+    <script src="js/customers.js?v=35"></script>
+    <script src="js/map.js?v=35"></script>
+    <script src="js/ledger.js?v=35"></script>
+    <script src="js/ui.js?v=35"></script>
+    <script src="js/main.js?v=35"></script>
   </body>
 </html>

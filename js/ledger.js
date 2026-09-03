@@ -22,6 +22,8 @@
       "Other overhead is extra operating costs that are not COGS, wages, or rent — for example unusual fees from events. Most days this stays at $0.",
     profit:
       "Profit is what is left after costs: revenue − COGS − wages − rent − other overhead. Positive means the business earned more than it spent that day (in accounting terms).",
+    ros:
+      "ROS % (return on sales) is profit ÷ revenue × 100. It shows what share of each sales dollar you keep after costs. Higher is better; it is blank when revenue is $0.",
     cash:
       "Cash is the money in your pocket right now. Sales add cash; buying ingredients, stands, restaurants, and paying wages/rent take cash away.",
     daysOperated:
@@ -37,9 +39,19 @@
     rent: "Rent",
     otherOverhead: "Other overhead",
     profit: "Profit",
+    ros: "ROS %",
     cash: "Cash on hand",
     daysOperated: "Days operated",
   };
+
+  /** Return on sales as a percent, or null when revenue is zero. */
+  function rosPercent(profit, revenue) {
+    const rev = Number(revenue);
+    if (!Number.isFinite(rev) || Math.abs(rev) < 1e-9) return null;
+    const p = Number(profit);
+    if (!Number.isFinite(p)) return null;
+    return +((p / rev) * 100).toFixed(1);
+  }
 
   function money(n) {
     const v = Number(n);
@@ -227,6 +239,12 @@
       },
       { key: "profit", label: METRIC_LABELS.profit, value: ledger.profit, kind: "money" },
       {
+        key: "ros",
+        label: METRIC_LABELS.ros,
+        value: rosPercent(ledger.profit, ledger.revenue),
+        kind: "percent",
+      },
+      {
         key: "cash",
         label: METRIC_LABELS.cash,
         value: money(state && state.cash),
@@ -261,6 +279,7 @@
             wages: entry.wages,
             rent: entry.rent,
             profit: entry.profit,
+            ros: rosPercent(entry.profit, entry.revenue),
             daysOperated: entry.daysOperated,
           };
         })
@@ -297,5 +316,6 @@
     recordCashEvent,
     getDisplayMetrics,
     infoFor,
+    rosPercent,
   };
 })(window);
