@@ -160,13 +160,7 @@
 
   function onStatDayClick() {
     if (selling) return;
-    const latest =
-      state.dayHistory && state.dayHistory.length
-        ? state.dayHistory[state.dayHistory.length - 1].completedDay
-        : state.day > 1
-          ? state.day - 1
-          : null;
-    const result = GameUI.showPreviousDay(state, latest);
+    const result = GameUI.openPreviousDayFromBusiness(state);
     if (!result.ok) {
       GameUI.setReport(result.message, { flash: true });
     }
@@ -476,21 +470,8 @@
     });
   }
 
-  function onBuyStand() {
-    if (selling) return;
-    const result = GameState.buyStand(state);
-    if (!result.ok) {
-      GameUI.setReport(result.message, { flash: true });
-      return;
-    }
-    GameState.save(state);
-    refresh();
-    GameUI.setReport(result.message, { flash: true });
-  }
-
-  function onAddStand() {
-    if (selling) return;
-    const result = GameState.buyStand(state);
+  function completeBuyStand(slot) {
+    const result = GameState.buyStand(state, slot);
     if (!result.ok) {
       GameUI.setReport(result.message, { flash: true });
       refresh();
@@ -499,6 +480,65 @@
     GameState.save(state);
     refresh();
     GameUI.setReport(result.message, { flash: true });
+  }
+
+  function beginBuyStand() {
+    if (selling) return;
+    if (GameState.isRestaurantMode && GameState.isRestaurantMode(state)) {
+      GameUI.setReport(
+        "You own a restaurant now — stands and restaurants cannot be owned together.",
+        { flash: true }
+      );
+      return;
+    }
+    const count = GameState.standCount(state);
+    const max = GameState.MAX_STANDS || 4;
+    const cost = Number(GameState.STAND_COST) || 20;
+    if (count >= max) {
+      GameUI.setReport(
+        "You already own the maximum of " + max + " stands.",
+        { flash: true }
+      );
+      return;
+    }
+    if (count >= 1 && GameState.canBuyExtraStand && !GameState.canBuyExtraStand(state)) {
+      GameUI.setReport(
+        "Extra stands unlock when cash is over $" +
+          (GameState.EXTRA_STAND_UNLOCK_CASH || 100) +
+          ".",
+        { flash: true }
+      );
+      refresh();
+      return;
+    }
+    if (Number(state.cash) + 1e-9 < cost) {
+      GameUI.setReport(
+        "Not enough cash to buy a stand (need $" +
+          cost.toFixed(2) +
+          ", have $" +
+          Number(state.cash).toFixed(2) +
+          ").",
+        { flash: true }
+      );
+      return;
+    }
+    const pick = GameUI.openLocationPicker(state, {
+      kind: "stand",
+      title: count === 0 ? "Place your stand" : "Place new stand",
+      lead: "Choose a numbered map spot (1–4). Open spots match the neighborhood graphic.",
+      onPick: completeBuyStand,
+    });
+    if (!pick.ok) {
+      GameUI.setReport(pick.message, { flash: true });
+    }
+  }
+
+  function onBuyStand() {
+    beginBuyStand();
+  }
+
+  function onAddStand() {
+    beginBuyStand();
   }
 
   function onSellStand() {
@@ -529,6 +569,24 @@
       GameUI.setReport(result.message, { flash: true });
       refresh();
       return;
+    }
+    GameState.save(state);
+    refresh();
+    GameUI.setReport(result.message, { flash: true });
+  }
+
+  function completeBuyRestaurant(slot) {
+    const result = GameState.buyRestaurant(state, slot);
+    if (!result.ok) {
+      GameUI.setReport(result.message, { flash: true });
+      refresh();
+      return;
+    }
+    if (window.GameLedger && GameLedger.recordCashEvent) {
+      GameLedger.recordCashEvent(state, {
+        kind: "buyRestaurant",
+        amount: -(Number(GameState.RESTAURANT_COST) || 400),
+      });
     }
     GameState.save(state);
     refresh();
@@ -578,21 +636,17 @@
             "/employee."
     );
     if (!confirmed) return;
-    const result = GameState.buyRestaurant(state);
-    if (!result.ok) {
-      GameUI.setReport(result.message, { flash: true });
-      refresh();
-      return;
+    const pick = GameUI.openLocationPicker(state, {
+      kind: "restaurant",
+      title: inRest ? "Place new restaurant" : "Place your restaurant",
+      lead: inRest
+        ? "Choose an open numbered map spot (1–4)."
+        : "Stands will be forfeited. Choose where the restaurant sits on the map (1–4).",
+      onPick: completeBuyRestaurant,
+    });
+    if (!pick.ok) {
+      GameUI.setReport(pick.message, { flash: true });
     }
-    if (window.GameLedger && GameLedger.recordCashEvent) {
-      GameLedger.recordCashEvent(state, {
-        kind: "buyRestaurant",
-        amount: -(Number(GameState.RESTAURANT_COST) || 400),
-      });
-    }
-    GameState.save(state);
-    refresh();
-    GameUI.setReport(result.message, { flash: true });
   }
 
   function onAddRestaurant() {
@@ -755,6 +809,7 @@
   function onBusinessTabClick(event) {
     const btn = event.target.closest("[data-business-tab]");
     if (!btn) return;
+    event.preventDefault();
     const tab = btn.getAttribute("data-business-tab");
     if (tab === "daily") {
       const result = GameUI.openPreviousDayFromBusiness(state);
@@ -767,6 +822,14 @@
     GameUI.setBusinessTab("business");
     GameUI.setPanel("business");
     GameUI.renderLedger(state);
+  }
+
+  function onStatDayClick() {
+    if (selling) return;
+    const result = GameUI.openPreviousDayFromBusiness(state);
+    if (!result.ok) {
+      GameUI.setReport(result.message, { flash: true });
+    }
   }
 
   function onNewGame() {
@@ -833,6 +896,20 @@
     .getElementById("btn-sell-restaurant")
     ?.addEventListener("click", onSellRestaurant);
   document
+    .getElementById("btn-cancel-location")
+    ?.addEventListener("click", function () {
+      GameUI.cancelLocationPicker();
+    });
+  document
+    .getElementById("location-picker-grid")
+    ?.addEventListener("click", function (event) {
+      const btn = event.target.closest("[data-map-slot]");
+      if (!btn || btn.disabled) return;
+      const slot = Number(btn.getAttribute("data-map-slot"));
+      if (!Number.isFinite(slot)) return;
+      GameUI.handleLocationPick(slot);
+    });
+  document
     .getElementById("restaurant-select")
     ?.addEventListener("change", onRestaurantSelectChange);
   document
@@ -880,6 +957,12 @@
     ?.addEventListener("click", onStatDayClick);
   document
     .getElementById("panel-business")
+    ?.addEventListener("click", onBusinessTabClick);
+  document
+    .getElementById("tab-business-summary")
+    ?.addEventListener("click", onBusinessTabClick);
+  document
+    .getElementById("tab-previous-day")
     ?.addEventListener("click", onBusinessTabClick);
 
   document

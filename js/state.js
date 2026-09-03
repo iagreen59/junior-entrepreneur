@@ -206,24 +206,145 @@
     return inventory;
   }
 
-  function createStand(index) {
+  function createStand(index, slot) {
     const n = Number.isFinite(index) && index >= 1 ? Math.floor(index) : 1;
+    const slotIndex = normalizeSlotIndex(slot, n - 1);
     return {
       id: "stand-" + n,
       name: "Stand " + n,
+      /** Map location 0–3 (shown as 1–4 on the neighborhood graphic). */
+      slot: slotIndex,
       /** "player" | "employee" | null — null means unstaffed. */
       staffedBy: null,
     };
   }
 
-  function createRestaurant(index) {
+  function createRestaurant(index, slot) {
     const n = Number.isFinite(index) && index >= 1 ? Math.floor(index) : 1;
+    const slotIndex = normalizeSlotIndex(slot, n - 1);
     return {
       id: "restaurant-" + n,
       name: "Restaurant " + n,
+      /** Map location 0–3 (shown as 1–4 on the neighborhood graphic). */
+      slot: slotIndex,
       /** Hired staff count; player cannot work a restaurant shift. */
       employeeCount: 0,
     };
+  }
+
+  /** Clamp a map slot to 0..MAX_STANDS-1 (same layout for restaurants). */
+  function normalizeSlotIndex(slot, fallback) {
+    const max = MAX_STANDS;
+    const fb =
+      Number.isFinite(fallback) && fallback >= 0
+        ? Math.min(max - 1, Math.floor(fallback))
+        : 0;
+    const v = Number(slot);
+    if (!Number.isFinite(v) || v < 0) return fb;
+    return Math.min(max - 1, Math.floor(v));
+  }
+
+  /** Parse a player-facing or 0-based slot; returns null if out of range. */
+  function parseSlotChoice(slot) {
+    if (slot === undefined || slot === null || slot === "") return null;
+    const v = Number(slot);
+    if (!Number.isFinite(v)) return null;
+    const index = Math.floor(v);
+    if (index < 0 || index >= MAX_STANDS) return null;
+    return index;
+  }
+
+  /** Slot indexes currently occupied by stands or restaurants (mode-aware). */
+  function occupiedSlots(state) {
+    const used = {};
+    if (isRestaurantMode(state)) {
+      const list = Array.isArray(state.restaurants) ? state.restaurants : [];
+      for (const r of list) {
+        if (!r) continue;
+        used[normalizeSlotIndex(r.slot, 0)] = true;
+      }
+    } else {
+      const list = Array.isArray(state.stands) ? state.stands : [];
+      for (const s of list) {
+        if (!s) continue;
+        used[normalizeSlotIndex(s.slot, 0)] = true;
+      }
+    }
+    return used;
+  }
+
+  /** Free map slot indexes (0-based) available for a new location. */
+  function freeSlots(state) {
+    const used = occupiedSlots(state);
+    const free = [];
+    for (let i = 0; i < MAX_STANDS; i++) {
+      if (!used[i]) free.push(i);
+    }
+    return free;
+  }
+
+  /**
+   * Slots the player may choose when buying a stand or restaurant.
+   * First restaurant forfeits stands, so all map spots open.
+   */
+  function availableSlotsForPurchase(state, kind) {
+    if (kind === "restaurant" && !ownsRestaurant(state)) {
+      const all = [];
+      for (let i = 0; i < MAX_STANDS; i++) all.push(i);
+      return all;
+    }
+    return freeSlots(state);
+  }
+
+  function isSlotFree(state, slot) {
+    const chosen = parseSlotChoice(slot);
+    if (chosen == null) return false;
+    return !occupiedSlots(state)[chosen];
+  }
+
+  /** Next stand number for naming (max existing index + 1). */
+  function nextStandIndex(state) {
+    let max = 0;
+    if (Array.isArray(state.stands)) {
+      for (const s of state.stands) {
+        const m = String(s.id || "").match(/stand-(\d+)/i);
+        if (m) max = Math.max(max, Number(m[1]) || 0);
+        const nm = String(s.name || "").match(/Stand\s+(\d+)/i);
+        if (nm) max = Math.max(max, Number(nm[1]) || 0);
+      }
+    }
+    return max + 1;
+  }
+
+  /**
+   * Assign unique map slots to a list of locations missing/duplicating slots.
+   * Preserves valid unique slots; fills gaps in order for the rest.
+   */
+  function assignUniqueSlots(list) {
+    if (!Array.isArray(list) || !list.length) return list || [];
+    const used = {};
+    const result = list.map(function (item, i) {
+      const copy = Object.assign({}, item);
+      const raw = Number(item && item.slot);
+      if (Number.isFinite(raw) && raw >= 0 && raw < MAX_STANDS && !used[raw]) {
+        copy.slot = Math.floor(raw);
+        used[copy.slot] = true;
+      } else {
+        copy.slot = null;
+      }
+      copy._order = i;
+      return copy;
+    });
+    let next = 0;
+    for (const item of result) {
+      if (item.slot != null) continue;
+      while (next < MAX_STANDS && used[next]) next++;
+      item.slot = next < MAX_STANDS ? next : normalizeSlotIndex(item._order, 0);
+      used[item.slot] = true;
+      next++;
+    }
+    for (const item of result) delete item._order;
+    return result;
   }
 
   function normalizeStaffedBy(value) {
@@ -474,8 +595,9 @@
   /**
    * Buy the first restaurant ($400, forfeit stands) or an additional one in
    * restaurant mode when cash > $1000 (max MAX_RESTAURANTS). Starts with 0 staff.
+   * Optional slot (0–3) places the restaurant on that map location.
    */
-  function buyRestaurant(state) {
+  function buyRestaurant(state, slot) {
     // Phase 17: buy another restaurant while already in restaurant mode.
     if (ownsRestaurant(state)) {
       const count = restaurantCount(state);
@@ -511,9 +633,30 @@
         };
       }
 
+      const free = freeSlots(state);
+      if (!free.length) {
+        return {
+          ok: false,
+          message: "No open map locations left for another restaurant.",
+        };
+      }
+
+      let chosenSlot = parseSlotChoice(slot);
+      if (chosenSlot == null) {
+        chosenSlot = free[0];
+      } else if (free.indexOf(chosenSlot) === -1) {
+        return {
+          ok: false,
+          message:
+            "That map location is not available. Pick an open numbered spot (1–" +
+            MAX_RESTAURANTS +
+            ").",
+        };
+      }
+
       state.cash = +(state.cash - RESTAURANT_COST).toFixed(2);
       state.extraRestaurantUnlockNotified = false;
-      const restaurant = createRestaurant(nextRestaurantIndex(state));
+      const restaurant = createRestaurant(nextRestaurantIndex(state), chosenSlot);
       state.restaurants.push(restaurant);
       state.activeRestaurantId = restaurant.id;
 
@@ -521,9 +664,12 @@
         ok: true,
         restaurant: restaurant,
         cost: RESTAURANT_COST,
+        slot: chosenSlot,
         message:
           "Bought " +
           restaurant.name +
+          " at location " +
+          (chosenSlot + 1) +
           " for $" +
           RESTAURANT_COST.toFixed(2) +
           "! You now own " +
@@ -575,6 +721,11 @@
       };
     }
 
+    let chosenSlot = parseSlotChoice(slot);
+    if (chosenSlot == null) {
+      chosenSlot = 0;
+    }
+
     const forfeited = standCount(state);
     state.cash = +(state.cash - RESTAURANT_COST).toFixed(2);
     state.mode = MODE_RESTAURANT;
@@ -584,7 +735,7 @@
     state.restaurantUnlockNotified = false;
     state.extraRestaurantUnlockNotified = false;
 
-    const restaurant = createRestaurant(1);
+    const restaurant = createRestaurant(1, chosenSlot);
     state.restaurants = [restaurant];
     state.activeRestaurantId = restaurant.id;
 
@@ -592,9 +743,12 @@
       ok: true,
       restaurant: restaurant,
       cost: RESTAURANT_COST,
+      slot: chosenSlot,
       message:
         "Bought " +
         restaurant.name +
+        " at location " +
+        (chosenSlot + 1) +
         " for $" +
         RESTAURANT_COST.toFixed(2) +
         "! Forfeited " +
@@ -1019,8 +1173,9 @@
   /**
    * Buy the first stand (Phase 9) or an extra stand (Phase 13).
    * First stand: no cash > $100 gate. Extra stands: require unlock + room.
+   * Optional slot (0–3) places the stand on that map location.
    */
-  function buyStand(state) {
+  function buyStand(state, slot) {
     if (isRestaurantMode(state)) {
       return {
         ok: false,
@@ -1062,20 +1217,46 @@
       };
     }
 
+    const free = freeSlots(state);
+    if (!free.length) {
+      return {
+        ok: false,
+        message: "No open map locations left for another stand.",
+      };
+    }
+
+    let chosenSlot = parseSlotChoice(slot);
+    if (chosenSlot == null) {
+      chosenSlot = free[0];
+    } else if (free.indexOf(chosenSlot) === -1) {
+      return {
+        ok: false,
+        message:
+          "That map location is not available. Pick an open numbered spot (1–" +
+          MAX_STANDS +
+          ").",
+      };
+    }
+
     state.cash = +(state.cash - STAND_COST).toFixed(2);
-    const nextIndex = count + 1;
-    const stand = createStand(nextIndex);
+    const nextIndex = nextStandIndex(state);
+    const stand = createStand(nextIndex, chosenSlot);
     if (!Array.isArray(state.stands)) state.stands = [];
     state.stands.push(stand);
     state.activeStandId = stand.id;
+
+    const spotLabel = "location " + (chosenSlot + 1);
 
     if (count === 0) {
       return {
         ok: true,
         stand,
         cost: STAND_COST,
+        slot: chosenSlot,
         message:
-          "Bought your first stand for $" +
+          "Bought your first stand at " +
+          spotLabel +
+          " for $" +
           STAND_COST.toFixed(2) +
           "! Cash left: $" +
           state.cash.toFixed(2) +
@@ -1087,9 +1268,12 @@
       ok: true,
       stand,
       cost: STAND_COST,
+      slot: chosenSlot,
       message:
         "Bought " +
         stand.name +
+        " at " +
+        spotLabel +
         " for $" +
         STAND_COST.toFixed(2) +
         "! You now own " +
@@ -1684,20 +1868,23 @@
     if (!Object.prototype.hasOwnProperty.call(raw, "stands")) {
       stands = [createStand(1)];
     } else if (Array.isArray(raw.stands)) {
-      stands = raw.stands
-        .filter(function (s) {
-          return s && typeof s === "object";
-        })
-        .map(function (s, i) {
-          const n = i + 1;
-          return {
-            id: typeof s.id === "string" && s.id ? s.id : "stand-" + n,
-            name:
-              typeof s.name === "string" && s.name ? s.name : "Stand " + n,
-            staffedBy: normalizeStaffedBy(s.staffedBy),
-          };
-        })
-        .slice(0, MAX_STANDS);
+      stands = assignUniqueSlots(
+        raw.stands
+          .filter(function (s) {
+            return s && typeof s === "object";
+          })
+          .map(function (s, i) {
+            const n = i + 1;
+            return {
+              id: typeof s.id === "string" && s.id ? s.id : "stand-" + n,
+              name:
+                typeof s.name === "string" && s.name ? s.name : "Stand " + n,
+              slot: s.slot,
+              staffedBy: normalizeStaffedBy(s.staffedBy),
+            };
+          })
+          .slice(0, MAX_STANDS)
+      );
       // At most one player-run stand after migrate/normalize.
       let sawPlayer = false;
       for (const s of stands) {
@@ -1734,23 +1921,26 @@
         : MODE_STAND;
     let restaurants = [];
     if (Array.isArray(raw.restaurants)) {
-      restaurants = raw.restaurants
-        .filter(function (r) {
-          return r && typeof r === "object";
-        })
-        .map(function (r, i) {
-          const n = i + 1;
-          return {
-            id:
-              typeof r.id === "string" && r.id ? r.id : "restaurant-" + n,
-            name:
-              typeof r.name === "string" && r.name
-                ? r.name
-                : "Restaurant " + n,
-            employeeCount: clampRestaurantStaff(r.employeeCount),
-          };
-        })
-        .slice(0, MAX_RESTAURANTS);
+      restaurants = assignUniqueSlots(
+        raw.restaurants
+          .filter(function (r) {
+            return r && typeof r === "object";
+          })
+          .map(function (r, i) {
+            const n = i + 1;
+            return {
+              id:
+                typeof r.id === "string" && r.id ? r.id : "restaurant-" + n,
+              name:
+                typeof r.name === "string" && r.name
+                  ? r.name
+                  : "Restaurant " + n,
+              slot: r.slot,
+              employeeCount: clampRestaurantStaff(r.employeeCount),
+            };
+          })
+          .slice(0, MAX_RESTAURANTS)
+      );
     }
     // Legacy / inconsistent saves: restaurants present ⇒ restaurant mode.
     // Never keep stands and restaurants together.
@@ -2218,6 +2408,14 @@
     normalize,
     createStand,
     createRestaurant,
+    normalizeSlotIndex,
+    parseSlotChoice,
+    occupiedSlots,
+    freeSlots,
+    availableSlotsForPurchase,
+    isSlotFree,
+    nextStandIndex,
+    assignUniqueSlots,
     ownsStand,
     standCount,
     isRestaurantMode,
