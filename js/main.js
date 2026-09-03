@@ -809,6 +809,7 @@
   function onBusinessTabClick(event) {
     const btn = event.target.closest("[data-business-tab]");
     if (!btn) return;
+    event.preventDefault();
     const tab = btn.getAttribute("data-business-tab");
     if (tab === "daily") {
       const result = GameUI.openPreviousDayFromBusiness(state);
@@ -956,6 +957,12 @@
     ?.addEventListener("click", onStatDayClick);
   document
     .getElementById("panel-business")
+    ?.addEventListener("click", onBusinessTabClick);
+  document
+    .getElementById("tab-business-summary")
+    ?.addEventListener("click", onBusinessTabClick);
+  document
+    .getElementById("tab-previous-day")
     ?.addEventListener("click", onBusinessTabClick);
 
   document

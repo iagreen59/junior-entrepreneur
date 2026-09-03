@@ -905,11 +905,8 @@
       };
     }
 
-    // Single open spot — skip the picker.
-    if (available.length === 1 && opts.skipIfSingle !== false) {
-      if (typeof opts.onPick === "function") opts.onPick(available[0]);
-      return { ok: true, auto: true, slot: available[0] };
-    }
+    // Always show the picker so the player chooses a numbered map spot.
+    // (Even a single open spot is shown explicitly.)
 
     const titleEl = document.getElementById("location-picker-title");
     const leadEl = document.getElementById("location-picker-lead");
