@@ -11,7 +11,7 @@
  *           scales demand; wages $8/employee + rent (Phase 19: $18/day); P&L
  *           breaks out sales vs wages vs rent vs profit.
  * Phase 17: multi-restaurant — demand/capacity rolled PER restaurant with that
- *           location's staff (shared inventory allocated in ownership order);
+ *           location's staff (shared inventory allocated in random order);
  *           rent × restaurant count; day report includes locations[] rollups.
  * Phase 18: Sell Day plans feed GameLedger running totals (caller records).
  * Phase 19: light balance — BASE_INTEREST 22 (was 20) so restaurant rent/wage
@@ -31,7 +31,8 @@
  *               (invalid / ≤0 price → treat as very cheap: BASE * 4 * pref)
  *               demandMult defaults to 1; foot-traffic surge uses ~1.4
  *   stock[p]  = max sellable from remaining shared bag for that product
- *   sold[p]   = min(demand[p], stock[p])  (bag depletes across restaurants)
+ *   sold[p]   = min(demand[p], stock[p])  (bag depletes across restaurants
+ *               in random order each day — no location is favored)
  *   cupsSold  = sum over restaurants and products
  *   revenue   = sum sold * price
  *   cogs      = sum costOfGoodsPerServing * sold
@@ -615,9 +616,16 @@
     let capacityMult = 1;
 
     if (isRestaurant && Array.isArray(state.restaurants) && state.restaurants.length) {
-      // Per-restaurant demand with shared inventory allocation (ownership order).
+      // Per-restaurant demand with shared inventory (random allocation order).
       const bag = cloneInventory(state.inventory);
-      for (const restaurant of state.restaurants) {
+      const shuffled = state.restaurants.slice();
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        const tmp = shuffled[i];
+        shuffled[i] = shuffled[j];
+        shuffled[j] = tmp;
+      }
+      for (const restaurant of shuffled) {
         const loc = planRestaurantLocation(
           state,
           restaurant,
