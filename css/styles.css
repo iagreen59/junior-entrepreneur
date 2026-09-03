@@ -882,7 +882,10 @@ body {
   border-radius: 0.85rem;
 }
 
-.business-tab.is-active {
+.business-tab.is-active,
+.business-tab.is-active:hover,
+.business-tab.is-active:active,
+.business-tab.is-active:focus-visible {
   border-color: transparent;
   background: linear-gradient(135deg, #6ec6a0 0%, var(--leaf) 100%);
   color: #fff;

@@ -115,6 +115,42 @@
     }
   }
 
+  /**
+   * Progress copy for customer counts.
+   * "left" means walk-aways (sold out / price / weather), not leftover stock.
+   */
+  function formatCustomerProgress(summary) {
+    const bought = (summary && summary.bought) | 0;
+    const walked = (summary && summary.left) | 0;
+    const stockLeft =
+      summary && summary.stockLeftAfter != null
+        ? summary.stockLeftAfter | 0
+        : null;
+    let text = bought + " bought";
+    if (walked > 0) {
+      text +=
+        " · " +
+        walked +
+        " walked away";
+    }
+    if (stockLeft != null) {
+      text +=
+        " · " +
+        stockLeft +
+        " in stock";
+    }
+    return text;
+  }
+
+  function formatCustomerProgressCounts(bought, walkedAway) {
+    const buys = bought | 0;
+    const walked = walkedAway | 0;
+    if (walked > 0) {
+      return buys + " bought · " + walked + " walked away";
+    }
+    return buys + " bought";
+  }
+
   function renderCustomerSummaryTable(summary, options) {
     const opts = options || {};
     const body = document.getElementById(
@@ -296,9 +332,7 @@
       if (mode === "live") {
         progress.textContent = "Customers are arriving…";
       } else if (summary) {
-        const bought = summary.bought | 0;
-        const left = summary.left | 0;
-        progress.textContent = bought + " bought · " + left + " left";
+        progress.textContent = formatCustomerProgress(summary);
       } else {
         progress.textContent = "";
       }
@@ -387,13 +421,11 @@
         ? global.GameWeather.label(report.weather)
         : "";
     const customers = report.customers || null;
-    const bought = customers ? customers.bought | 0 : 0;
-    const left = customers ? customers.left | 0 : 0;
     labelEl.textContent =
       "Previous day · Day " +
       dayNum +
       (weatherLabel ? " · " + weatherLabel : "") +
-      (customers ? " · " + bought + " bought · " + left + " left" : "") +
+      (customers ? " · " + formatCustomerProgress(customers) : "") +
       " — profit " +
       formatMoney(report.profit ?? 0);
     if (contentEl) contentEl.hidden = false;
@@ -1391,6 +1423,12 @@
           lines.push(loc.restaurantName || "Restaurant");
         }
         lines.push("  Sales     " + formatMoney(loc.revenue));
+        lines.push(
+          "  Sold      " +
+            (loc.cupsSold | 0) +
+            " serving" +
+            ((loc.cupsSold | 0) === 1 ? "" : "s")
+        );
         lines.push("  Wages     " + formatMoney(loc.wages));
         lines.push("  Rent      " + formatMoney(loc.rent));
         lines.push("  Profit    " + formatMoney(loc.profit));
@@ -1402,6 +1440,20 @@
             ((loc.employeeCount | 0) === 1 ? "" : "s")
         );
         lines.push("");
+      }
+
+      if (report.locations.length > 1) {
+        const soldCounts = report.locations.map(function (loc) {
+          return loc.cupsSold | 0;
+        });
+        const maxSold = Math.max.apply(null, soldCounts);
+        const minSold = Math.min.apply(null, soldCounts);
+        if (maxSold > 0 && minSold < maxSold * 0.35) {
+          lines.push(
+            "Shared stock is served in restaurant order — earlier locations sell first, so later ones may run short while still paying wages and rent."
+          );
+          lines.push("");
+        }
       }
 
       lines.push("Business totals");
@@ -2733,8 +2785,7 @@
     if (progress) {
       const buys = stage.querySelectorAll(".is-buy").length;
       const leaves = stage.querySelectorAll(".is-leave").length;
-      progress.textContent =
-        buys + " bought · " + leaves + " left";
+      progress.textContent = formatCustomerProgressCounts(buys, leaves);
     }
   }
 
